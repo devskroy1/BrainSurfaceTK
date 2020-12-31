@@ -31,13 +31,13 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
-    data_compression = "10k"
-    data_type = 'pial'
-    hemisphere = 'both'
+    data_compression = "5k"
+    data_type = 'white'
+    hemisphere = 'left'
 
     comment = 'comment'
 

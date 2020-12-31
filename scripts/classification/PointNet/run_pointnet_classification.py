@@ -32,13 +32,13 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
-    data_compression = "10k"
-    data_type = 'pial'
-    hemisphere = 'both'
+    data_compression = "5k"
+    data_type = 'white'
+    hemisphere = 'left'
 
     comment = 'comment'
     # additional_comment = ''
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
-    numb_epochs = 1
+    numb_epochs = 200
     number_of_points = 10000
 
     ################################################
