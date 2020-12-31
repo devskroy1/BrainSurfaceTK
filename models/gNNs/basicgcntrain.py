@@ -1,5 +1,12 @@
-import math
 import os
+import os.path as osp
+
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+import sys
+
+sys.path.append(PATH_TO_ROOT)
+
+import math
 import subprocess
 
 import dgl
