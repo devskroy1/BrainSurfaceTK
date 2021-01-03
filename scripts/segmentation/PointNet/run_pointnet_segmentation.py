@@ -35,7 +35,7 @@ if __name__ == '__main__':
     data_nativeness = 'native'
     data_compression = "5k"
     data_type = 'white'
-    hemisphere = 'left'
+    hemisphere = 'both'
 
     additional_comment = ''
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 10
     gamma = 0.9875
     target_class = ""
     task = 'segmentation'

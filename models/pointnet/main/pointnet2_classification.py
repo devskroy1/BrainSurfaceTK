@@ -23,9 +23,30 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     model.train()
     loss_train = 0.0
     correct = 0
-
+    #print("type(train_loader)")
+    #print(type(train_loader))
+    #print("len(train_loader)")
+    #print(len(train_loader))
+    #batch_size = 0
+    #idx = 0
     for data in train_loader:
         data = data.to(device)
+        #new_batch_size = data.batch.size(0)
+        #if idx == 0:
+        #    batch_size = new_batch_size
+        #else:
+        #    if new_batch_size > batch_size:
+        #        data.batch = data.batch[:batch_size]
+        #    elif new_batch_size < batch_size:
+        #        batch_size = new_batch_size
+        #print("batch")
+        #print(data.batch)
+        ##print("batch size")
+        ##print(data.batch.size())
+        ##print("data num nodes list")
+        ##print(data.num_nodes_list)
+        #print("data num graphs")
+        #print(data.num_graphs) 
         pred = model(data)
         perd_label = pred.max(1)[1]
         loss = F.nll_loss(pred, data.y[:, 0].long())
@@ -33,6 +54,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         optimizer.step()
         correct += perd_label.eq(data.y[:, 0].long()).sum().item()
         loss_train += loss.item()
+        #idx += 1
     acc = correct / len(train_loader.dataset)
 
     scheduler.step()

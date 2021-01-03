@@ -54,12 +54,12 @@ def save_to_log(experiment_description, prefix=''):
 
     # If the log file does not exist - create it
     add_first_line = False
+    if not os.path.exists(PATH_TO_ROOT + f'logs/new/'):
+        os.makedirs(PATH_TO_ROOT + f'logs/new/')
+
     if not os.path.exists(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'):
         add_first_line = True
-        filename = PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'
-        dirname = os.path.dirname(filename)
-        os.makedirs(dirname)
-
+       
     if add_first_line:
         with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'w+') as log_record:
             log_record.write(f'LOG OF ALL THE EXPERIMENTS for {prefix}')
@@ -231,7 +231,8 @@ def data(data_folder, files_ending, data_type, target_class, task, REPROCESS, lo
 
     path = osp.join(
         osp.dirname(osp.realpath(__file__)), '..', 'data/' + 'segmentation' + f'/{data_compression}_{data_nativeness}_{hemisphere}/{data_type}')
-
+    print("path")
+    print(path)
     # Transformations
     transform = T.Compose([
         # T.RandomTranslate(0.1),

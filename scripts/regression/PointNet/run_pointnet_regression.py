@@ -32,12 +32,12 @@ if __name__ == '__main__':
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "5k"
     data_type = 'white'
-    hemisphere = 'left'
+    hemisphere = 'both'
 
     comment = 'comment'
 
@@ -48,12 +48,12 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 10
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'scan_age'
     task = 'regression'
-    numb_epochs = 200
+    numb_epochs = 150
     number_of_points = 10000
 
     ################################################

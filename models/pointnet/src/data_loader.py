@@ -303,7 +303,7 @@ class OurDataset(InMemoryDataset):
 
                 # Get points
                 points = torch.tensor(mesh.points)
-
+                
                 if self.add_faces:
                     # Get faces
                     n_faces = mesh.n_cells

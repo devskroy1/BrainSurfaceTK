@@ -33,12 +33,12 @@ if __name__ == '__main__':
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "5k"
     data_type = 'white'
-    hemisphere = 'left'
+    hemisphere = 'both'
 
     comment = 'comment'
     # additional_comment = ''
@@ -50,12 +50,12 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 10
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
-    numb_epochs = 200
+    numb_epochs = 150
     number_of_points = 10000
 
     ################################################
@@ -67,6 +67,8 @@ if __name__ == '__main__':
 
     data_folder, files_ending = get_data_path(data_nativeness, data_compression, data_type, hemisphere=hemisphere)
 
+    print("data_folder")
+    print(data_folder)
     train_dataset, test_dataset, validation_dataset, train_loader, test_loader, val_loader, num_labels = data(
         data_folder,
         files_ending,
