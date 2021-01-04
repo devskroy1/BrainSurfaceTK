@@ -1,0 +1,8 @@
+Learning rate - 0.001
+Batch size - 10
+Local features - []
+Global feature - []
+Number of points - 10000
+Data res - 5k
+Data type - white
+Data nativeness - native
