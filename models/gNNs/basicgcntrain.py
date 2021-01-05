@@ -69,7 +69,7 @@ def get_args():
     parser.add_argument("features", help="""'None', 'some' or 'all' 
     (edit the features_to_str function to customise tailor the names of the features to your needs)""",
                         type=str_to_features)
-    parser.add_argument("--meta_data_file_path", help="tsv file containing patient data", type=str)
+    parser.add_argument("--meta_data_file_path", help="tsv file containing patient data", type=str, default="/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
                         # default="/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
     parser.add_argument("--pickle_split_filepath", help="split file", type=str, default=None)
                         # default="/vol/bitbucket/cnw119/neodeepbrain/models/gNNs/names_06152020_noCrashSubs.pk")

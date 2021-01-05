@@ -1,5 +1,5 @@
 Learning rate - 0.001
-Batch size - 10
+Batch size - 5
 Local features - []
 Global feature - []
 Number of points - 10000

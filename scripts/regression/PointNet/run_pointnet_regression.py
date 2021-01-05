@@ -32,7 +32,7 @@ if __name__ == '__main__':
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = True
+    REPROCESS = False
 
     data_nativeness = 'native'
     data_compression = "5k"
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 10
+    batch_size = 5
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'scan_age'

@@ -1,0 +1,2 @@
+LOG OF ALL THE EXPERIMENTS for native_white_5k_left_
+#2 ::: native  5k  white  left  LR=0.001		Batch=2		Local features:['corrected_thickness', 'curvature', 'sulcal_depth']		Global features:None		Data used: 5k_white		Split class: 

@@ -282,7 +282,9 @@ class BrainNetworkDataset(Dataset):
         files_to_load = list()
         for fn in potential_files:
             participant_id, session_id = fn.split("_")[:2]
-            records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+            tmp_participant_id = participant_id.replace("sub-", "")
+            tmp_session_id = session_id.replace("ses-", "")
+            records = df[(df.participant_id == tmp_participant_id) & (df.session_id == int(tmp_session_id))]
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
@@ -406,7 +408,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):

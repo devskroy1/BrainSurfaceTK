@@ -106,10 +106,9 @@ class OurDataset(InMemoryDataset):
             path = self.processed_paths[2]
         else:
             path = self.processed_paths[1]
-
+        
         # If processed_paths exist, return without having to process again
         self.data, self.slices = torch.load(path)
-
 
     @property
     def raw_file_names(self):
