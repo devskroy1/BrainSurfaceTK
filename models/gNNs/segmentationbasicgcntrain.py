@@ -1,6 +1,12 @@
-import math
 import os
+import os.path as osp
 
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+import sys
+
+sys.path.append(PATH_TO_ROOT)
+
+import math
 import dgl
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -13,7 +19,7 @@ from models.gNNs.networks import BasicGCNSegmentation
 def collate(samples):
     # The input `samples` is a list of pairs
     #  (graph, label).
-    graphs, labels = map(list, zip(*samples))
+    _, graphs, labels  = map(list, zip(*samples))
     batched_graph = dgl.batch(graphs)
     return batched_graph, torch.tensor(labels).view(len(graphs), -1)
 
@@ -39,17 +45,17 @@ if __name__ == "__main__":
     # save_path = os.path.join(os.getcwd(), "tmp", "dataset")
 
     # Imperial
-    load_path = os.path.join("/vol/biomedic2/aa16914/shared/MScAI_brain_surface/vtps/white/30k/left")
+    load_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/merged/reducedto_05k/white/vtk")
     meta_data_file_path = os.path.join("/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
-    save_path = "/vol/bitbucket/cnw119/tmp/dataset"
+    save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
     lr = 8e-4
     T_max = 10
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 12
-    train_test_split = 0.8
+    batch_size = 32
+    train_test_split = (0.8, 0.1, 0.1)
 
     train_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
                                         dataset="train", train_split_per=train_test_split)
@@ -64,7 +70,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(5, 256, 40)  # 5 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")

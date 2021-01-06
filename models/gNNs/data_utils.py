@@ -44,7 +44,7 @@ class BrainNetworkDataset(Dataset):
         self.max_workers = max_workers
 
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 

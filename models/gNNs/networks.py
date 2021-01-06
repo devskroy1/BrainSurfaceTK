@@ -38,8 +38,6 @@ class BasicGCNSegmentation(nn.Module):
         hidden = self.conv2(graph, hidden)
         return self.conv3(graph, hidden)
 
-
-
 class GNNModel(nn.Module):
     def __init__(self, input_node_dim, input_edge_dim, hidden_dim1, hidden_dim2, out_dim):
         super(GNNModel, self).__init__()

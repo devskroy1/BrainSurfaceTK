@@ -141,7 +141,8 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg = bg.to(device)
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
-
+        print("bg node features dims")
+        print(bg_node_features.size())
         prediction = model(bg, bg_node_features)
         loss = loss_function(prediction, batch_labels)
         loss.backward()
