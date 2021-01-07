@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 5
+    batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'scan_age'
@@ -87,7 +87,9 @@ if __name__ == '__main__':
     else:
         numb_local_features = 0
     numb_global_features = len(global_features)
-
+    
+    print("num local features")
+    print(numb_local_features)
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = Net(numb_local_features, numb_global_features).to(device)
@@ -159,7 +161,7 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-    test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model

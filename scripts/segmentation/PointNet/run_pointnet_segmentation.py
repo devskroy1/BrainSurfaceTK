@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 5
+    batch_size = 2
     gamma = 0.9875
     target_class = ""
     task = 'segmentation'
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         # 3. Validate the performance after each epoch
         loss, acc, iou, mean_iou = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer, epoch=epoch, id=id,
                                         experiment_name=experiment_name, recording=recording)
-        print('Epoch: {:02d}, Val Loss/nll: {}, Val Acc: {:.4f}'.format(epoch, loss, acc))
+        print('Epoch: {:02d}, Val Loss/l1: {}, Val Acc: {:.4f}'.format(epoch, loss, acc))
 
         scheduler.step()
 
@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 torch.save(model.state_dict(),
                            PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt')
 
-            writer.add_scalar('Loss/val_nll', loss, epoch)
+            writer.add_scalar('Loss/val_l1', loss, epoch)
             writer.add_scalar('Accuracy/val', acc, epoch)
             for label, value in enumerate(iou):
                 writer.add_scalar('IoU{}/validation'.format(label), value, epoch)
@@ -180,18 +180,19 @@ if __name__ == '__main__':
 
         print('=' * 60)
 
-    if recording:
-        # save the last model
-        torch.save(model.state_dict(), PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'last_model' + '.pt')
+        if recording:
+            # save the last model
+            torch.save(model.state_dict(), PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'last_model' + '.pt')
 
-        loss_acc, acc_acc, iou_acc, mean_iou_acc, loss_iou, acc_iou, iou_iou, mean_iou_iou = perform_final_testing(model,
-                                                                                                                   writer,
-                                                                                                                   test_loader,
-                                                                                                                   experiment_name,
-                                                                                                                   comment,
-                                                                                                                   id,
-                                                                                                                   num_labels,
-                                                                                                                   device,
-                                                                                                                   best_model_acc,
-                                                                                                                   best_model_iou,
-                                                                                                                   recording=recording)
+            loss_acc, acc_acc, iou_acc, mean_iou_acc, loss_iou, acc_iou, iou_iou, mean_iou_iou = perform_final_testing(model,
+                                                                                                                       writer,
+                                                                                                                       test_loader,
+                                                                                                                       experiment_name,
+                                                                                                                       comment,
+                                                                                                                       id,
+                                                                                                                       num_labels,
+                                                                                                                       device,
+                                                                                                                       best_model_acc,
+                                                                                                                       best_model_iou,
+                                                                                                                       recording=recording)
+            print('Test Loss/l1: {}, Test Acc: {:.4f}'.format(loss_acc, acc_acc))

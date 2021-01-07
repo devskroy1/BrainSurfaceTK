@@ -162,7 +162,7 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-    test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model
