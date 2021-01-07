@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(5, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
