@@ -54,9 +54,11 @@ if __name__ == "__main__":
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 32
+    batch_size = 64
     train_test_split = (0.8, 0.1, 0.1)
-
+    
+    print("Batch size: ")
+    print(batch_size)
     train_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
                                         dataset="train", train_split_per=train_test_split)
 
