@@ -1,6 +1,6 @@
 import os.path as osp
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..')
 import sys
 
 sys.path.append(PATH_TO_ROOT)
@@ -18,7 +18,7 @@ from models.pointnet.src.models.pointnet2_classification import Net
 from models.pointnet.main.pointnet2_classification import train, test_classification
 from models.pointnet.src.utils import get_data_path, data
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..') + '/'
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
 
 if __name__ == '__main__':
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
-    numb_epochs = 1
+    numb_epochs = 150
     number_of_points = 10000
 
     ################################################
