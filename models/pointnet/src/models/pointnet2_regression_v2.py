@@ -16,6 +16,16 @@ class SAModule(torch.nn.Module):
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)
         edge_index = torch.stack([col, row], dim=0)
+        print("x dims")
+        print(x.size())
+        print("pos dims")
+        print(pos.size())
+        print("pos[idx] dims")
+        print(pos[idx].size())
+        print("edge_index dims")
+        print(edge_index.size())
+        print("edge_index")
+        print(edge_index)
         x = self.conv(x, (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch

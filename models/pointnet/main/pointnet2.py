@@ -68,6 +68,12 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
                     loss_test_mse = F.mse_loss(pred, data.y[:, 0])
+                    print("pred dims")
+                    print(pred.size())
+                    print("data.y dims")
+                    print(data.y.size())
+                    print("data.y[:, 0] dims")
+                    print(data.y[:, 0].size())
                     loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
                     mse += loss_test_mse.item()
                     l1 += loss_test_l1.item()

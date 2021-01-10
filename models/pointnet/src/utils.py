@@ -271,6 +271,10 @@ def data(data_folder, files_ending, data_type, target_class, task, REPROCESS, lo
     num_labels = train_dataset.num_labels
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    print("Inside data() of utils.py")
+    
+    print("train_loader")
+    print(train_loader)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 

@@ -109,6 +109,9 @@ class OurDataset(InMemoryDataset):
         
         # If processed_paths exist, return without having to process again
         self.data, self.slices = torch.load(path)
+        print("Inside OurDataset class")
+        print("self.data")
+        print(self.data)
 
     @property
     def raw_file_names(self):

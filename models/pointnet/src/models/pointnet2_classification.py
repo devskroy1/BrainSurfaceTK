@@ -16,6 +16,16 @@ class SAModule(torch.nn.Module):
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
+        print("x.size()")
+        print(x.size())
+        print("batch.size()")
+        print(batch.size())
+        print("pos.size()")
+        print(pos.size())
+        print("pos[idx].size()")
+        print(pos[idx].size())
+        print("edge_index.size()")
+        print(edge_index.size())
         x = self.conv(x, (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
@@ -44,10 +54,13 @@ def MLP(channels, batch_norm=True):
 class Net(torch.nn.Module):
     def __init__(self, num_local_features, num_global_features):
         super(Net, self).__init__()
-
+        print("num_local_features")
+        print(num_local_features)
         self.num_global_features = num_global_features
 
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
+        print("SA1 module input MLP layer num features")
+        print(3 + num_local_features)
         self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
         self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
@@ -59,10 +72,14 @@ class Net(torch.nn.Module):
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
     def forward(self, data):
-       # print("data.x.size()")
-       # print(data.x.size())
-       # print("data.x.size(0)")
-       # print(data.x.size(0))
+        print("data.x.size()")
+        print(data.x.size())
+        print("data.x.size(0)")
+        print(data.x.size(0))
+        print("data.pos.size()")
+        print(data.pos.size())
+        print("data.batch.size()")
+        print(data.batch.size())
        # data_x = data.x.view(data.x.size(1)*2, -1)
        # print("data_x")
        # print(data_x)
@@ -71,28 +88,30 @@ class Net(torch.nn.Module):
        # print(data_pos)
        #data_batch = data.batch.view(data.batch.size(1)*2, -1)
         sa0_out = (data.x, data.pos, data.batch)
-       # print("sa0_out first tensor dims")
-       # print(sa0_out[0].size())
-       # print("sa0_out second tensor dims")
-       # print("data_x")
-       # print(data_x)
-       # print(sa0_out[1].size())
-       # print("sa0_out third tensor dims")
-       # print(sa0_out[2].size())
-       # print("*sa0_out")
-       # print(*sa0_out)
-       # print("*sa0_out first tensor dims")
-       # print(*sa0_out[0].size())
-       # print("*sa0_out second tensor dims")
-       # print(*sa0_out[1].size())
-       # print("*sa0_out third tensor dims")
-       # print(*sa0_out[2].size())
+        print("sa0_out first tensor dims")
+        print(sa0_out[0].size())
+        print("sa0_out second tensor dims")
+        # print("data_x")
+        # print(data_x)
+        print(sa0_out[1].size())
+        print("sa0_out third tensor dims")
+        print(sa0_out[2].size())
+        print("*sa0_out")
+        print(*sa0_out)
+        print("*sa0_out first tensor dims")
+        print(*sa0_out[0].size())
+        print("*sa0_out second tensor dims")
+        print(*sa0_out[1].size())
+        print("*sa0_out third tensor dims")
+        print(*sa0_out[2].size())
         sa1_out = self.sa1_module(*sa0_out)
         sa1a_out = self.sa1a_module(*sa1_out)
         sa2_out = self.sa2_module(*sa1a_out)
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
-
+        print("Inside Net forward function")
+        print("x.size()")
+        print(x.size())
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
             x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)

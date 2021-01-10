@@ -26,7 +26,11 @@ if __name__ == '__main__':
     PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
     num_workers = 2
-    local_features = []
+    #local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    #Local features specified initially by MSc group
+    local_features = ['corr_thickness', 'curvature', 'sulc']
+    #Final setting for local features by MSc group
+    #local_features = []
     global_features = []
 
     #################################################
@@ -50,7 +54,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 5
+    batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
@@ -88,6 +92,8 @@ if __name__ == '__main__':
 
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
+        print("numb_local_features")
+        print(numb_local_features)
     else:
         numb_local_features = 0
     numb_global_features = len(global_features)

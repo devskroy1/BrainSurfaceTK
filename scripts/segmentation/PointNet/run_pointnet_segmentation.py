@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
         scheduler.step()
 
-        # 4. Record valiation metrics in Tensorboard
+        # 4. Record validation metrics in Tensorboard
         if recording:
 
             # By Accuracy

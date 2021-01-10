@@ -29,7 +29,18 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     #print(len(train_loader))
     #batch_size = 0
     #idx = 0
+    # print("len(train_loader)")
+    # print(len(train_loader))
+    # print("train_loader")
+    # print(train_loader)
+    idx = 0
     for data in train_loader:
+        print("data.num_nodes")
+        print(data.num_nodes)
+        print("data.batch.size()")
+        print(data.batch.size())
+        print("data.batch")
+        print(data.batch)
         data = data.to(device)
         #new_batch_size = data.batch.size(0)
         #if idx == 0:
@@ -39,22 +50,41 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         #        data.batch = data.batch[:batch_size]
         #    elif new_batch_size < batch_size:
         #        batch_size = new_batch_size
-        #print("batch")
-        #print(data.batch)
-        ##print("batch size")
-        ##print(data.batch.size())
+        # print("batch")
+        # print(data.batch)
+        # print("batch size")
+        # print(data.batch.size())
+        # print("data.y.batch")
+        # print(data.y.batch)
+        # print("data.y.batch.size()")
+        # print(data.y.batch.size())
         ##print("data num nodes list")
         ##print(data.num_nodes_list)
         #print("data num graphs")
         #print(data.num_graphs) 
         pred = model(data)
         perd_label = pred.max(1)[1]
+        # print("pred.size()")
+        # print(pred.size())
+        # print("pred")
+        # print(pred)
+        print("data.y.size()")
+        print(data.y.size())
+        print("data.y")
+        print(data.y)
         loss = F.nll_loss(pred, data.y[:, 0].long())
+        # data_y_batch = data.y.narrow(0, idx, pred.size(0))
+        # print("data_y_batch")
+        # print(data_y_batch)
+        # print("data_y_batch.size()")
+        # print(data_y_batch.size())
+        # loss = F.nll_loss(pred, data_y_batch.long())
         loss.backward()
         optimizer.step()
         correct += perd_label.eq(data.y[:, 0].long()).sum().item()
+        #correct += perd_label.eq(data_y_batch.long()).sum().item()
         loss_train += loss.item()
-        #idx += 1
+        idx += 1
     acc = correct / len(train_loader.dataset)
 
     scheduler.step()
@@ -84,7 +114,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
                 data = data.to(device)
                 with torch.no_grad():
                     pred = model(data).max(1)[1]
-
+                    #data_y_batch = data.y.narrow(0, idx, pred.size(0))
                     for i in range(len(pred)):
                         print(str(pred[i].item()).center(20, ' '),
                               str(data.y[:, 0][i].item()).center(20, ' '),

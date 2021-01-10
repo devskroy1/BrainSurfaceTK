@@ -41,7 +41,12 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
 
         pred = out.max(dim=1)[1]
 
-        loss = F.nll_loss(out, data.y)
+        #loss = F.nll_loss(out, data.y)
+        print("dims of data.y")
+        print(data.y.size())
+        print("dims of out")
+        print(out.size())
+        loss = F.l1_loss(out, data.y)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -109,7 +114,8 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
 
             pred = out.max(dim=1)[1]
 
-            loss = F.nll_loss(out, data.y)
+            #loss = F.nll_loss(out, data.y)
+            loss = F.l1_loss(out, data.y[:, 0])
             total_loss.append(loss)
 
 
