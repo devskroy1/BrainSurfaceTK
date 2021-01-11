@@ -59,7 +59,7 @@ if __name__ == '__main__':
     lr = 0.001
     batch_size = 2
     gamma = 0.9875
-    target_class = None
+    target_class = ""
     task = 'segmentation'
     ################################################
 
