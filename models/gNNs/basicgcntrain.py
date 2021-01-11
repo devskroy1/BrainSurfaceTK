@@ -1,5 +1,13 @@
-import math
+
 import os
+import os.path as osp
+
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+import sys
+
+sys.path.append(PATH_TO_ROOT)
+
+import math
 import subprocess
 
 import dgl
@@ -62,7 +70,7 @@ def get_args():
     parser.add_argument("features", help="""'None', 'some' or 'all' 
     (edit the features_to_str function to customise tailor the names of the features to your needs)""",
                         type=str_to_features)
-    parser.add_argument("--meta_data_file_path", help="tsv file containing patient data", type=str)
+    parser.add_argument("--meta_data_file_path", help="tsv file containing patient data", type=str, default="/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
                         # default="/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
     parser.add_argument("--pickle_split_filepath", help="split file", type=str, default=None)
                         # default="/vol/bitbucket/cnw119/neodeepbrain/models/gNNs/names_06152020_noCrashSubs.pk")
@@ -134,7 +142,6 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg = bg.to(device)
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
-
         prediction = model(bg, bg_node_features)
         loss = loss_function(prediction, batch_labels)
         loss.backward()
