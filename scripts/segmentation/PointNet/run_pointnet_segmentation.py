@@ -29,13 +29,18 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "20k"
+    data_compression = "10k"
     data_type = 'white'
-    hemisphere = 'left'
+    hemisphere = 'both'
+
+    # data_nativeness = 'native'
+    # data_compression = "20k"
+    # data_type = 'white'
+    # hemisphere = 'left'
 
     additional_comment = ''
 
@@ -54,7 +59,7 @@ if __name__ == '__main__':
     lr = 0.001
     batch_size = 2
     gamma = 0.9875
-    target_class = None
+    target_class = ""
     task = 'segmentation'
     ################################################
 

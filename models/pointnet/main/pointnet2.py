@@ -26,7 +26,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         data = data.to(device)
         optimizer.zero_grad()
         pred = model(data)
-        loss = F.mse_loss(pred, data.y[:, 0])
+        loss = F.mse_loss(pred, data.y[:, 0].float())
         loss.backward()
         optimizer.step()
 

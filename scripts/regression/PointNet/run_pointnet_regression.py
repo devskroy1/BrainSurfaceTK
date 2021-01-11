@@ -1,6 +1,6 @@
 import os.path as osp
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..')
 import sys
 
 sys.path.append(PATH_TO_ROOT)
@@ -19,7 +19,7 @@ from models.pointnet.main.pointnet2 import train, test_regression
 
 from models.pointnet.src.utils import get_data_path, data
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..') + '/'
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
 
 if __name__ == '__main__':
@@ -31,13 +31,18 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
     data_compression = "10k"
-    data_type = 'pial'
+    data_type = 'white'
     hemisphere = 'both'
+
+    # data_nativeness = 'native'
+    # data_compression = "10k"
+    # data_type = 'pial'
+    # hemisphere = 'both'
 
     comment = 'comment'
 
@@ -159,7 +164,7 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-    test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model

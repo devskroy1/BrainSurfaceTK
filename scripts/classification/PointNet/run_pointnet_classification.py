@@ -1,6 +1,6 @@
 import os.path as osp
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..')
 import sys
 
 sys.path.append(PATH_TO_ROOT)
@@ -18,7 +18,7 @@ from models.pointnet.src.models.pointnet2_classification import Net
 from models.pointnet.main.pointnet2_classification import train, test_classification
 from models.pointnet.src.utils import get_data_path, data
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..') + '/'
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
 
 if __name__ == '__main__':
@@ -32,13 +32,18 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
-    recording = False
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
     data_compression = "10k"
-    data_type = 'pial'
+    data_type = 'white'
     hemisphere = 'both'
+
+    # data_nativeness = 'native'
+    # data_compression = "10k"
+    # data_type = 'pial'
+    # hemisphere = 'both'
 
     comment = 'comment'
     # additional_comment = ''
@@ -55,7 +60,7 @@ if __name__ == '__main__':
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
-    numb_epochs = 1
+    numb_epochs = 200
     number_of_points = 10000
 
     ################################################
@@ -160,7 +165,7 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-    test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model
