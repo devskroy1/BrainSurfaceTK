@@ -50,6 +50,9 @@ if __name__ == "__main__":
     meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    num_local_features = len(local_features)
+
     lr = 8e-4
     T_max = 10
     eta_min = 1e-6
@@ -61,10 +64,10 @@ if __name__ == "__main__":
     print("Batch size: ")
     print(batch_size)
     train_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
-                                        dataset="train", train_split_per=train_test_split)
+                                        dataset="train", train_split_per=train_test_split, features=local_features)
 
     test_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
-                                       dataset="test")
+                                       dataset="test", features=local_features)
 
     print("Building dataloaders")
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=8)
@@ -73,7 +76,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3 + num_local_features, 256, 40)  # 3 coords + num_local_features features per node, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
