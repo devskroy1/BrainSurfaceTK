@@ -34,6 +34,11 @@ class BasicGCNSegmentation(nn.Module):
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
+        print("Inside BasicGCNSegmentation forward()")
+        print("graph")
+        print(graph)
+        print("features dims")
+        print(features.size())
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
         return self.conv3(graph, hidden)

@@ -43,6 +43,9 @@ class BrainNetworkDataset(Dataset):
         # Number of workers for loading
         self.max_workers = max_workers
 
+        print("Inside BrainNetworkDataset init()")
+        print("features")
+        print(features)
         if features is None:
             self.featureless = features
         else:
@@ -270,19 +273,21 @@ class BrainNetworkDataset(Dataset):
     @staticmethod
     def search_for_files_and_targets(load_path, meta_data_file_path):
         """
-        Function to search for potential vtps to be used. The meta_data dataframe is used to select the corresponding
-        file_paths and associate them with the respective scan_age.
-        :param load_path:
-        :param meta_data_file_path:
-        :return:
-        """
+               Function to search for potential vtps to be used. The meta_data dataframe is used to select the corresponding
+               file_paths and associate them with the respective scan_age.
+               :param load_path:
+               :param meta_data_file_path:
+               :return:
+               """
         targets = list()
         df = pd.read_csv(meta_data_file_path, sep='\t', header=0)
         potential_files = [f for f in os.listdir(load_path)]
         files_to_load = list()
         for fn in potential_files:
             participant_id, session_id = fn.split("_")[:2]
-            records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+            tmp_participant_id = participant_id.replace("sub-", "")
+            tmp_session_id = session_id.replace("ses-", "")
+            records = df[(df.participant_id == tmp_participant_id) & (df.session_id == int(tmp_session_id))]
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
@@ -406,7 +411,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
@@ -415,13 +420,16 @@ class BrainNetworkDataset(Dataset):
         :param data_path:
         :return:
         """
+        print("Inside normalise_dataset()")
         files_to_load = [os.path.join(data_path, file_to_load) for file_to_load in os.listdir(data_path) if
                          file_to_load.endswith(".pickle")]
         # TODO: add safeguard for when split percentage is 0. or 1.
         self.normalise_nodes_(files_to_load)
         self.normalise_edges_(files_to_load)
         targets_mu, targets_std = self.normalise_targets_(files_to_load)
+        print("About to save mu_std.pickle file")
         self._save_data_with_pickle(os.path.join(data_path, "mu_std.pickle"), (targets_mu, targets_std))
+        print("After saving mu_std.pickle file")
 
     def normalise_nodes_(self, files_to_load):
         """
