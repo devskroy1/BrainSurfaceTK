@@ -26,7 +26,8 @@ if __name__ == '__main__':
     PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
     num_workers = 2
-    local_features = []
+    #local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
@@ -86,6 +87,9 @@ if __name__ == '__main__':
 
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
+        print("numb_local_features")
+        print(numb_local_features)
+
     else:
         numb_local_features = 0
     numb_global_features = len(global_features)
