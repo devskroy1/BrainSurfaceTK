@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
     num_workers = 2
     local_features = []
+    #local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
@@ -93,6 +94,8 @@ if __name__ == '__main__':
         numb_local_features = 0
     numb_global_features = len(global_features)
 
+    print("number of local features")
+    print(numb_local_features)
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = Net(numb_local_features, numb_global_features).to(device)
@@ -155,16 +158,20 @@ if __name__ == '__main__':
             writer.add_scalar('Loss/val_mse', val_mse, epoch)
             writer.add_scalar('Loss/val_l1', val_l1, epoch)
 
-            print('Epoch: {:03d}, Test loss l1: {:.4f}'.format(epoch, val_l1))
+            print('Epoch: {:03d}, Val loss l1: {:.4f}'.format(epoch, val_l1))
             end = time.time()
             print('Time: ' + str(end - start))
+
             if val_l1 < best_val_loss:
                 best_val_loss = val_l1
                 torch.save(model.state_dict(), model_dir + '/model_best.pt')
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-        test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_mse, test_l1 = test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        if recording:
+            writer.add_scalar('Loss/test_mse', test_mse, epoch)
+            writer.add_scalar('Loss/test_l1', test_l1, epoch)
 
     if recording:
         # save the last model

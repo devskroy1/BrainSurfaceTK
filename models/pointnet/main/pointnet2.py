@@ -23,10 +23,15 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     model.train()
     loss_train = 0.0
     for data in train_loader:
+        print("data.y")
+        print(data.y)
+        print("data.y.size()")
+        print(data.y.size())
         data = data.to(device)
         optimizer.zero_grad()
         pred = model(data)
-        loss = F.mse_loss(pred, data.y[:, 0].float())
+        #loss = F.mse_loss(pred, data.y[:, 0].float())
+        loss = F.l1_loss(pred, data.y[:, 0].float())
         loss.backward()
         optimizer.step()
 
@@ -34,9 +39,10 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
 
     scheduler.step()
 
+    print(f'Epoch {epoch} training error (L1): {loss_train / len(train_loader)}')
     if writer is not None:
-        writer.add_scalar('Loss/train_mse', loss_train / len(train_loader), epoch)
-
+        #writer.add_scalar('Loss/train_mse', loss_train / len(train_loader), epoch)
+        writer.add_scalar('Loss/train_l1', loss_train / len(train_loader), epoch)
 
 def test_regression(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
     model.eval()
@@ -72,11 +78,15 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                     mse += loss_test_mse.item()
                     l1 += loss_test_l1.item()
             if val:
-                result_writer.writerow(['Epoch average error:', str(l1 / len(loader))])
-                print(f'Epoch {epoch} average error: {l1 / len(loader)}')
+                result_writer.writerow(['Epoch average val error (L1):', str(l1 / len(loader))])
+                print(f'Epoch {epoch} average val error (L1): {l1 / len(loader)}')
+                result_writer.writerow(['Epoch average val error (L2):', str(mse / len(loader))])
+                print(f'Epoch {epoch} average val error (L2): {mse / len(loader)}')
             else:
-                result_writer.writerow(['Test average error:', str(l1 / len(loader))])
-                print(f'Test average error: {l1 / len(loader)}')
+                result_writer.writerow(['Test average error (L1):', str(l1 / len(loader))])
+                print(f'Test average error (L1): {l1 / len(loader)}')
+                result_writer.writerow(['Test average error (L2):', str(mse / len(loader))])
+                print(f'Test average error (L2): {mse / len(loader)}')
     else:
 
         if val:
@@ -103,8 +113,10 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
 
         if val:
             print(f'Epoch {epoch} average error (L1): {l1 / len(loader)}')
+            print(f'Epoch {epoch} average error (L2): {mse / len(loader)}')
         else:
             print(f'Test average error (L1): {l1 / len(loader)}')
+            print(f'Test average error (L2): {mse / len(loader)}')
 
     return mse / len(loader), l1 / len(loader)
 
