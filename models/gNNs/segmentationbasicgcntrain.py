@@ -50,7 +50,9 @@ if __name__ == "__main__":
     meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
-    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    #local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    #local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth', 'initial_thickness', 'roi']
     num_local_features = len(local_features)
 
     lr = 8e-4
