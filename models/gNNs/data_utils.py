@@ -47,7 +47,7 @@ class BrainNetworkDataset(Dataset):
         print("features")
         print(features)
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 
