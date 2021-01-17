@@ -149,16 +149,21 @@ if __name__ == '__main__':
         train(model, train_loader, epoch, device,
               optimizer, scheduler, writer)
 
-        val_acc, val_precis, val_recall, val_f1 = test_classification(model, val_loader,
+        # val_acc, val_precis, val_recall, val_f1 = test_classification(model, val_loader,
+        #                               indices['Val'], device,
+        #                               recording, results_folder,
+        #                               epoch=epoch)
+
+        val_acc = test_classification(model, val_loader,
                                       indices['Val'], device,
                                       recording, results_folder,
                                       epoch=epoch)
 
         if recording:
             writer.add_scalar('Acc/val', val_acc, epoch)
-            writer.add_scalar('Precis/val', val_precis, epoch)
-            writer.add_scalar('Recall/val', val_recall, epoch)
-            writer.add_scalar('F1/val', val_f1, epoch)
+            # writer.add_scalar('Precis/val', val_precis, epoch)
+            # writer.add_scalar('Recall/val', val_recall, epoch)
+            # writer.add_scalar('F1/val', val_f1, epoch)
 
             end = time.time()
             print('Time: ' + str(end - start))
@@ -169,12 +174,15 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-        test_acc, test_precis, test_recall, test_f1 = test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        #test_acc, test_precis, test_recall, test_f1 = test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_acc = test_classification(model, test_loader, indices['Test'], device,
+                                                                          recording, results_folder, val=False)
+
         if recording:
             writer.add_scalar('Test_acc', test_acc, epoch)
-            writer.add_scalar('Test_precis', test_precis, epoch)
-            writer.add_scalar('Test_recall', test_recall, epoch)
-            writer.add_scalar('Test_f1', test_f1, epoch)
+            # writer.add_scalar('Test_precis', test_precis, epoch)
+            # writer.add_scalar('Test_recall', test_recall, epoch)
+            # writer.add_scalar('Test_f1', test_f1, epoch)
 
     if recording:
         # save the last model

@@ -24,9 +24,9 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     loss_train = 0.0
     correct = 0
 
-    true_positives = 0
-    false_positives = 0
-    false_negatives = 0
+    # true_positives = 0
+    # false_positives = 0
+    # false_negatives = 0
     for data in train_loader:
         print("data.y size")
         print(data.y.size())
@@ -36,33 +36,33 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         pred = model(data)
         perd_label = pred.max(1)[1]
         #loss = F.nll_loss(pred, data.y[:, 0].long())
-        loss = F.smooth_l1_loss(pred, data.y[:, 0].long())
+        loss = F.smooth_l1_loss(pred, data.y[:, 0].float())
         loss.backward()
         optimizer.step()
         correct += perd_label.eq(data.y[:, 0].long()).sum().item()
-        if (perd_label > 0) and (data.y[:, 0].long() > 0):
-            true_positives += 1
-        elif (perd_label > 0) and (data.y[:, 0].long() == 0):
-            false_positives += 1
-        elif (perd_label == 0) and (data.y[:, 0].long() > 0):
-            false_negatives += 1
+        # if (perd_label > 0) and (data.y[:, 0].long() > 0):
+        #     true_positives += 1
+        # elif (perd_label > 0) and (data.y[:, 0].long() == 0):
+        #     false_positives += 1
+        # elif (perd_label == 0) and (data.y[:, 0].long() > 0):
+        #     false_negatives += 1
         loss_train += loss.item()
     acc = correct / len(train_loader.dataset)
-    precision = true_positives / (true_positives + false_positives)
-    recall = true_positives / (true_positives + false_negatives)
-    f1_score = (2 * precision * recall) / (precision + recall)
+    # precision = true_positives / (true_positives + false_positives)
+    # recall = true_positives / (true_positives + false_negatives)
+    # f1_score = (2 * precision * recall) / (precision + recall)
     scheduler.step()
 
     if writer is not None:
         writer.add_scalar('Acc/train', acc, epoch)
-        writer.add_scalar('Precision/train', precision, epoch)
-        writer.add_scalar('Recall/train', recall, epoch)
-        writer.add_scalar('F1 Score/train', f1_score, epoch)
+        # writer.add_scalar('Precision/train', precision, epoch)
+        # writer.add_scalar('Recall/train', recall, epoch)
+        # writer.add_scalar('F1 Score/train', f1_score, epoch)
         writer.add_scalar('Loss/train_huber', loss_train / len(train_loader), epoch)
     print('Train acc: ' + str(acc))
-    print('Train precision: ' + str(precision))
-    print('Train recall: ' + str(recall))
-    print('Train F1 Score: ' + str(f1_score))
+    # print('Train precision: ' + str(precision))
+    # print('Train recall: ' + str(recall))
+    # print('Train F1 Score: ' + str(f1_score))
     print('Loss/train_huber: ' + str(loss_train / len(train_loader)))
 
 def test_classification(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
@@ -75,20 +75,20 @@ def test_classification(model, loader, indices, device, recording, results_folde
             if val:
                 print('Validation'.center(60, '-'))
                 result_writer.writerow(['Val accuracy Epoch - ' + str(epoch)])
-                result_writer.writerow(['Val precision Epoch - ' + str(epoch)])
-                result_writer.writerow(['Val recall Epoch - ' + str(epoch)])
-                result_writer.writerow(['Val f1 score Epoch - ' + str(epoch)])
+                # result_writer.writerow(['Val precision Epoch - ' + str(epoch)])
+                # result_writer.writerow(['Val recall Epoch - ' + str(epoch)])
+                # result_writer.writerow(['Val f1 score Epoch - ' + str(epoch)])
             else:
                 print('Test'.center(60, '-'))
                 result_writer.writerow(['Test accuracy'])
-                result_writer.writerow(['Test precision'])
-                result_writer.writerow(['Test recall'])
-                result_writer.writerow(['Test f1 score'])
+                # result_writer.writerow(['Test precision'])
+                # result_writer.writerow(['Test recall'])
+                # result_writer.writerow(['Test f1 score'])
 
             correct = 0
-            true_positives = 0
-            false_positives = 0
-            false_negatives = 0
+            # true_positives = 0
+            # false_positives = 0
+            # false_negatives = 0
             for idx, data in enumerate(loader):
                 data = data.to(device)
                 with torch.no_grad():
@@ -112,29 +112,29 @@ def test_classification(model, loader, indices, device, recording, results_folde
                     false_negatives += 1
 
             acc = correct / len(loader.dataset)
-            precision = true_positives / (true_positives + false_positives)
-            recall = true_positives / (true_positives + false_negatives)
-            f1_score = (2 * precision * recall) / (precision + recall)
+            # precision = true_positives / (true_positives + false_positives)
+            # recall = true_positives / (true_positives + false_negatives)
+            # f1_score = (2 * precision * recall) / (precision + recall)
 
             if val:
                 print(f'Epoch {epoch} validation accuracy: {acc}')
                 result_writer.writerow(['Epoch average val accuracy:', str(acc)])
-                print(f'Epoch {epoch} validation precision: {precision}')
-                result_writer.writerow(['Epoch validation precision:', str(precision)])
-                print(f'Epoch {epoch} validation recall: {recall}')
-                result_writer.writerow(['Epoch validation recall:', str(recall)])
-                print(f'Epoch {epoch} validation F1 score: {f1_score}')
-                result_writer.writerow(['Epoch validation f1 score:', str(f1_score)])
+                # print(f'Epoch {epoch} validation precision: {precision}')
+                # result_writer.writerow(['Epoch validation precision:', str(precision)])
+                # print(f'Epoch {epoch} validation recall: {recall}')
+                # result_writer.writerow(['Epoch validation recall:', str(recall)])
+                # print(f'Epoch {epoch} validation F1 score: {f1_score}')
+                # result_writer.writerow(['Epoch validation f1 score:', str(f1_score)])
 
             else:
                 print(f'Test accuracy: {acc}')
                 result_writer.writerow(['Test average accuracy:', str(acc)])
-                print(f'Test precision: {precision}')
-                result_writer.writerow(['Test precision:', str(precision)])
-                print(f'Test recall: {recall}')
-                result_writer.writerow(['Test recall:', str(recall)])
-                print(f'Test F1 score: {f1_score}')
-                result_writer.writerow(['Test F1 score:', str(f1_score)])
+                # print(f'Test precision: {precision}')
+                # result_writer.writerow(['Test precision:', str(precision)])
+                # print(f'Test recall: {recall}')
+                # result_writer.writerow(['Test recall:', str(recall)])
+                # print(f'Test F1 score: {f1_score}')
+                # result_writer.writerow(['Test F1 score:', str(f1_score)])
     else:
         if val:
             print('Validation'.center(60, '-'))
@@ -142,9 +142,9 @@ def test_classification(model, loader, indices, device, recording, results_folde
             print('Test'.center(60, '-'))
 
         correct = 0
-        true_positives = 0
-        false_positives = 0
-        false_negatives = 0
+        # true_positives = 0
+        # false_positives = 0
+        # false_negatives = 0
         for idx, data in enumerate(loader):
             data = data.to(device)
             with torch.no_grad():
@@ -156,30 +156,31 @@ def test_classification(model, loader, indices, device, recording, results_folde
                           indices[idx * len(pred) + i])
 
             correct += pred.eq(data.y[:, 0].long()).sum().item()
-            if (perd_label > 0) and (data.y[:, 0].long() > 0):
-                true_positives += 1
-            elif (perd_label > 0) and (data.y[:, 0].long() == 0):
-                false_positives += 1
-            elif (perd_label == 0) and (data.y[:, 0].long() > 0):
-                false_negatives += 1
+            # if (perd_label > 0) and (data.y[:, 0].long() > 0):
+            #     true_positives += 1
+            # elif (perd_label > 0) and (data.y[:, 0].long() == 0):
+            #     false_positives += 1
+            # elif (perd_label == 0) and (data.y[:, 0].long() > 0):
+            #     false_negatives += 1
 
         acc = correct / len(loader.dataset)
-        precision = true_positives / (true_positives + false_positives)
-        recall = true_positives / (true_positives + false_negatives)
-        f1_score = (2 * precision * recall) / (precision + recall)
+        # precision = true_positives / (true_positives + false_positives)
+        # recall = true_positives / (true_positives + false_negatives)
+        # f1_score = (2 * precision * recall) / (precision + recall)
 
         if val:
             print(f'Epoch {epoch} validation accuracy: {acc}')
-            print(f'Epoch {epoch} validation precision: {precision}')
-            print(f'Epoch {epoch} validation recall: {recall}')
-            print(f'Epoch {epoch} validation f1 score: {f1_score}')
+            # print(f'Epoch {epoch} validation precision: {precision}')
+            # print(f'Epoch {epoch} validation recall: {recall}')
+            # print(f'Epoch {epoch} validation f1 score: {f1_score}')
         else:
             print(f'Test accuracy: {acc}')
-            print(f'Test precision: {precision}')
-            print(f'Test recall: {recall}')
-            print(f'Test f1 score: {f1_score}')
+            # print(f'Test precision: {precision}')
+            # print(f'Test recall: {recall}')
+            # print(f'Test f1 score: {f1_score}')
 
-    return acc, precision, recall, f1_score
+    #return acc, precision, recall, f1_score
+    return acc
 
 
 if __name__ == '__main__':
