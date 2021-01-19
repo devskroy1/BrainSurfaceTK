@@ -71,6 +71,10 @@ class Net(torch.nn.Module):
         print(data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features))
         # print("(x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features))")
         # print((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)))
+        print("self.num_global_features")
+        print(self.num_global_features)
+        print("data.y")
+        print(data.y)
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
             x = torch.cat((x.float(), data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
