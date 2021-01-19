@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = []
+    global_features = ['sex', 'age']
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 5
+    batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
