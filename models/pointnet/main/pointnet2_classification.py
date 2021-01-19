@@ -8,6 +8,7 @@ import os
 import time
 import pickle
 import csv
+import numpy as np
 
 import torch
 import torch.nn.functional as F
@@ -28,15 +29,50 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     # false_positives = 0
     # false_negatives = 0
     for data in train_loader:
-        print("data.y size")
-        print(data.y.size())
-        print("data.y")
-        print(data.y)
+        # print("data.y size")
+        # print(data.y.size())
+        # print("data.y")
+        # print(data.y)
         data = data.to(device)
         pred = model(data)
         perd_label = pred.max(1)[1]
+        # print("pred dims")
+        # print(pred.size())
+        # print("pred")
+        # print(pred)
+        # print("data.y[:, 0].float() dims")
+        # print(data.y[:, 0].float().size())
+        # print("data.y[:, 0].float()")
+        # print(data.y[:, 0].float())
+        # print("data.y[:, 0].long()")
+        # print(data.y[:, 0].long())
         #loss = F.nll_loss(pred, data.y[:, 0].long())
         loss = F.smooth_l1_loss(pred, data.y[:, 0].float())
+        # print("pred dims")
+        # print(pred.size())
+        # print("pred")
+        # print(pred)
+        # print("data.y[:, 0].float() dims")
+        # print(data.y[:, 0].float().size())
+        # print("data.y[:, 0].float()")
+        # print(data.y[:, 0].float())
+        # pred_rows = pred.size(0)
+        # print("pred num rows")
+        # print(pred_rows)
+        # print()
+        # reshaped_target = data.y[:, 0].float().view(1, pred_rows)
+        # print("reshaped target")
+        # print(reshaped_target)
+        # print("reshaped target dims")
+        # print(reshaped_target.size())
+        # #repeated_target = reshaped_target.repeat(pred_rows)
+        # repeated_target = tile(reshaped_target, 0, pred_rows)
+        # print("repeated_target")
+        # print(repeated_target)
+        # print("repeated_target.size()")
+        # print(repeated_target.size())
+        # loss = F.smooth_l1_loss(pred, repeated_target)
+
         loss.backward()
         optimizer.step()
         correct += perd_label.eq(data.y[:, 0].long()).sum().item()
@@ -64,6 +100,14 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     # print('Train recall: ' + str(recall))
     # print('Train F1 Score: ' + str(f1_score))
     print('Loss/train_huber: ' + str(loss_train / len(train_loader)))
+
+# def tile(a, dim, n_tile):
+#     init_dim = a.size(dim)
+#     repeat_idx = [1] * a.dim()
+#     repeat_idx[dim] = n_tile
+#     a = a.repeat(*(repeat_idx))
+#     order_index = torch.LongTensor(np.concatenate([init_dim * np.arange(n_tile) + i for i in range(init_dim)]))
+#     return torch.index_select(a, dim, order_index)
 
 def test_classification(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
     model.eval()
@@ -104,12 +148,12 @@ def test_classification(model, loader, indices, device, recording, results_folde
                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
                 correct += pred.eq(data.y[:, 0].long()).sum().item()
-                if (perd_label > 0) and (data.y[:, 0].long() > 0):
-                    true_positives += 1
-                elif (perd_label > 0) and (data.y[:, 0].long() == 0):
-                    false_positives += 1
-                elif (perd_label == 0) and (data.y[:, 0].long() > 0):
-                    false_negatives += 1
+                # if (perd_label > 0) and (data.y[:, 0].long() > 0):
+                #     true_positives += 1
+                # elif (perd_label > 0) and (data.y[:, 0].long() == 0):
+                #     false_positives += 1
+                # elif (perd_label == 0) and (data.y[:, 0].long() > 0):
+                #     false_negatives += 1
 
             acc = correct / len(loader.dataset)
             # precision = true_positives / (true_positives + false_positives)

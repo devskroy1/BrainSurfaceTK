@@ -92,6 +92,8 @@ if __name__ == '__main__':
 
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
+        print("numb local features")
+        print(numb_local_features)
     else:
         numb_local_features = 0
     numb_global_features = len(global_features)

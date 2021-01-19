@@ -25,8 +25,8 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 if __name__ == '__main__':
 
     num_workers = 2
-    local_features = []
-    #local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    #local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################

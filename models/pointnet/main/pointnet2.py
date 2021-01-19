@@ -23,10 +23,6 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     model.train()
     loss_train = 0.0
     for data in train_loader:
-        print("data.y")
-        print(data.y)
-        print("data.y.size()")
-        print(data.y.size())
         data = data.to(device)
         optimizer.zero_grad()
         pred = model(data)
