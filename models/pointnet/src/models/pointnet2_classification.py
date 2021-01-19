@@ -65,10 +65,15 @@ class Net(torch.nn.Module):
         sa2_out = self.sa2_module(*sa1a_out)
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
-
+        print("x")
+        print(x)
+        print("data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)")
+        print(data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features))
+        # print("(x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features))")
+        # print((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)))
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
-            x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
+            x = torch.cat((x.float(), data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
 
         x = F.relu(self.lin1(x))
         # x = F.dropout(x, p=0.5, training=self.training)

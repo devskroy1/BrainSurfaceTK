@@ -94,6 +94,8 @@ if __name__ == '__main__':
     else:
         numb_local_features = 0
     numb_global_features = len(global_features)
+    print("number global features")
+    print(numb_global_features)
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
