@@ -75,9 +75,12 @@ class Net(torch.nn.Module):
         print(self.num_global_features)
         print("data.y")
         print(data.y)
+        dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+        data_y_global_features = data.y[:, 1:self.num_global_features + 1].type(dtype)
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
-            x = torch.cat((x.float(), data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
+            #x = torch.cat((x.float(), data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
+            x = torch.cat((x, data_y_global_features.view(-1, self.num_global_features)), 1)
 
         x = F.relu(self.lin1(x))
         # x = F.dropout(x, p=0.5, training=self.training)
