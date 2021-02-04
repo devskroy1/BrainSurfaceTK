@@ -53,11 +53,14 @@ def save_to_log(experiment_description, prefix=''):
 
     # If the log file does not exist - create it
     add_first_line = False
+    # if not os.path.exists(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'):
+    #     add_first_line = True
+    #     filename = PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'
+    #     dirname = os.path.dirname(filename)
+    #     os.makedirs(dirname)
+
     if not os.path.exists(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'):
         add_first_line = True
-        filename = PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'
-        dirname = os.path.dirname(filename)
-        os.makedirs(dirname)
 
     if add_first_line:
         with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'w+') as log_record:

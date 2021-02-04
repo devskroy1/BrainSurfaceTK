@@ -38,7 +38,7 @@ def get_graph_feature(x, k=20, idx=None):
 
     return feature
 
-
+#Todo: introduce num_local_features and num_global_features into dGCNN
 class DGCNN(nn.Module):
     def __init__(self, args, output_channels=40):
         super(DGCNN, self).__init__()
@@ -77,10 +77,12 @@ class DGCNN(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         x = get_graph_feature(x, k=self.k)
+        #Dynamic edge convolution
         x = self.conv1(x)
         x1 = x.max(dim=-1, keepdim=False)[0]
 
         x = get_graph_feature(x1, k=self.k)
+        # Dynamic edge convolution
         x = self.conv2(x)
         x2 = x.max(dim=-1, keepdim=False)[0]
 

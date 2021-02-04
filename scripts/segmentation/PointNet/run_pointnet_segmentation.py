@@ -33,9 +33,9 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "30k"
     data_type = 'white'
-    hemisphere = 'both'
+    hemisphere = 'left'
 
     # data_nativeness = 'native'
     # data_compression = "20k"
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 8
     gamma = 0.9875
     target_class = ""
     task = 'segmentation'
@@ -85,8 +85,10 @@ if __name__ == '__main__':
     ##### SPECIFY YOUR DATA_FOLDER AND FILES_ENDING #####
     # 5. Perform data processing.
     data_folder, files_ending = get_data_path(data_nativeness, data_compression, data_type, hemisphere=hemisphere)
-
-
+    print("data_folder")
+    print(data_folder)
+    print("files_ending")
+    print(files_ending)
 
     train_dataset, test_dataset, validation_dataset, train_loader, test_loader, val_loader, num_labels = data(
                                                                                                                 data_folder,
@@ -121,7 +123,9 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
-    id = '0'
+    #id = '0'
+    id = '3'
+    experiment_name = "native_white_30k_left_"
     writer = None
     if recording:
         # 9. Save to log_record.txt
@@ -131,7 +135,7 @@ if __name__ == '__main__':
 
         save_to_log(log_descr, prefix=experiment_name)
 
-        id = str(int(get_id(prefix=experiment_name)) - 1)
+        # id = str(int(get_id(prefix=experiment_name)) - 1)
 
         writer = SummaryWriter(PATH_TO_POINTNET + f'new_runs/{experiment_name}ID' + id)
         writer.add_text(f'{experiment_name} ID #{id}', comment)
@@ -142,52 +146,52 @@ if __name__ == '__main__':
     best_model_iou = 0
 
     # 10. ====== TRAINING LOOP ======
-    for epoch in range(1, 150):
-
-        # 1. Start recording time
-        start = time.time()
-
-        # 2. Make a training step
-        train(model, train_loader, epoch, device, optimizer, num_labels, writer, recording=recording)
-
-        if recording:
-            writer.add_scalar('Training Time/epoch', time.time() - start, epoch)
-
-        # 3. Validate the performance after each epoch
-        loss, acc, iou, mean_iou = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer, epoch=epoch, id=id,
-                                        experiment_name=experiment_name, recording=recording)
-        print('Epoch: {:02d}, Val Loss/nll: {}, Val Acc: {:.4f}'.format(epoch, loss, acc))
-
-        scheduler.step()
-
-        # 4. Record valiation metrics in Tensorboard
-        if recording:
-
-            # By Accuracy
-            if acc > best_val_acc:
-                best_val_acc = acc
-                best_model_acc = epoch
-                torch.save(model.state_dict(),
-                           PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_acc_model' + '.pt')
-
-            # By Mean IoU
-            if mean_iou > best_val_iou:
-                best_val_iou = mean_iou
-                best_model_iou = epoch
-                torch.save(model.state_dict(),
-                           PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt')
-
-            writer.add_scalar('Loss/val_nll', loss, epoch)
-            writer.add_scalar('Accuracy/val', acc, epoch)
-            for label, value in enumerate(iou):
-                writer.add_scalar('IoU{}/validation'.format(label), value, epoch)
-                print('\t\tValidation Label {}: {}'.format(label, value))
-
-        print('=' * 60)
+    # for epoch in range(1, 150):
+    #
+    #     # 1. Start recording time
+    #     start = time.time()
+    #
+    #     # 2. Make a training step
+    #     train(model, train_loader, epoch, device, optimizer, num_labels, writer, recording=recording)
+    #
+    #     if recording:
+    #         writer.add_scalar('Training Time/epoch', time.time() - start, epoch)
+    #
+    #     # 3. Validate the performance after each epoch
+    #     loss, acc, iou, mean_iou = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer, epoch=epoch, id=id,
+    #                                     experiment_name=experiment_name, recording=recording)
+    #     print('Epoch: {:02d}, Val Loss/nll: {}, Val Acc: {:.4f}'.format(epoch, loss, acc))
+    #
+    #     scheduler.step()
+    #
+    #     # 4. Record valiation metrics in Tensorboard
+    #     if recording:
+    #
+    #         # By Accuracy
+    #         if acc > best_val_acc:
+    #             best_val_acc = acc
+    #             best_model_acc = epoch
+    #             torch.save(model.state_dict(),
+    #                        PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_acc_model' + '.pt')
+    #
+    #         # By Mean IoU
+    #         if mean_iou > best_val_iou:
+    #             best_val_iou = mean_iou
+    #             best_model_iou = epoch
+    #             torch.save(model.state_dict(),
+    #                        PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt')
+    #
+    #         writer.add_scalar('Loss/val_nll', loss, epoch)
+    #         writer.add_scalar('Accuracy/val', acc, epoch)
+    #         for label, value in enumerate(iou):
+    #             writer.add_scalar('IoU{}/validation'.format(label), value, epoch)
+    #             print('\t\tValidation Label {}: {}'.format(label, value))
+    #
+    #     print('=' * 60)
 
     if recording:
         # save the last model
-        torch.save(model.state_dict(), PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'last_model' + '.pt')
+        #torch.save(model.state_dict(), PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'last_model' + '.pt')
 
         loss_acc, acc_acc, iou_acc, mean_iou_acc, loss_iou, acc_iou, iou_iou, mean_iou_iou = perform_final_testing(model,
                                                                                                                    writer,

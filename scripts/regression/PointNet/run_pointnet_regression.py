@@ -141,34 +141,34 @@ if __name__ == '__main__':
     best_val_loss = 999
 
     # MAIN TRAINING LOOP
-    for epoch in range(1, numb_epochs + 1):
-        start = time.time()
-        train(model, train_loader, epoch, device,
-              optimizer, scheduler, writer)
-
-        val_mse, val_l1 = test_regression(model, val_loader,
-                                          indices['Val'], device,
-                                          recording, results_folder,
-                                          epoch=epoch)
-
-        if recording:
-            writer.add_scalar('Loss/val_mse', val_mse, epoch)
-            writer.add_scalar('Loss/val_l1', val_l1, epoch)
-
-            print('Epoch: {:03d}, Test loss l1: {:.4f}'.format(epoch, val_l1))
-            end = time.time()
-            print('Time: ' + str(end - start))
-            if val_l1 < best_val_loss:
-                best_val_loss = val_l1
-                torch.save(model.state_dict(), model_dir + '/model_best.pt')
-                print('Saving Model'.center(60, '-'))
-            writer.add_scalar('Time/epoch', end - start, epoch)
-
-        test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+    # for epoch in range(1, numb_epochs + 1):
+    #     start = time.time()
+    #     train(model, train_loader, epoch, device,
+    #           optimizer, scheduler, writer)
+    #
+    #     val_mse, val_l1 = test_regression(model, val_loader,
+    #                                       indices['Val'], device,
+    #                                       recording, results_folder,
+    #                                       epoch=epoch)
+    #
+    #     if recording:
+    #         writer.add_scalar('Loss/val_mse', val_mse, epoch)
+    #         writer.add_scalar('Loss/val_l1', val_l1, epoch)
+    #
+    #         print('Epoch: {:03d}, Test loss l1: {:.4f}'.format(epoch, val_l1))
+    #         end = time.time()
+    #         print('Time: ' + str(end - start))
+    #         if val_l1 < best_val_loss:
+    #             best_val_loss = val_l1
+    #             torch.save(model.state_dict(), model_dir + '/model_best.pt')
+    #             print('Saving Model'.center(60, '-'))
+    #         writer.add_scalar('Time/epoch', end - start, epoch)
+    #
+    #     test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model
-        torch.save(model.state_dict(), model_dir + '/model_last.pt')
+        #torch.save(model.state_dict(), model_dir + '/model_last.pt')
 
         # Eval best model on test
         model.load_state_dict(torch.load(model_dir + '/model_best.pt'))
