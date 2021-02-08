@@ -4,11 +4,12 @@ pushd models/MeshCNN
 
 ## run the test and export collapses
 python3 test.py \
---dataroot datasets/brains \
+--dataroot datasets \
 --checkpoints_dir checkpoints/reg \
 --export_folder checkpoints/mesh_collapses \
 --name brains \
 --label scan_age \
+--batch_labels scan_age \
 --ncf 16 32 \
 --pool_res 3000 2750 \
 --norm group \

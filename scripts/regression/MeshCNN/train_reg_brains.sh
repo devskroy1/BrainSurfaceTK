@@ -4,7 +4,7 @@
 pushd models/MeshCNN
 
 python3 train.py \
---dataroot datasets/brains \
+--dataroot datasets \
 --checkpoints_dir checkpoints/reg \
 --export_folder checkpoints/mesh_collapses \
 --name brains \
@@ -14,6 +14,7 @@ python3 train.py \
 --verbose_plot \
 --print_freq 10 \
 --dataset_mode regression \
+--batch_labels scan_age \
 --label scan_age \
 --niter 1 \
 --niter_decay 100 \

@@ -21,6 +21,8 @@ def run_test(epoch=-1, is_val=True):
         opt.phase = "test"
 
     dataset = DataLoader(opt)
+    print("len dataset")
+    print(len(dataset))
     if opt.verbose:
         print("DEBUG testpath: ", opt.dataroot)
         print("DEBUG dataset length ", len(dataset))
@@ -28,8 +30,11 @@ def run_test(epoch=-1, is_val=True):
     writer = Writer(opt)
     writer.reset_counter()
     for i, data in enumerate(dataset):
+        print("Enumerating dataset")
         model.set_input(data)
         ncorrect, nexamples = model.test(epoch, is_val)
+        print("nexamples")
+        print(nexamples)
         if opt.verbose:
             print("DEBUG test ncorrect, nexamples ", ncorrect, nexamples)
         writer.update_counter(ncorrect, nexamples)

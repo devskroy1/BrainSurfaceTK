@@ -26,6 +26,7 @@ class BaseOptions:
         self.parser.add_argument('--ninput_edges', type=int, default=750, help='# of input edges (will include dummy edges)')
         self.parser.add_argument('--max_dataset_size', type=int, default=float("inf"), help='Maximum number of samples per epoch')
         # network params
+        self.parser.add_argument('--batch_labels', type=str, default='scan_age', help='batch labels')
         self.parser.add_argument('--batch_size', type=int, default=16, help='input batch size')
         self.parser.add_argument('--arch', type=str, default='mconvnet', help='selects network to use') #todo add choices
         self.parser.add_argument('--resblocks', type=int, default=0, help='# of res blocks')
