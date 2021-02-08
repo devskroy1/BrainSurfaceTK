@@ -1,5 +1,5 @@
 import os.path as osp
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..')
 import sys
 sys.path.append(PATH_TO_ROOT)
 import torch
@@ -18,8 +18,8 @@ print('Device: ' + str(device))
 if use_cuda:
     print('GPU: ' + str(torch.cuda.get_device_name(int(cuda_dev))))
 
-PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
-PATH_TO_VOLUME3D = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'volume3d') + '/'
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
+PATH_TO_VOLUME3D = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'volume3d') + '/'
 
 
 if __name__ == '__main__':
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     USE_GPU = True
     dtype = torch.float32
     num_of_parameters_multiplier = 10
-    num_epochs = 3
+    num_epochs = 200
     lr = 0.006882801723742766
     gamma = 0.97958263796472
     batch_size = 32
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     ################################
 
     # 6. Create tensorboard writer
-    writer = SummaryWriter(PATH_TO_VOLUME3D + f'tensorboard_runs/Subject {additional_comment} {counter}')
+    writer = SummaryWriter(PATH_TO_VOLUME3D + f'tensorboard_runs/Subject{additional_comment}-{counter}')
 
     # 7. Run TRAINING + VALIDATION after every N epochs
     model, params, final_MAE = train_validate(lr, num_of_parameters_multiplier, num_epochs,
