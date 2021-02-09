@@ -104,7 +104,6 @@ def save_to_log(model, params, fn, final_MAE, num_epochs, batch_size, lr, feats,
         log.write('\n')
         log.write(f'SUBJECT #{fn[-1]}:    Validation = {final_MAE},    ')
 
-
 def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_train, dataset_val, fn, number_here, scheduler_freq, writer):
     '''
     Main train-val loop. Train on training data and evaluate on validation data.
