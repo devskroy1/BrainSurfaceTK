@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-from torch_geometric.nn import knn_interpolate
+from torch_geometric.nn import knn, knn_interpolate
 from ..models.pointnet_randla_net import SharedMLP, LocalSpatialEncoding, AttentivePooling, LocalFeatureAggregation
 
 class SAModule(torch.nn.Module):
@@ -59,7 +59,7 @@ class FPModule(torch.nn.Module):
 
 # My network
 class Net(torch.nn.Module):
-    def __init__(self, num_classes, num_local_features, num_global_features=None):
+    def __init__(self, num_classes, num_local_features, num_neighbours=16, decimation=4, num_global_features=None):
         '''
         :param num_classes: Number of segmentation classes
         :param num_local_features: Feature per node
@@ -67,6 +67,7 @@ class Net(torch.nn.Module):
         '''
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.decimation = decimation
         super(Net, self).__init__()
         self.sa1_module = SAModule(0.2, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
@@ -77,10 +78,10 @@ class Net(torch.nn.Module):
         self.fp1_module = FPModule(3, MLP([128 + num_local_features, 128, 128, 128]))
 
         self.encoder = nn.ModuleList([
-            LocalFeatureAggregation(8, 16, 16, self.device),
-            LocalFeatureAggregation(32, 64, 16, self.device),
-            LocalFeatureAggregation(128, 128, 16, self.device),
-            LocalFeatureAggregation(256, 256, 16, self.device)
+            LocalFeatureAggregation(8, 16, num_neighbours, self.device),
+            LocalFeatureAggregation(32, 64, num_neighbours, self.device),
+            LocalFeatureAggregation(128, 128, num_neighbours, self.device),
+            LocalFeatureAggregation(256, 256, num_neighbours, self.device)
         ])
 
         self.decoder = nn.ModuleList([
@@ -95,6 +96,9 @@ class Net(torch.nn.Module):
         self.lin3 = torch.nn.Linear(64, num_classes)
 
     def forward(self, data):
+        N = data.size(1)
+        d = self.decimation
+
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)
@@ -103,6 +107,39 @@ class Net(torch.nn.Module):
         fp3_out = self.fp3_module(*sa3_out, *sa2_out)
         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
+
+        decimation_ratio = 1
+        coords = data[..., :3].clone().cpu()
+        permutation = torch.randperm(N)
+        coords = coords[:,permutation]
+        x = x[:,:,permutation]
+
+        for lfa in self.encoder:
+            # at iteration i, x.shape = (B, N//(d**i), d_in)
+            x = lfa(coords[:,:N//self.decimation_ratio], x)
+            x_stack.append(x.clone())
+            decimation_ratio *= d
+            x = x[:, :, :N//decimation_ratio]
+
+        for mlp in self.decoder:
+            neighbors, _ = knn(
+                coords[:, :N//decimation_ratio].cpu().contiguous(), # original set
+                coords[:, :d*N//decimation_ratio].cpu().contiguous(), # upsampled set
+                1
+            ) # shape (B, N, 1)
+            neighbors = neighbors.to(self.device)
+
+            extended_neighbors = neighbors.unsqueeze(1).expand(-1, x.size(1), -1, 1)
+
+            x_neighbors = torch.gather(x, -2, extended_neighbors)
+
+            x = torch.cat((x_neighbors, x_stack.pop()), dim=1)
+
+            x = mlp(x)
+
+            decimation_ratio //= d
+
+        x = x[:, :, torch.argsort(permutation)]
 
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=0.5, training=self.training)
