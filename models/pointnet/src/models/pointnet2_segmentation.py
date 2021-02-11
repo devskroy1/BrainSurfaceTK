@@ -4,7 +4,7 @@ from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
 from torch_geometric.nn import knn_interpolate
-
+from ..models.pointnet_randla_net import SharedMLP, LocalSpatialEncoding, AttentivePooling, LocalFeatureAggregation
 
 class SAModule(torch.nn.Module):
     def __init__(self, ratio, r, nn):
@@ -65,6 +65,8 @@ class Net(torch.nn.Module):
         :param num_local_features: Feature per node
         :param num_global_features: NOT USED
         '''
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         super(Net, self).__init__()
         self.sa1_module = SAModule(0.2, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
@@ -73,6 +75,20 @@ class Net(torch.nn.Module):
         self.fp3_module = FPModule(1, MLP([1024 + 256, 256, 256]))
         self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
         self.fp1_module = FPModule(3, MLP([128 + num_local_features, 128, 128, 128]))
+
+        self.encoder = nn.ModuleList([
+            LocalFeatureAggregation(8, 16, 16, self.device),
+            LocalFeatureAggregation(32, 64, 16, self.device),
+            LocalFeatureAggregation(128, 128, 16, self.device),
+            LocalFeatureAggregation(256, 256, 16, self.device)
+        ])
+
+        self.decoder = nn.ModuleList([
+            SharedMLP(1024, 512, **decoder_kwargs),
+            SharedMLP(512, 256, **decoder_kwargs),
+            SharedMLP(256, 128, **decoder_kwargs),
+            SharedMLP(128, 128, **decoder_kwargs)
+        ])
 
         self.lin1 = torch.nn.Linear(128, 128)
         self.lin2 = torch.nn.Linear(128, 64)
