@@ -37,6 +37,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     if writer is not None:
         writer.add_scalar('Loss/train_mse', loss_train / len(train_loader), epoch)
 
+    return prediction
 
 def test_regression(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
     model.eval()

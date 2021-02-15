@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.main.pointnet2 import train, test_regression
 
-from models.pointnet.src.utils import get_data_path, data
+from models.pointnet.src.utils import get_data_path, data, drop_points
 
 PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
@@ -87,6 +87,8 @@ if __name__ == '__main__':
         hemisphere=hemisphere
     )
 
+    print("train_dataset[0]")
+    print(train_dataset[0])
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
     else:
@@ -139,11 +141,11 @@ if __name__ == '__main__':
     #################################################
 
     best_val_loss = 999
-
+    drop_points(train_loader)
     # MAIN TRAINING LOOP
     for epoch in range(1, numb_epochs + 1):
         start = time.time()
-        train(model, train_loader, epoch, device,
+        prediction = train(model, train_loader, epoch, device,
               optimizer, scheduler, writer)
 
         val_mse, val_l1 = test_regression(model, val_loader,
@@ -166,6 +168,7 @@ if __name__ == '__main__':
 
         test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
+    # drop_points(train_loader)
     if recording:
         # save the last model
         torch.save(model.state_dict(), model_dir + '/model_last.pt')

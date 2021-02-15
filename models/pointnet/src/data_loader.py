@@ -109,6 +109,8 @@ class OurDataset(InMemoryDataset):
 
         # If processed_paths exist, return without having to process again
         self.data, self.slices = torch.load(path)
+        print("Inside OurDataset. self.data")
+        print(self.data)
 
 
     @property
@@ -303,7 +305,8 @@ class OurDataset(InMemoryDataset):
 
                 # Get points
                 points = torch.tensor(mesh.points)
-
+                print("points shape")
+                print(points.shape)
                 if self.add_faces:
                     # Get faces
                     n_faces = mesh.n_cells

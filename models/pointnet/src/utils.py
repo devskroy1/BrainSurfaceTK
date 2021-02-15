@@ -82,6 +82,18 @@ def get_grid_search_local_features(local_feats):
 
     return local_fs
 
+def drop_points(data_loader, i):
+    for data in data_loader:
+        points = data.pos
+        print("type points")
+        print(type(points))
+        print("points dims")
+        print(points.shape)
+        print("points")
+        print(points)
+        points = torch.cat([points[0:(i*1000)], points[(i + 1)*1000:]])
+        # data.pos = data.pos[1000:]
+        break
 
 def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left'):
 
