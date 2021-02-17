@@ -59,6 +59,10 @@ class BrainNetworkDataset(Dataset):
             print("Prepared dataset already exists in: ", save_path)
         else:
             print("Generating Dataset")
+            print("Files path")
+            print(files_path)
+            print("save_path")
+            print(save_path)
             self.generate_dataset(files_path, meta_data_filepath, save_path, index_split_pickle_fp)
 
         # Now collect all required filepaths containing data which will be fed to the GNN
@@ -104,6 +108,8 @@ class BrainNetworkDataset(Dataset):
 
         # Make dirs to store data
         train_save_path = self.update_save_path(save_path, "train")
+        print("train_save_path")
+        print(train_save_path)
         if not os.path.exists(train_save_path):
             os.makedirs(train_save_path)
         val_save_path = self.update_save_path(save_path, "val")
@@ -163,6 +169,8 @@ class BrainNetworkDataset(Dataset):
                 test_indices,
             ), total=len(test_fps))]
 
+        print("tr_results")
+        print(tr_results)
         if (None in tr_results) or (None in val_results) or (None in te_results):
             print("Error during graph building")
 
@@ -174,6 +182,9 @@ class BrainNetworkDataset(Dataset):
         if len(test_fps) > 0:
             self.normalise_dataset(test_save_path)
 
+    # def save_paths(self, ):
+
+
     def process_file_target(self, file_to_load, age, save_path, filename=None):
         """
         Process the mesh, (vtk PolyData) in the file_to_load (.vtk) and convert it to a graph before pickling (graph, target)
@@ -182,6 +193,7 @@ class BrainNetworkDataset(Dataset):
         :param save_path: directory for the processed sample to be saved
         :return: 1 meaning success
         """
+        print("Inside process_file_target()")
         if filename is None:
             fp_save_path = os.path.join(save_path, os.path.basename(file_to_load).replace(".vtk", ".pickle"))
         else:
@@ -206,6 +218,9 @@ class BrainNetworkDataset(Dataset):
         g.add_edges(g.nodes(), g.nodes())  # Required Trick --> see DGL discussions somewhere sorry
         g.edata['features'] = self.get_edge_data(mesh, src, dst, g)
 
+        print("About to call save_data_with_pickle()")
+        print("fp_save_path")
+        print(fp_save_path)
         self._save_data_with_pickle(fp_save_path, (g, age))
 
         return 1
@@ -282,7 +297,7 @@ class BrainNetworkDataset(Dataset):
         files_to_load = list()
         for fn in potential_files:
             participant_id, session_id = fn.split("_")[:2]
-            records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+            records = df[(df.participant_id == participant_id) & (df.session_id == session_id)]
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
@@ -417,11 +432,15 @@ class BrainNetworkDataset(Dataset):
         """
         files_to_load = [os.path.join(data_path, file_to_load) for file_to_load in os.listdir(data_path) if
                          file_to_load.endswith(".pickle")]
+        print("files_to_load")
+        print(files_to_load)
         # TODO: add safeguard for when split percentage is 0. or 1.
         self.normalise_nodes_(files_to_load)
         self.normalise_edges_(files_to_load)
         targets_mu, targets_std = self.normalise_targets_(files_to_load)
+        print("About to save mu_std pickle file")
         self._save_data_with_pickle(os.path.join(data_path, "mu_std.pickle"), (targets_mu, targets_std))
+        print("Saved mu_std pickle file")
 
     def normalise_nodes_(self, files_to_load):
         """
@@ -546,8 +565,17 @@ class BrainNetworkDataset(Dataset):
         :param data: data to be pickled, typically of form (graph, target)
         :return: None
         """
+
+        print("Inside _save_data_with_pickle()")
+        print(filepath)
+        print(data)
+        print("About to dump pickle contents")
         with open(filepath, "wb") as f:
+            print("file")
+            print(f)
             pickle.dump(data, f)
+
+        print("Dumped pickle contents")
 
     def load_sample_from_pickle(self, filepath):
         """

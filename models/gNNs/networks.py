@@ -1,5 +1,6 @@
 import dgl
 import torch.nn as nn
+import torch.nn.functional as F
 from dgl.nn.pytorch import GraphConv
 
 from models.gNNs.layers import GNNLayer
@@ -8,14 +9,22 @@ from models.gNNs.layers import GNNLayer
 class BasicGCNRegressor(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes):
         super(BasicGCNRegressor, self).__init__()
+        self.dropout = 0.5
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv2(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv3(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv4(graph, hidden)
         with graph.local_scope():
             graph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.
@@ -27,18 +36,25 @@ class BasicGCNRegressor(nn.Module):
 class BasicGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes):
         super(BasicGCNSegmentation, self).__init__()
+        self.dropout = 0.5
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.conv3 = GraphConv(hidden_dim, n_classes, activation=None)
+        self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv5 = GraphConv(hidden_dim, n_classes, activation=None)
 
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv2(graph, hidden)
-        return self.conv3(graph, hidden)
-
-
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv3(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv4(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        return self.conv5(graph, hidden)
 
 class GNNModel(nn.Module):
     def __init__(self, input_node_dim, input_edge_dim, hidden_dim1, hidden_dim2, out_dim):
