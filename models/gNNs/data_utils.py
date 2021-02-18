@@ -1,5 +1,6 @@
 import os
 import pickle
+from multiprocessing.context import Process
 from concurrent.futures import ProcessPoolExecutor
 from itertools import cycle
 
@@ -119,6 +120,79 @@ class BrainNetworkDataset(Dataset):
         if not os.path.exists(test_save_path):
             os.makedirs(test_save_path)
 
+        print("train_fps")
+        print(train_fps)
+        print("train_targets")
+        print(train_targets)
+        t1 = Process(target=self.save_paths, args=(train_fps, train_targets, train_save_path, train_indices, val_fps, val_targets,
+                  val_save_path, val_indices, test_fps, test_targets, test_save_path, test_indices))
+        t1.start()
+        t1.join()
+        # # Convert each mesh to a graph and save
+        # if self.max_workers > 0:
+        #     with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
+        #         tr_results = [r for r in tqdm(executor.map(
+        #             self.process_file_target,
+        #             train_fps,
+        #             train_targets,
+        #             cycle((train_save_path,)),
+        #             train_indices,
+        #             chunksize=32
+        #         ), total=len(train_fps))]
+        #         val_results = [r for r in tqdm(executor.map(
+        #             self.process_file_target,
+        #             val_fps,
+        #             val_targets,
+        #             cycle((val_save_path,)),
+        #             val_indices,
+        #             chunksize=32
+        #         ), total=len(val_fps))]
+        #         te_results = [r for r in tqdm(executor.map(
+        #             self.process_file_target,
+        #             test_fps,
+        #             test_targets,
+        #             cycle((test_save_path,)),
+        #             test_indices,
+        #             chunksize=32
+        #         ), total=len(test_fps))]
+        # else:
+        #     tr_results = [r for r in tqdm(map(
+        #         self.process_file_target,
+        #         train_fps,
+        #         train_targets,
+        #         cycle((train_save_path,)),
+        #         train_indices
+        #     ), total=len(train_fps))]
+        #     val_results = [r for r in tqdm(map(
+        #         self.process_file_target,
+        #         val_fps,
+        #         val_targets,
+        #         cycle((val_save_path,)),
+        #         val_indices,
+        #     ), total=len(val_fps))]
+        #     te_results = [r for r in tqdm(map(
+        #         self.process_file_target,
+        #         test_fps,
+        #         test_targets,
+        #         cycle((test_save_path,)),
+        #         test_indices,
+        #     ), total=len(test_fps))]
+
+        print("tr_results")
+        print(tr_results)
+        if (None in tr_results) or (None in val_results) or (None in te_results):
+            print("Error during graph building")
+
+        # Normalise the two datasets separately
+        # TODO: save guard for when training_split is 0. or 1. otherwise we'll get an error
+        self.normalise_dataset(train_save_path)
+        if len(val_fps) > 0:
+            self.normalise_dataset(val_save_path)
+        if len(test_fps) > 0:
+            self.normalise_dataset(test_save_path)
+
+    def save_paths(self, train_fps, train_targets, train_save_path, train_indices, val_fps, val_targets,
+                  val_save_path, val_indices, test_fps, test_targets, test_save_path, test_indices):
         # Convert each mesh to a graph and save
         if self.max_workers > 0:
             with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
@@ -168,22 +242,7 @@ class BrainNetworkDataset(Dataset):
                 cycle((test_save_path,)),
                 test_indices,
             ), total=len(test_fps))]
-
-        print("tr_results")
-        print(tr_results)
-        if (None in tr_results) or (None in val_results) or (None in te_results):
-            print("Error during graph building")
-
-        # Normalise the two datasets separately
-        # TODO: save guard for when training_split is 0. or 1. otherwise we'll get an error
-        self.normalise_dataset(train_save_path)
-        if len(val_fps) > 0:
-            self.normalise_dataset(val_save_path)
-        if len(test_fps) > 0:
-            self.normalise_dataset(test_save_path)
-
-    # def save_paths(self, ):
-
+        return tr_results, val_results, te_results
 
     def process_file_target(self, file_to_load, age, save_path, filename=None):
         """
@@ -305,6 +364,13 @@ class BrainNetworkDataset(Dataset):
 
     def fetch_data_using_manual_split(self, load_path, meta_data_file_path, index_split_pickle_fp):
         # "names_04152020_noCrashSubs.pk"
+        print("Inside fetch_data_using_manual_split")
+        print("load_path")
+        print(load_path)
+        print("meta data file path")
+        print(meta_data_file_path)
+        print("index_split_pickle_fp")
+        print(index_split_pickle_fp)
         with open(index_split_pickle_fp, "rb") as f:
             indices = pickle.load(f)
         train_indices = indices["Train"]
@@ -341,6 +407,9 @@ class BrainNetworkDataset(Dataset):
                     index_order.append(index)
                     files_to_load.append(os.path.join(load_path, fn))
                     targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
+        print("Inside get_file_paths_using_indices")
+        print("files_to_load")
+        print(files_to_load)
         return files_to_load, targets, index_order
 
     @staticmethod
