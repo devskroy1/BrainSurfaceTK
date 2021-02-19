@@ -111,7 +111,10 @@ class OurDataset(InMemoryDataset):
         self.data, self.slices = torch.load(path)
         print("Inside OurDataset. self.data")
         print(self.data)
-
+        print("self.data.pos")
+        print(self.data.pos)
+        print("self.data.x")
+        print(self.data.x)
 
     @property
     def raw_file_names(self):

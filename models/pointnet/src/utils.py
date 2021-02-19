@@ -92,7 +92,7 @@ def drop_points(data_loader, i):
         print("points")
         print(points)
         points = torch.cat([points[0:(i*1000)], points[(i + 1)*1000:]])
-        # data.pos = data.pos[1000:]
+        data.pos = points
         break
 
 def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left'):
@@ -263,7 +263,8 @@ def data(data_folder, files_ending, data_type, target_class, task, REPROCESS, lo
                                val=False, indices=indices['Train'],
                                data_folder=data_folder,
                                files_ending=files_ending)
-
+    print("len(train_dataset)")
+    print(len(train_dataset))
     test_dataset = OurDataset(path, train=False, transform=transform, pre_transform=pre_transform,
                               target_class=target_class, task=task, reprocess=REPROCESS,
                               local_features=local_features, global_feature=global_features,

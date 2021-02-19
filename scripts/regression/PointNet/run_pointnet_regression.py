@@ -12,6 +12,7 @@ import csv
 
 import torch
 from torch.optim.lr_scheduler import StepLR
+from torch.utils.data import ConcatDataset, Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pointnet.src.models.pointnet2_regression_v2 import Net
@@ -87,8 +88,18 @@ if __name__ == '__main__':
         hemisphere=hemisphere
     )
 
+    print("test_dataset[0].x.size(0)")
+    print(test_dataset[0].x.size(0))
+    print("test_dataset[1].x.size(0)")
+    print(test_dataset[1].x.size(0))
+    print("len(test_dataset)")
+    print(len(test_dataset))
+
     print("train_dataset[0]")
     print(train_dataset[0])
+    print("len(train_dataset[0])")
+    print(len(train_dataset[0]))
+
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
     else:
@@ -141,8 +152,10 @@ if __name__ == '__main__':
     #################################################
 
     best_val_loss = 999
-    drop_points(train_loader)
     # MAIN TRAINING LOOP
+    #TODO: Remove this
+    # drop_points(model, test_loader, 0)
+
     for epoch in range(1, numb_epochs + 1):
         start = time.time()
         prediction = train(model, train_loader, epoch, device,
@@ -168,6 +181,30 @@ if __name__ == '__main__':
 
         test_regression(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
 
+        num_test_points = test_dataset[0].x.size(0)
+        complete_list_indices = range(num_test_points)
+        complete_list_indices_tensor = torch.Tensor(complete_list_indices)
+        max_i = num_test_points / 1000
+
+        for i in range(max_i):
+            list_datasets = []
+            for d in range(len(test_dataset)):
+                valid_indices = torch.cat(complete_list_indices_tensor[0:(i * 1000)],
+                                          complete_list_indices_tensor[(i + 1) * 1000:])
+                subset_x = Subset(test_dataset[d].x, valid_indices)
+                subset_pos = Subset(test_dataset[d].pos, valid_indices)
+                test_dataset_combined = ConcatDataset([subset_x, subset_pos, test_dataset[d].y])
+                list_datasets.append(test_dataset_combined)
+            test_dataset_combined = ConcatDataset(list_datasets)
+            test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False,
+                                                 num_workers=num_workers)
+            for dropped_data, data in zip(test_dataloader_dropped, test_loader):
+                pred_dropped = model(dropped_data)
+                original_pred = model(data)
+                importance = abs(pred_dropped - original_pred)
+
+    #Keep this here
+    #drop_points(train_loader, model)
     # drop_points(train_loader)
     if recording:
         # save the last model
