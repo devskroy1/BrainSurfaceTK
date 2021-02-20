@@ -156,6 +156,56 @@ if __name__ == '__main__':
     #TODO: Remove this
     # drop_points(model, test_loader, 0)
 
+    num_test_points = test_dataset[0].x.size(0)
+    complete_list_indices = range(num_test_points)
+    complete_list_indices_tensor = torch.Tensor(complete_list_indices)
+    max_i = int(num_test_points / 1000)
+
+    for i in range(max_i):
+        list_datasets = []
+        for d in range(len(test_dataset)):
+            print("len(test_dataset[d].x)")
+            print(len(test_dataset[d].x))
+            valid_indices = torch.cat((complete_list_indices_tensor[0:(i * 1000)],
+                                      complete_list_indices_tensor[(i + 1) * 1000:]))
+            # print("valid_indices")
+            # print(valid_indices)
+            # subset_x = Subset(test_dataset[d].x, valid_indices)
+            # print("len(subset_x)")
+            # print(len(subset_x))
+            # subset_pos = Subset(test_dataset[d].pos, valid_indices)
+
+            test_subset = Subset(test_dataset[d], valid_indices)
+            print("test_subset")
+            print(test_subset)
+            print("len(test_subset)")
+            print(len(test_subset))
+            #test_dataset_combined = ConcatDataset([subset_x, subset_pos, test_dataset[d].y])
+            # print("test_dataset_combined.x")
+            # print(test_dataset_combined.x)
+            # print("test_dataset_combined.pos")
+            # print(test_dataset_combined.pos)
+            # print("test_dataset_combined.y")
+            # print(test_dataset_combined.y)
+            list_datasets.append(test_subset)
+        test_dataset_combined = ConcatDataset(list_datasets)
+        print("test_dataset_combined")
+        print(test_dataset_combined)
+        test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False,
+                                             num_workers=num_workers)
+        print("test_dataloader_dropped")
+        print(test_dataloader_dropped)
+        # for dropped_data, data in zip(test_dataloader_dropped, test_loader):
+        for dropped_data in test_dataloader_dropped:
+            print("dropped data")
+            print(dropped_data)
+            pred_dropped = model(dropped_data)
+            print("pred_dropped")
+            print(pred_dropped)
+
+            # original_pred = model(data)
+            # importance = abs(pred_dropped - original_pred)
+
     for epoch in range(1, numb_epochs + 1):
         start = time.time()
         prediction = train(model, train_loader, epoch, device,
