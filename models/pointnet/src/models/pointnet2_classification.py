@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-
+from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction
 
 class SAModule(torch.nn.Module):
     def __init__(self, ratio, r, nn):
@@ -47,6 +47,31 @@ class Net(torch.nn.Module):
 
         self.num_global_features = num_global_features
 
+        #Start of code from pointASNL repo
+        batch_size = point_cloud.get_shape()[0].value
+        end_points = {}
+        if use_normal:
+            l0_xyz = tf.slice(point_cloud, [0, 0, 0], [-1, -1, 3])
+            l0_points = tf.slice(point_cloud, [0, 0, 3], [-1, -1, 3])
+        else:
+            l0_xyz = point_cloud
+            l0_points = point_cloud
+
+        end_points['l0_xyz'] = l0_xyz
+        as_neighbor = [12, 12] if adaptive_sample else [0, 0]
+
+        # Set abstraction layers: pointASNL
+        l1_xyz, l1_points = PointASNLSetAbstraction(l0_xyz, l0_points, npoint=512, nsample=32, mlp=[64, 64, 128],
+                                                    is_training=is_training, bn_decay=bn_decay,
+                                                    weight_decay=weight_decay, scope='layer1',
+                                                    as_neighbor=as_neighbor[0])
+        end_points['l1_xyz'] = l1_xyz
+        l2_xyz, l2_points = PointASNLSetAbstraction(l1_xyz, l1_points, npoint=128, nsample=64, mlp=[128, 128, 256],
+                                                    is_training=is_training, bn_decay=bn_decay,
+                                                    weight_decay=weight_decay, scope='layer2',
+                                                    as_neighbor=as_neighbor[1])
+
+        #End of code from ASNL repo
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
         self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
         self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
