@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch.utils.tensorboard import SummaryWriter
@@ -84,6 +85,12 @@ class Net(torch.nn.Module):
             LocalFeatureAggregation(256, 256, num_neighbours, self.device)
         ])
 
+        decoder_kwargs = dict(
+            transpose=True,
+            bn=True,
+            activation_fn=nn.ReLU()
+        )
+
         self.decoder = nn.ModuleList([
             SharedMLP(1024, 512, **decoder_kwargs),
             SharedMLP(512, 256, **decoder_kwargs),
@@ -96,7 +103,7 @@ class Net(torch.nn.Module):
         self.lin3 = torch.nn.Linear(64, num_classes)
 
     def forward(self, data):
-        N = data.size(1)
+        N = data.x.size(0)
         d = self.decimation
 
         sa0_out = (data.x, data.pos, data.batch)
@@ -109,17 +116,20 @@ class Net(torch.nn.Module):
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
 
         decimation_ratio = 1
-        coords = data[..., :3].clone().cpu()
+        coords = data.pos.clone().cpu()
+        x = data.x.clone().cpu()
+        print("coords")
+        print(coords)
         permutation = torch.randperm(N)
-        coords = coords[:,permutation]
-        x = x[:,:,permutation]
+        coords = coords[permutation]
+        x = x[permutation]
 
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
-            x = lfa(coords[:,:N//self.decimation_ratio], x)
+            x = lfa(coords[:N//decimation_ratio], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
-            x = x[:, :, :N//decimation_ratio]
+            x = x[:N//decimation_ratio]
 
         for mlp in self.decoder:
             neighbors, _ = knn(

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch_points_kernels import knn
 
 class SharedMLP(nn.Module):
     def __init__(
