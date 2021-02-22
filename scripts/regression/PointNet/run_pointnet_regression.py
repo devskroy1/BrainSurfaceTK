@@ -163,10 +163,11 @@ if __name__ == '__main__':
 
     for i in range(max_i):
         list_datasets = []
+        #Feature importance: use segmentn region dropping instead of points dropping
         #Ensure you are dropping for each subject
         #Could use features of segmentn, drop labels of segmentn
         #Could use points under any region in the segmentn.
-        #Extract points for which label == 1. Get index by label and drop points by label.
+        #Extract points for which label == 1, label == 39 etc. Get index by label and drop points by label.
         #Might need padding if point size is not the same.
         for d in range(len(test_dataset)):
             print("len(test_dataset[d].x)")
