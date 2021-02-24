@@ -115,6 +115,8 @@ class OurDataset(InMemoryDataset):
         print(self.data.pos)
         print("self.data.x")
         print(self.data.x)
+        print("self.data.y")
+        print(self.data.y)
 
     @property
     def raw_file_names(self):

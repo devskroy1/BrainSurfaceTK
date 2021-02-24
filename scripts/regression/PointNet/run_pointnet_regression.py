@@ -25,7 +25,8 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 
 if __name__ == '__main__':
 
-    num_workers = 2
+    #num_workers = 2
+    num_workers = 1
     local_features = []
     global_features = []
 
@@ -161,19 +162,27 @@ if __name__ == '__main__':
     complete_list_indices_tensor = torch.Tensor(complete_list_indices)
     max_i = int(num_test_points / 1000)
 
-    for i in range(max_i):
-        list_datasets = []
         #Feature importance: use segmentn region dropping instead of points dropping
         #Ensure you are dropping for each subject
         #Could use features of segmentn, drop labels of segmentn
         #Could use points under any region in the segmentn.
         #Extract points for which label == 1, label == 39 etc. Get index by label and drop points by label.
         #Might need padding if point size is not the same.
+    for label in range(num_labels):
+        list_datasets = []
         for d in range(len(test_dataset)):
+            valid_indices = []
+            test_dataset_label = test_dataset[d].y
+            print("test_dataset label")
+            print(test_dataset[d].y)
             print("len(test_dataset[d].x)")
             print(len(test_dataset[d].x))
-            valid_indices = torch.cat((complete_list_indices_tensor[0:(i * 1000)],
-                                      complete_list_indices_tensor[(i + 1) * 1000:]))
+            num_points_subject = len(test_dataset[d].x)
+            for j in range(num_points_subject):
+                if test_dataset_label[j] != label:
+                    valid_indices.append(j)
+            # valid_indices = torch.cat((complete_list_indices_tensor[0:(i * 1000)],
+            #                           complete_list_indices_tensor[(i + 1) * 1000:]))
             # print("valid_indices")
             # print(valid_indices)
             # subset_x = Subset(test_dataset[d].x, valid_indices)
@@ -182,23 +191,12 @@ if __name__ == '__main__':
             # subset_pos = Subset(test_dataset[d].pos, valid_indices)
 
             test_subset = Subset(test_dataset[d], valid_indices)
-            print("test_subset")
-            print(test_subset)
-            print("len(test_subset)")
-            print(len(test_subset))
-            #test_dataset_combined = ConcatDataset([subset_x, subset_pos, test_dataset[d].y])
-            # print("test_dataset_combined.x")
-            # print(test_dataset_combined.x)
-            # print("test_dataset_combined.pos")
-            # print(test_dataset_combined.pos)
-            # print("test_dataset_combined.y")
-            # print(test_dataset_combined.y)
             list_datasets.append(test_subset)
         test_dataset_combined = ConcatDataset(list_datasets)
         print("test_dataset_combined")
         print(test_dataset_combined)
         test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False,
-                                             num_workers=num_workers)
+                                         num_workers=num_workers)
         print("test_dataloader_dropped")
         print(test_dataloader_dropped)
         # for dropped_data, data in zip(test_dataloader_dropped, test_loader):

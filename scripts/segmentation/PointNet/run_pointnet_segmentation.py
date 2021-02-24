@@ -21,7 +21,8 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 
 if __name__ == '__main__':
 
-    num_workers = 2
+    #num_workers = 2
+    num_workers = 1
 
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = None
@@ -140,6 +141,17 @@ if __name__ == '__main__':
     best_val_iou = 0
     best_model_acc = 0
     best_model_iou = 0
+
+    print("len(train_dataset)")
+    print(len(train_dataset))
+    print("train_dataset")
+    print(train_dataset)
+    #Feature importance code
+    # for d in range(len(train_dataset)):
+    #
+    #     # print(train_dataset[d])
+    #     # label = train_dataset[d].y
+
 
     # 10. ====== TRAINING LOOP ======
     for epoch in range(1, 150):
