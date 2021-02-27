@@ -43,9 +43,10 @@ class BrainNetworkDataset(Dataset):
         self.meta_data_path = meta_data_filepath
         # Number of workers for loading
         self.max_workers = max_workers
-
+        print("features")
+        print(features)
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 
@@ -59,11 +60,11 @@ class BrainNetworkDataset(Dataset):
         if os.path.exists(self.update_save_path(save_path, dataset)):
             print("Prepared dataset already exists in: ", save_path)
         else:
-            print("Generating Dataset")
-            print("Files path")
-            print(files_path)
-            print("save_path")
-            print(save_path)
+            # print("Generating Dataset")
+            # print("Files path")
+            # print(files_path)
+            # print("save_path")
+            # print(save_path)
             self.generate_dataset(files_path, meta_data_filepath, save_path, index_split_pickle_fp)
 
         # Now collect all required filepaths containing data which will be fed to the GNN
@@ -87,6 +88,10 @@ class BrainNetworkDataset(Dataset):
         if index_split_pickle_fp is None:
             # Find files in Imperial Folder & Corresponding targets
             files_to_load, targets = self.search_for_files_and_targets(files_path, meta_data_filepath)
+            # print("files_to_load..before split_dataset")
+            # print(files_to_load)
+            # print("targets")
+            # print(targets)
             # Split the dataset here
             (train_fps, train_targets), \
             (val_fps, val_targets), \
@@ -109,8 +114,6 @@ class BrainNetworkDataset(Dataset):
 
         # Make dirs to store data
         train_save_path = self.update_save_path(save_path, "train")
-        print("train_save_path")
-        print(train_save_path)
         if not os.path.exists(train_save_path):
             os.makedirs(train_save_path)
         val_save_path = self.update_save_path(save_path, "val")
@@ -120,14 +123,32 @@ class BrainNetworkDataset(Dataset):
         if not os.path.exists(test_save_path):
             os.makedirs(test_save_path)
 
-        print("train_fps")
-        print(train_fps)
-        print("train_targets")
-        print(train_targets)
-        t1 = Process(target=self.save_paths, args=(train_fps, train_targets, train_save_path, train_indices, val_fps, val_targets,
-                  val_save_path, val_indices, test_fps, test_targets, test_save_path, test_indices))
-        t1.start()
-        t1.join()
+        tr_results = [r for r in tqdm(map(
+                    self.process_file_target,
+                    train_fps,
+                    train_targets,
+                    cycle((train_save_path,)),
+                    train_indices
+                ), total=len(train_fps))]
+        val_results = [r for r in tqdm(map(
+            self.process_file_target,
+            val_fps,
+            val_targets,
+            cycle((val_save_path,)),
+            val_indices,
+        ), total=len(val_fps))]
+        te_results = [r for r in tqdm(map(
+            self.process_file_target,
+            test_fps,
+            test_targets,
+            cycle((test_save_path,)),
+            test_indices,
+        ), total=len(test_fps))]
+
+        # t1 = Process(target=self.save_paths, args=(train_fps, train_targets, train_save_path, train_indices, val_fps, val_targets,
+        #           val_save_path, val_indices, test_fps, test_targets, test_save_path, test_indices))
+        # t1.start()
+        # t1.join()
         # # Convert each mesh to a graph and save
         # if self.max_workers > 0:
         #     with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
@@ -191,59 +212,6 @@ class BrainNetworkDataset(Dataset):
         if len(test_fps) > 0:
             self.normalise_dataset(test_save_path)
 
-    def save_paths(self, train_fps, train_targets, train_save_path, train_indices, val_fps, val_targets,
-                  val_save_path, val_indices, test_fps, test_targets, test_save_path, test_indices):
-        # Convert each mesh to a graph and save
-        if self.max_workers > 0:
-            with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
-                tr_results = [r for r in tqdm(executor.map(
-                    self.process_file_target,
-                    train_fps,
-                    train_targets,
-                    cycle((train_save_path,)),
-                    train_indices,
-                    chunksize=32
-                ), total=len(train_fps))]
-                val_results = [r for r in tqdm(executor.map(
-                    self.process_file_target,
-                    val_fps,
-                    val_targets,
-                    cycle((val_save_path,)),
-                    val_indices,
-                    chunksize=32
-                ), total=len(val_fps))]
-                te_results = [r for r in tqdm(executor.map(
-                    self.process_file_target,
-                    test_fps,
-                    test_targets,
-                    cycle((test_save_path,)),
-                    test_indices,
-                    chunksize=32
-                ), total=len(test_fps))]
-        else:
-            tr_results = [r for r in tqdm(map(
-                self.process_file_target,
-                train_fps,
-                train_targets,
-                cycle((train_save_path,)),
-                train_indices
-            ), total=len(train_fps))]
-            val_results = [r for r in tqdm(map(
-                self.process_file_target,
-                val_fps,
-                val_targets,
-                cycle((val_save_path,)),
-                val_indices,
-            ), total=len(val_fps))]
-            te_results = [r for r in tqdm(map(
-                self.process_file_target,
-                test_fps,
-                test_targets,
-                cycle((test_save_path,)),
-                test_indices,
-            ), total=len(test_fps))]
-        return tr_results, val_results, te_results
-
     def process_file_target(self, file_to_load, age, save_path, filename=None):
         """
         Process the mesh, (vtk PolyData) in the file_to_load (.vtk) and convert it to a graph before pickling (graph, target)
@@ -252,7 +220,6 @@ class BrainNetworkDataset(Dataset):
         :param save_path: directory for the processed sample to be saved
         :return: 1 meaning success
         """
-        print("Inside process_file_target()")
         if filename is None:
             fp_save_path = os.path.join(save_path, os.path.basename(file_to_load).replace(".vtk", ".pickle"))
         else:
@@ -277,9 +244,6 @@ class BrainNetworkDataset(Dataset):
         g.add_edges(g.nodes(), g.nodes())  # Required Trick --> see DGL discussions somewhere sorry
         g.edata['features'] = self.get_edge_data(mesh, src, dst, g)
 
-        print("About to call save_data_with_pickle()")
-        print("fp_save_path")
-        print(fp_save_path)
         self._save_data_with_pickle(fp_save_path, (g, age))
 
         return 1
@@ -314,12 +278,32 @@ class BrainNetworkDataset(Dataset):
         :param train_split_per:
         :return: (train_samples, train_targets), (test_samples, test_targets)
         """
+        # print("Inside split_dataset()")
+        # print("len(samples) * train_val_test_split[0]")
+        # print(len(samples) * train_val_test_split[0])
+        # print("len(samples) * train_val_test_split[1]")
+        # print(len(samples) * train_val_test_split[1])
+        # print("len(samples) * train_val_test_split[2]")
+        # print(len(samples) * train_val_test_split[2])
 
         train_size = round(len(samples) * train_val_test_split[0])
         val_size = round(len(samples) * train_val_test_split[1])
         test_size = round(len(samples) * train_val_test_split[2])
+        # print("train_size")
+        # print(train_size)
+        # print("val_size")
+        # print(val_size)
+        # print("test_size")
+        # print(test_size)
+        # print("len(samples)")
+        # print(len(samples))
+        # print("train_size + val_size + test_size")
+        # print(train_size + val_size + test_size)
         if (train_size + val_size + test_size) != len(samples):
-            raise Exception("implementation error")
+            if ((train_size + val_size + test_size) == (len(samples) - 1)):
+                train_size += 1
+            else:
+                raise Exception("implementation error")
 
         available_indices = [i for i in range(len(samples))]
 
@@ -350,13 +334,19 @@ class BrainNetworkDataset(Dataset):
         :param meta_data_file_path:
         :return:
         """
+        print("meta_data_file_path")
+        print(meta_data_file_path)
+        print("load_path")
+        print(load_path)
         targets = list()
         df = pd.read_csv(meta_data_file_path, sep='\t', header=0)
         potential_files = [f for f in os.listdir(load_path)]
         files_to_load = list()
         for fn in potential_files:
-            participant_id, session_id = fn.split("_")[:2]
-            records = df[(df.participant_id == participant_id) & (df.session_id == session_id)]
+            tmp = fn.replace("sub-", "").replace("ses-", "").split("_")[:2]
+            participant_id = tmp[0]
+            session_id = tmp[1]
+            records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
@@ -490,7 +480,8 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
+
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
@@ -635,16 +626,9 @@ class BrainNetworkDataset(Dataset):
         :return: None
         """
 
-        print("Inside _save_data_with_pickle()")
-        print(filepath)
-        print(data)
-        print("About to dump pickle contents")
         with open(filepath, "wb") as f:
-            print("file")
-            print(f)
             pickle.dump(data, f)
 
-        print("Dumped pickle contents")
 
     def load_sample_from_pickle(self, filepath):
         """

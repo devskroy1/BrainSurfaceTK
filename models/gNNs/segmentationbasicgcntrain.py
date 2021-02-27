@@ -46,8 +46,9 @@ if __name__ == "__main__":
 
     # Imperial
     load_path = os.path.join(
-        "/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/hemispheres/reducedto_20k/pial/vtk")
-    meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
+        "/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/hemispheres/reducedto_20k/white/vtk")
+    #meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
+    meta_data_file_path = os.path.join("/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/models/pointnet/src/meta_data.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
     lr = 8e-4
