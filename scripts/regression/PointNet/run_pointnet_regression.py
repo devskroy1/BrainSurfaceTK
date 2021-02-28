@@ -10,6 +10,7 @@ import time
 import pickle
 import csv
 
+import itertools
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import ConcatDataset, Subset, DataLoader
@@ -191,15 +192,28 @@ if __name__ == '__main__':
             # subset_pos = Subset(test_dataset[d].pos, valid_indices)
 
             test_subset = Subset(test_dataset[d], valid_indices)
+            print("len(test_subset)")
+            print(len(test_subset))
+            print("test_subset")
+            print(test_subset)
             list_datasets.append(test_subset)
-        test_dataset_combined = ConcatDataset(list_datasets)
-        print("test_dataset_combined")
-        print(test_dataset_combined)
-        test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False,
-                                         num_workers=num_workers)
+        # print("len(list_datasets)")
+        # print(len(list_datasets))
+        # test_dataset_combined = ConcatDataset(list_datasets)
+        # print("test_dataset_combined")
+        # print(test_dataset_combined)
+        # print("len(test_dataset_combined)")
+        # print(len(test_dataset_combined))
+        test_dataloader_dropped = itertools.chain(list_datasets)
+        # test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False,
+        #                                  num_workers=num_workers)
         print("test_dataloader_dropped")
         print(test_dataloader_dropped)
         # for dropped_data, data in zip(test_dataloader_dropped, test_loader):
+        print("len(test_loader)")
+        print(len(test_loader))
+        # print("len(test_dataloader_dropped)")
+        # print(len(test_dataloader_dropped))
         for dropped_data in test_dataloader_dropped:
             print("dropped data")
             print(dropped_data)
