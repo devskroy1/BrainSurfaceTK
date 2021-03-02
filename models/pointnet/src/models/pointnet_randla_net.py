@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch_points_kernels import knn
+from torch_geometric.nn import knn
 
 class SharedMLP(nn.Module):
     def __init__(
@@ -71,6 +71,14 @@ class LocalSpatialEncoding(nn.Module):
         """
         # finding neighboring points
         idx, dist = knn_output
+        print("idx")
+        print(idx)
+        print("idx shape")
+        print(idx.shape)
+        print("dist")
+        print(dist)
+        print("dist shape")
+        print(dist.shape)
         B, N, K = idx.size()
         # idx(B, N, K), coords(B, N, 3)
         # neighbors[b, i, n, k] = coords[b, idx[b, n, k], i] = extended_coords[b, i, extended_idx[b, i, n, k], k]
@@ -156,7 +164,14 @@ class LocalFeatureAggregation(nn.Module):
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
         knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        print("Inside Randla-net LocalFeatureAggregation forward()")
+        print("features")
+        print(features)
+        print("features.shape")
+        print(features.shape)
 
+        print("knn_output shape")
+        print(knn_output.shape)
         x = self.mlp1(features)
 
         x = self.lse1(coords, x, knn_output)

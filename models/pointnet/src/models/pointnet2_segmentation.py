@@ -51,10 +51,19 @@ class FPModule(torch.nn.Module):
         self.nn = nn
 
     def forward(self, x, pos, batch, x_skip, pos_skip, batch_skip):
+        print("Inside FPModule forward")
+        print("x shape")
+        print(x.shape)
+        print("x_skip shape")
+        print(x_skip.shape)
         x = knn_interpolate(x, pos, pos_skip, batch, batch_skip, k=self.k)
         if x_skip is not None:
             x = torch.cat([x, x_skip], dim=1)
+        print("x shape before calling self.nn")
+        print(x.shape)
         x = self.nn(x)
+        print("x shape after calling self.nn")
+        print(x.shape)
         return x, pos_skip, batch_skip
 
 
@@ -113,19 +122,37 @@ class Net(torch.nn.Module):
 
         fp3_out = self.fp3_module(*sa3_out, *sa2_out)
         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
-        x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
+        x, coords, batch = self.fp1_module(*fp2_out, *sa0_out)
+
+
+        print("Inside PointNet segmentation forward()")
+        print("x shape from fp1 module")
+        print(x.shape)
+        print("coords shape from fp1 module")
+        print("coords shape")
+        print(coords.shape)
 
         decimation_ratio = 1
-        coords = data.pos.clone().cpu()
-        x = data.x.clone().cpu()
-        print("coords")
-        print(coords)
-        permutation = torch.randperm(N)
-        coords = coords[permutation]
-        x = x[permutation]
+        # coords = data.pos.clone().cpu()
+        # x = data.x.clone().cpu()
+        # print("coords")
+        # print(coords)
+        # permutation = torch.randperm(N)
+        # coords = coords[permutation]
+        # x = x[permutation]
+        #
+        # print("x.shape")
+        # print(x.shape)
+        # print("x")
+        # print(x)
+
+        x = x.view(x.size(0), x.size(1)//16, 16, 1)
+        print("x.shape after reshaping into 4d")
+        print(x.shape)
 
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
+
             x = lfa(coords[:N//decimation_ratio], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
