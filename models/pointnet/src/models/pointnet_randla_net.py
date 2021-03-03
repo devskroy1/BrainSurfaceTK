@@ -1,6 +1,22 @@
 import torch
 import torch.nn as nn
-from torch_geometric.nn import knn
+#from torch_geometric.nn import knn
+
+#TODO: Remove comment. From DGCNN repo
+def knn(x, k):
+    print("Inside knn function")
+    print("x shape")
+    print(x.shape)
+    inner = -2 * torch.matmul(x.transpose(1, 0), x)
+    xx = torch.sum(x ** 2, dim=1, keepdim=True)
+    print("inner shape")
+    print(inner.shape)
+    print("xx.shape")
+    print(xx.shape)
+    #pairwise_distance = -xx - inner - xx.transpose(2, 1)
+    pairwise_distance = -xx - inner - xx.transpose(1, 0)
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+    return idx
 
 class SharedMLP(nn.Module):
     def __init__(
@@ -163,7 +179,8 @@ class LocalFeatureAggregation(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
-        knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
         print("Inside Randla-net LocalFeatureAggregation forward()")
         print("features")
         print(features)

@@ -15,11 +15,16 @@ class SAModule(torch.nn.Module):
         self.conv = PointConv(nn)
 
     def forward(self, x, pos, batch):
+        print("Inside SAModule forward")
+        print("x shape before calling PointConv")
+        print(x.shape)
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)
         edge_index = torch.stack([col, row], dim=0)
         x = self.conv(x, (pos, pos[idx]), edge_index)
+        print("x shape after calling PointConv")
+        print(x.shape)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
 
@@ -117,6 +122,7 @@ class Net(torch.nn.Module):
 
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
+        print("Just before calling sa2 module forward")
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
 
