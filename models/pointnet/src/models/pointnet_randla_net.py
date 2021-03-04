@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 #from torch_geometric.nn import knn
 
-#TODO: Remove comment. From DGCNN repo
+#TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
 def knn(x, k):
     print("Inside knn function")
     print("x shape")
@@ -179,7 +179,9 @@ class LocalFeatureAggregation(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
+        #TODO: use top commented line - torch_points_kernels knn function
         #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        #DGCNN knn function - don't use this
         knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
         print("Inside Randla-net LocalFeatureAggregation forward()")
         print("features")
