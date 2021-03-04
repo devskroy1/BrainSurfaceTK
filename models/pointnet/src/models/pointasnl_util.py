@@ -5,32 +5,51 @@ from __future__ import print_function
 import numpy as np
 import os
 import sys
-import tensorflow as tf
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(BASE_DIR)
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
-sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/sampling'))
-sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/grouping'))
-sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/3d_interpolation'))
-from tf_interpolate import three_nn, three_interpolate
-import tf_grouping
-import tf_sampling
-import tf_util
-import nearest_neighbors.lib.python.nearest_neighbors as nearest_neighbors
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import PointConv, fps, radius, global_max_pool
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# ROOT_DIR = os.path.dirname(BASE_DIR)
+# sys.path.append(os.path.join(ROOT_DIR, 'utils'))
+# sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/sampling'))
+# sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/grouping'))
+# sys.path.append(os.path.join(ROOT_DIR, 'tf_ops/3d_interpolation'))
+# from tf_interpolate import three_nn, three_interpolate
+# import tf_grouping
+# import tf_sampling
+# import tf_util
+# import nearest_neighbors.lib.python.nearest_neighbors as nearest_neighbors
 
 
-def knn_query(k, support_pts, query_pts):
-    """
-    :param support_pts: points you have, B*N1*3
-    :param query_pts: points you want to know the neighbour index, B*N2*3
-    :param k: Number of neighbours in knn search
-    :return: neighbor_idx: neighboring points indexes, B*N2*k
-    """
-    neighbor_idx = nearest_neighbors.knn_batch(support_pts, query_pts, k, omp=True)
-    return neighbor_idx.astype(np.int32)
+#def knn_query(k, support_pts, query_pts):
+    # """
+    # :param support_pts: points you have, B*N1*3
+    # :param query_pts: points you want to know the neighbour index, B*N2*3
+    # :param k: Number of neighbours in knn search
+    # :return: neighbor_idx: neighboring points indexes, B*N2*k
+    # """
+
+    # neighbor_idx = nearest_neighbors.knn_batch(support_pts, query_pts, k, omp=True)
+    # return neighbor_idx.astype(np.int32)
+
+def knn(x, k):
+    print("Inside knn function")
+    print("x shape")
+    print(x.shape)
+    inner = -2 * torch.matmul(x.transpose(1, 0), x)
+    xx = torch.sum(x ** 2, dim=1, keepdim=True)
+    print("inner shape")
+    print(inner.shape)
+    print("xx.shape")
+    print(xx.shape)
+    # pairwise_distance = -xx - inner - xx.transpose(2, 1)
+    pairwise_distance = -xx - inner - xx.transpose(1, 0)
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+    return idx
 
 
-def sampling(npoint, pts, feature=None):
+def sampling(npoint, pts, ratio, feature=None):
     '''
     inputs:
     npoint: scalar, number of points to sample
@@ -38,15 +57,36 @@ def sampling(npoint, pts, feature=None):
     output:
     sub_pts: B * npoint * D, sub-sampled point cloud
     '''
-    batch_size = pts.get_shape()[0]
-    fps_idx = tf_sampling.farthest_point_sample(npoint, pts)
-    batch_indices = tf.tile(tf.reshape(tf.range(batch_size), (-1, 1, 1)), (1, npoint,1))
-    idx = tf.concat([batch_indices, tf.expand_dims(fps_idx, axis=2)], axis=2)
-    idx.set_shape([batch_size, npoint, 2])
+    batch_size = pts.shape(0)
+    fps_idx = fps(npoint, pts, ratio)
+    #batch_indices = tf.tile(torch.reshape(torch.range(0, batch_size), (-1, 1, 1)), (1, npoint,1))
+
+    batch_indices = torch.from_numpy(np.tile(torch.arange(0, batch_size).view(-1, 1, 1), (1, npoint,1)))
+
+    idx = torch.concat([batch_indices, fps_idx.expand(2)], dim=2)
+    idx = idx.reshape([batch_size, npoint, 2])
     if feature is None:
-        return tf.gather_nd(pts, idx)
-    else:
-        return tf.gather_nd(pts, idx), tf.gather_nd(feature, idx)
+
+        params_size = list(pts.size())
+
+        assert len(idx.size()) == 2
+        assert len(params_size) >= idx.size(1)
+        # Generate indices
+        idx = idx.t().long()
+        ndim = idx.size(0)
+        index = torch.zeros_like(idx[0]).long()
+        m = 1
+
+        for i in range(ndim)[::-1]:
+            index += idx[i] * m
+            m *= pts.size(i)
+
+        pts = pts.reshape((-1, *tuple(torch.tensor(pts.size()[ndim:]))))
+        return pts[index]
+
+    #     return tf.gather_nd(pts, idx)
+    # else:
+    #     return tf.gather_nd(pts, idx), tf.gather_nd(feature, idx)
 
 def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2):
     '''
@@ -55,16 +95,44 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     q_xyz: query point xyz (batch_size, npoint, 3)
     '''
 
-    batch_size = src_xyz.get_shape()[0]
-    npoint = q_xyz.get_shape()[1]
+    batch_size = src_xyz.shape(0)
+    npoint = q_xyz.get_shape(1)
 
     if use_knn:
-        point_indices = tf.py_func(knn_query, [K, src_xyz, q_xyz], tf.int32)
-        batch_indices = tf.tile(tf.reshape(tf.range(batch_size), (-1, 1, 1, 1)), (1, npoint, K, 1))
-        idx = tf.concat([batch_indices, tf.expand_dims(point_indices, axis=3)], axis=3)
-        idx.set_shape([batch_size, npoint, K, 2])
-        grouped_xyz = tf.gather_nd(src_xyz, idx)
+        #point_indices = tf.py_func(knn_query, [K, src_xyz, q_xyz], tf.int32)
+
+        point_indices = knn(src_xyz, K)
+
+        # batch_indices = tf.tile(tf.reshape(tf.range(batch_size), (-1, 1, 1, 1)), (1, npoint, K, 1))
+        # idx = tf.concat([batch_indices, tf.expand_dims(point_indices, axis=3)], axis=3)
+        # idx.set_shape([batch_size, npoint, K, 2])
+        # grouped_xyz = tf.gather_nd(src_xyz, idx)
+
+        batch_indices = torch.from_numpy(np.tile(torch.arange(0, batch_size).view(-1, 1, 1, 1), (1, npoint, K, 1)))
+
+        idx = torch.concat([batch_indices, point_indices.expand(3)], dim=3)
+        idx = idx.reshape([batch_size, npoint, K, 2])
+
+        if feature is None:
+
+            params_size = list(src_xyz.size())
+
+            assert len(idx.size()) == 2
+            assert len(params_size) >= idx.size(1)
+            # Generate indices
+            idx = idx.t().long()
+            ndim = idx.size(0)
+            index = torch.zeros_like(idx[0]).long()
+            m = 1
+
+            for i in range(ndim)[::-1]:
+                index += idx[i] * m
+                m *= src_xyz.size(i)
+
+            src_xyz = src_xyz.reshape((-1, *tuple(torch.tensor(src_xyz.size()[ndim:]))))
+            grouped_xyz = src_xyz[index]
     else:
+        #TODO: Not sure how to implement query_ball_point with Pytorch
         point_indices, _ = tf_grouping.query_ball_point(radius, K, src_xyz, q_xyz)
         grouped_xyz = tf_grouping.group_point(src_xyz, point_indices)
 
