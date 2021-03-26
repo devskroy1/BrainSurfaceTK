@@ -1,22 +1,38 @@
 import torch
 import torch.nn as nn
+import torch_points_kernels.points_cpu as tpcpu
 #from torch_geometric.nn import knn
 
 #TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
-def knn(x, k):
-    print("Inside knn function")
-    print("x shape")
-    print(x.shape)
-    inner = -2 * torch.matmul(x.transpose(1, 0), x)
-    xx = torch.sum(x ** 2, dim=1, keepdim=True)
-    print("inner shape")
-    print(inner.shape)
-    print("xx.shape")
-    print(xx.shape)
-    #pairwise_distance = -xx - inner - xx.transpose(2, 1)
-    pairwise_distance = -xx - inner - xx.transpose(1, 0)
-    idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
-    return idx
+# def knn(x, k):
+#     print("Inside knn function")
+#     print("x shape")
+#     print(x.shape)
+#     inner = -2 * torch.matmul(x.transpose(1, 0), x)
+#     xx = torch.sum(x ** 2, dim=1, keepdim=True)
+#     print("inner shape")
+#     print(inner.shape)
+#     print("xx.shape")
+#     print(xx.shape)
+#     #pairwise_distance = -xx - inner - xx.transpose(2, 1)
+#     pairwise_distance = -xx - inner - xx.transpose(1, 0)
+#     idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+#     return idx
+
+def knn(pos_support, pos, k):
+    """Dense knn serach
+    Arguments:
+        pos_support - [B,N,3] support points
+        pos - [B,M,3] centre of queries
+        k - number of neighboors, needs to be > N
+    Returns:
+        idx - [B,M,k]
+        dist2 - [B,M,k] squared distances
+    """
+    assert pos_support.dim() == 3 and pos.dim() == 3
+    if pos_support.is_cuda:
+        raise ValueError("CUDA version not implemented, use pytorch geometric")
+    return tpcpu.dense_knn(pos_support, pos, k)
 
 class SharedMLP(nn.Module):
     def __init__(
@@ -180,9 +196,9 @@ class LocalFeatureAggregation(nn.Module):
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
         #TODO: use top commented line - torch_points_kernels knn function
-        #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
         #DGCNN knn function - don't use this
-        knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
+        # knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
         print("Inside Randla-net LocalFeatureAggregation forward()")
         print("features")
         print(features)
