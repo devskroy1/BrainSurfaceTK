@@ -302,20 +302,26 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
         tile_transformed_feature1 = np.tile(torch.unsqueeze(transformed_feature1, dim=1),(1,npoint*nsample,1,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
         tile_transformed_new_point = np.tile(torch.reshape(transformed_new_point, (batch_size, npoint*nsample, 1, bottleneck_channel)), (1,1,ndataset,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
         merged_feature = torch.concat([tile_transformed_feature1,tile_transformed_new_point], dim=-1)
-        attention_map = tf_util.conv2d(merged_feature, 1, [1,1],
-                                            padding='VALID', stride=[1,1],
-                                            bn=bn, is_training=is_training,
-                                            scope='conv_attention_map', bn_decay=bn_decay, weight_decay = weight_decay)
 
+        # attention_map = tf_util.conv2d(merged_feature, 1, [1,1],
+        #                                     padding='VALID', stride=[1,1],
+        #                                     bn=bn, is_training=is_training,
+        #                                     scope='conv_attention_map', bn_decay=bn_decay, weight_decay = weight_decay)
 
-        attention_map = tf.reshape(attention_map, (batch_size, npoint*nsample, ndataset))
-    attention_map = tf.nn.softmax(attention_map, axis=-1)
-    new_nonlocal_point = tf.matmul(attention_map, transformed_feature2) #(batch_size, npoint*nsample, bottleneck_channel)
-    new_nonlocal_point = tf_util.conv2d(tf.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]), mlp[-1], [1,1],
-                                            padding='VALID', stride=[1,1],
-                                            bn=bn, is_training=is_training,
-                                            scope='conv_back_project', bn_decay=bn_decay, weight_decay = weight_decay)
-    new_nonlocal_point = tf.squeeze(new_nonlocal_point, axis=[1])  # (batch_size, npoints, mlp2[-1])
+        attention_map = nn.conv2d(new_point, bottleneck_channel, kernel_size=(1, 1), padding=1, stride=1)
+
+        attention_map = torch.reshape(attention_map, (batch_size, npoint*nsample, ndataset))
+    softmax = nn.Softmax(dim=-1)
+    attention_map = softmax(attention_map)
+    new_nonlocal_point = torch.matmul(attention_map, transformed_feature2) #(batch_size, npoint*nsample, bottleneck_channel)
+    # new_nonlocal_point = tf_util.conv2d(tf.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]), mlp[-1], [1,1],
+    #                                         padding='VALID', stride=[1,1],
+    #                                         bn=bn, is_training=is_training,
+    #                                         scope='conv_back_project', bn_decay=bn_decay, weight_decay = weight_decay)
+
+    new_nonlocal_point = nn.conv2d(torch.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]), mlp[-1], kernel_size=(1, 1), padding=1, stride=1)
+
+    new_nonlocal_point = torch.squeeze(new_nonlocal_point, dim=1)  # (batch_size, npoints, mlp2[-1])
 
     return new_nonlocal_point
 
@@ -330,67 +336,71 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
             new_xyz: (batch_size, npoint, 3) TF tensor
             new_points: (batch_size, npoint, mlp[-1] or mlp2[-1]) TF tensor
     '''
-    with tf.variable_scope(scope) as sc:
+    #with tf.variable_scope(scope) as sc:
 
-        batch_size, num_points, num_channel = feature.get_shape()
-        '''Farthest Point Sampling'''
-        if num_points == npoint:
-            new_xyz = xyz
-            new_feature = feature
-        else:
-            new_xyz, new_feature = sampling(npoint, xyz, feature)
+    batch_size, num_points, num_channel = feature.get_shape()
+    '''Farthest Point Sampling'''
+    if num_points == npoint:
+        new_xyz = xyz
+        new_feature = feature
+    else:
+        new_xyz, new_feature = sampling(npoint, xyz, feature)
 
-        grouped_xyz, new_point, idx = grouping(feature, nsample, xyz, new_xyz,use_knn=use_knn,radius=radius)
-        nl_channel = mlp[-1]
+    grouped_xyz, new_point, idx = grouping(feature, nsample, xyz, new_xyz,use_knn=use_knn,radius=radius)
+    nl_channel = mlp[-1]
 
-        '''Adaptive Sampling'''
-        if num_points != npoint:
-            new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay, weight_decay, scope, bn)
-        grouped_xyz -= tf.tile(tf.expand_dims(new_xyz, 2), [1, 1, nsample, 1])  # translation normalization
-        new_point = tf.concat([grouped_xyz, new_point], axis=-1)
+    '''Adaptive Sampling'''
+    if num_points != npoint:
+        new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay, weight_decay, scope, bn)
+    grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, 2), [1, 1, nsample, 1])  # translation normalization
+    new_point = torch.concat([grouped_xyz, new_point], dim=-1)
 
-        '''Point NonLocal Cell'''
-        if NL:
-            new_nonlocal_point = PointNonLocalCell(feature, tf.expand_dims(new_feature, axis=1),
-                                                   [max(32, num_channel//2), nl_channel],
-                                                   is_training, bn_decay, weight_decay, scope, bn)
+    '''Point NonLocal Cell'''
+    if NL:
+        new_nonlocal_point = PointNonLocalCell(feature, tf.expand_dims(new_feature, axis=1),
+                                               [max(32, num_channel//2), nl_channel],
+                                               is_training, bn_decay, weight_decay, scope, bn)
 
-        '''Skip Connection'''
-        skip_spatial = tf.reduce_max(new_point, axis=[2])
-        skip_spatial = tf_util.conv1d(skip_spatial, mlp[-1], 1,padding='VALID', stride=1,
-                                     bn=bn, is_training=is_training, scope='skip',
-                                     bn_decay=bn_decay, weight_decay=weight_decay)
+    '''Skip Connection'''
+    skip_spatial = torch.max(new_point, dim=2)
 
-        '''Point Local Cell'''
-        for i, num_out_channel in enumerate(mlp):
-            if i != len(mlp) - 1:
-                new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
-                                            padding='VALID', stride=[1,1],
-                                            bn=bn, is_training=is_training,
-                                            scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
+    # skip_spatial = tf_util.conv1d(skip_spatial, mlp[-1], 1,padding='VALID', stride=1,
+    #                              bn=bn, is_training=is_training, scope='skip',
+    #                              bn_decay=bn_decay, weight_decay=weight_decay)
 
+    skip_spatial = nn.conv1d(skip_spatial,  mlp[-1], kernel_size=(1, 1), padding=1, stride=1)
 
-        weight = weight_net_hidden(grouped_xyz, [32], scope = 'weight_net', is_training=is_training, bn_decay = bn_decay, weight_decay = weight_decay)
-        new_point = tf.transpose(new_point, [0, 1, 3, 2])
-        new_point = tf.matmul(new_point, weight)
-        new_point = tf_util.conv2d(new_point, mlp[-1], [1,new_point.get_shape()[2].value],
-                                        padding='VALID', stride=[1,1],
-                                        bn=bn, is_training=is_training,
-                                        scope='after_conv', bn_decay=bn_decay, weight_decay = weight_decay)
+    '''Point Local Cell'''
+    for i, num_out_channel in enumerate(mlp):
+        if i != len(mlp) - 1:
+            # new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
+            #                             padding='VALID', stride=[1,1],
+            #                             bn=bn, is_training=is_training,
+            #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
 
-        new_point = tf.squeeze(new_point, [2])  # (batch_size, npoints, mlp2[-1])
+            new_point = nn.conv2d(new_point, num_out_channel, kernel_size=(1, 1), padding=1, stride=1)
 
-        new_point = tf.add(new_point,skip_spatial)
+    weight = weight_net_hidden(grouped_xyz, [32], scope = 'weight_net', is_training=is_training, bn_decay = bn_decay, weight_decay = weight_decay)
+    new_point = torch.transpose(new_point, [0, 1, 3, 2])
+    new_point = torch.matmul(new_point, weight)
+    new_point = tf_util.conv2d(new_point, mlp[-1], [1,new_point.get_shape()[2].value],
+                                    padding='VALID', stride=[1,1],
+                                    bn=bn, is_training=is_training,
+                                    scope='after_conv', bn_decay=bn_decay, weight_decay = weight_decay)
 
-        if NL:
-            new_point = tf.add(new_point, new_nonlocal_point)
+    new_point = tf.squeeze(new_point, [2])  # (batch_size, npoints, mlp2[-1])
 
-        '''Feature Fushion'''
-        new_point = tf_util.conv1d(new_point, mlp[-1], 1,
-                                  padding='VALID', stride=1, bn=bn, is_training=is_training,
-                                  scope='aggregation', bn_decay=bn_decay, weight_decay=weight_decay)
+    new_point = tf.add(new_point,skip_spatial)
 
-        return new_xyz, new_point
+    if NL:
+        new_point = tf.add(new_point, new_nonlocal_point)
+
+    '''Feature Fushion'''
+    new_point = tf_util.conv1d(new_point, mlp[-1], 1,
+                              padding='VALID', stride=1, bn=bn, is_training=is_training,
+                              scope='aggregation', bn_decay=bn_decay, weight_decay=weight_decay)
+
+    return new_xyz, new_point
 
 def PointASNLDecodingLayer(xyz1, xyz2, points1, points2, nsample, mlp, is_training, bn_decay, weight_decay, scope, bn=True, use_xyz = True,use_knn=True, radius=None, dilate_rate=1, mode='concat', NL=False):
     ''' Input:
