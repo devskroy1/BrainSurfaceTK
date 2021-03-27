@@ -5,9 +5,12 @@
 #SBATCH --output="pointnetsegmentation-%j.out"
 export PATH=/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/venv/bin:$PATH
 source activate
-source /vol/cuda/10.1.105-cudnn7.6.5.32/setup.sh
+source /vol/cuda/11.0.3-cudnn8.0.5.39/setup.sh
 TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
+cd ./venv/lib/python3.8/site-packages/torch_points_kernels
+python setup.py build_ext --inplace
+cd /vol/bitbucket/sr4617/ForkedBrainSurfaceTK
 python3 ./scripts/segmentation/PointNet/run_pointnet_segmentation.py

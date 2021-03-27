@@ -69,10 +69,9 @@ tensorboard-plugin-wit==1.6.0.post3
 tensorboardX==2.0
 testresources
 torch==1.5.0+cu101
-torchvision==0.6.0+cu110
+torchvision==0.6.0+cu101
 tqdm==4.46.0
 urllib3==1.25.9
 Werkzeug==1.0.1
 wheel==0.36.2
 zipp==3.1.0
-
