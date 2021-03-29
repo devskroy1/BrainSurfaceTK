@@ -34,7 +34,13 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
     print_per = 10
 
     for idx, data in enumerate(train_loader):
-
+        print("data.y")
+        print(data.y)
+        print("data.y size")
+        print(data.y.size())
+        print("Inside randla-net training loop")
+        print("type data")
+        print(type(data))
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)

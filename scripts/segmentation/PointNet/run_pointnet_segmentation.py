@@ -11,6 +11,7 @@ from torch.optim.lr_scheduler import StepLR
 from models.pointnet.src.utils import get_id, save_to_log, get_comment, get_data_path, data
 from models.pointnet.src.models.pointnet2_segmentation import Net
 from models.pointnet.main.pointnet2_segmentation import train, test, perform_final_testing
+from models.pointnet.src.models.pointnet_randla_net import RandLANet
 
 # Global variables
 all_labels = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16, 17])
@@ -117,7 +118,18 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(num_labels, num_local_features, num_global_features=None).to(device)
+    #model = Net(num_labels, num_local_features, num_global_features=None).to(device)
+
+    # d_in = next(iter(train_loader))[0].size(-1)
+    # print("About to initialise Randla-Net model")
+    # print("d_in")
+    # print(d_in)
+
+    d_in = num_local_features
+    print("d_in")
+    print(d_in)
+    model = RandLANet(d_in=d_in, num_classes=num_labels, device=device)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 

@@ -117,6 +117,8 @@ class Net(torch.nn.Module):
         self.lin3 = torch.nn.Linear(64, num_classes)
 
     def forward(self, data):
+
+        print("Inside PointNet segmentation forward()")
         N = data.x.size(0)
         d = self.decimation
 
@@ -124,17 +126,16 @@ class Net(torch.nn.Module):
         sa1_out = self.sa1_module(*sa0_out)
         print("Just before calling sa2 module forward")
         sa2_out = self.sa2_module(*sa1_out)
-        sa3_out = self.sa3_module(*sa2_out)
+        #sa3_out = self.sa3_module(*sa2_out)
+        x, coords, batch = self.sa3_module(*sa2_out)
 
-        fp3_out = self.fp3_module(*sa3_out, *sa2_out)
-        fp2_out = self.fp2_module(*fp3_out, *sa1_out)
-        x, coords, batch = self.fp1_module(*fp2_out, *sa0_out)
+        # fp3_out = self.fp3_module(*sa3_out, *sa2_out)
+        # fp2_out = self.fp2_module(*fp3_out, *sa1_out)
+        # x, coords, batch = self.fp1_module(*fp2_out, *sa0_out)
 
-
-        print("Inside PointNet segmentation forward()")
-        print("x shape from fp1 module")
+        print("x shape from sa3 module")
         print(x.shape)
-        print("coords shape from fp1 module")
+        print("coords shape from sa3 module")
         print("coords shape")
         print(coords.shape)
 
@@ -159,10 +160,10 @@ class Net(torch.nn.Module):
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
 
-            x = lfa(coords[:N//decimation_ratio], x)
+            x = lfa(coords[:, :N//decimation_ratio], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
-            x = x[:N//decimation_ratio]
+            x = x[:, :, :N//decimation_ratio]
 
         for mlp in self.decoder:
             neighbors, _ = knn(

@@ -29,6 +29,10 @@ def knn(pos_support, pos, k):
         idx - [B,M,k]
         dist2 - [B,M,k] squared distances
     """
+    print("pos_support dim")
+    print(pos_support.dim())
+    print("pos dim")
+    print(pos.dim())
     assert pos_support.dim() == 3 and pos.dim() == 3
     if pos_support.is_cuda:
         raise ValueError("CUDA version not implemented, use pytorch geometric")
@@ -195,6 +199,9 @@ class LocalFeatureAggregation(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
+        print("Inside lfa forward()")
+        print("coords shape")
+        print(coords.shape)
         #TODO: use top commented line - torch_points_kernels knn function
         knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
         #DGCNN knn function - don't use this
@@ -205,8 +212,8 @@ class LocalFeatureAggregation(nn.Module):
         print("features.shape")
         print(features.shape)
 
-        print("knn_output shape")
-        print(knn_output.shape)
+        print("knn_output")
+        print(knn_output)
         x = self.mlp1(features)
 
         x = self.lse1(coords, x, knn_output)
@@ -278,25 +285,44 @@ class RandLANet(nn.Module):
             torch.Tensor, shape (B, num_classes, N)
                 segmentation scores for each point
         """
-        N = input.size(1)
+        #N = input.size(1)
+        N = input.x.size(0)
+        B = input.batch.size(0)
+        print("input")
+        print(input)
+        print("N")
+        print(N)
         d = self.decimation
+        print("decimation")
+        print(d)
 
-        coords = input[...,:3].clone().cpu()
-        x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
+        coords = input.pos.clone().cpu()
+        input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
+        print("input_expanded shape")
+        print(input_expanded.shape)
+
+        x = self.fc_start(input.x.unsqueeze(0).expand(B, -1, -1)).transpose(-2,-1).unsqueeze(-1)
         x = self.bn_start(x) # shape (B, d, N, 1)
 
         decimation_ratio = 1
 
         # <<<<<<<<<< ENCODER
         x_stack = []
-
         permutation = torch.randperm(N)
-        coords = coords[:,permutation]
+        coords = coords[permutation, :]
+        print("coords shape")
+        print(coords.shape)
+        print("x shape")
+        print(x.shape)
         x = x[:,:,permutation]
 
+        coords = coords.unsqueeze(0).expand(B, -1, -1)
+        print("coords shape after expanding")
+        print(coords.shape)
+        coords = coords.repeat()
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
-            x = lfa(coords[:,:N//decimation_ratio], x)
+            x = lfa(coords[:,:N//decimation_ratio, :], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
             x = x[:,:,:N//decimation_ratio]
@@ -309,8 +335,8 @@ class RandLANet(nn.Module):
         # <<<<<<<<<< DECODER
         for mlp in self.decoder:
             neighbors, _ = knn(
-                coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
-                coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
+                coords[:,:N//decimation_ratio, :].cpu().contiguous(), # original set
+                coords[:,:d*N//decimation_ratio, :].cpu().contiguous(), # upsampled set
                 1
             ) # shape (B, N, 1)
             neighbors = neighbors.to(self.device)
