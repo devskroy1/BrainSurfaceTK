@@ -10,7 +10,7 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-cd ./venv/lib/python3.8/site-packages/torch_points_kernels
-python setup.py build_ext --inplace
+cd /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/venv/lib/python3.8/site-packages/torch_points_kernels
+python3 setup.py build_ext --inplace
 cd /vol/bitbucket/sr4617/ForkedBrainSurfaceTK
 python3 ./scripts/segmentation/PointNet/run_pointnet_segmentation.py
