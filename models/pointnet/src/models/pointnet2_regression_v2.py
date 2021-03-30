@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.utils.data import Subset
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
 
@@ -57,7 +58,10 @@ class Net(torch.nn.Module):
         self.lin3 = Lin(128, 1)
 
     def forward(self, data):
-        sa0_out = (data.x, data.pos, data.batch)
+        if isinstance(data, Subset):
+            sa0_out = (data.dataset.x, data.dataset.pos, data.dataset.batch)
+        else:
+            sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
