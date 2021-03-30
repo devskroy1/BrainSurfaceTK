@@ -286,12 +286,18 @@ class RandLANet(nn.Module):
                 segmentation scores for each point
         """
         #N = input.size(1)
-        N = input.x.size(0)
-        B = input.batch.size(0)
+        N = input.size(1)
+        B = input.size(0)
+        d_in = input.size(2)
         print("input")
         print(input)
         print("N")
         print(N)
+        print("B")
+        print(B)
+        print("d_in")
+        print(d_in)
+
         d = self.decimation
         print("decimation")
         print(d)

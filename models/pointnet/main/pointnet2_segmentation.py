@@ -42,8 +42,84 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         print("type data")
         print(type(data))
         data = data.to(device)
+        print("type data")
+        print(type(data))
         optimizer.zero_grad()
-        out = model(data)
+
+        #Shape: B
+        batch_tensor = torch.tensor(data.batch)
+        #Shape: N x 3
+        pos_tensor = torch.tensor(data.pos)
+        # Shape: N x d_in
+        x_tensor = torch.tensor(data.x)
+        # Shape: B
+        y_tensor = torch.tensor(data.y)
+
+        #batch_tensor_reshaped = batch_tensor.reshape(batch_tensor.size(), pos_tensor.size(0), x_tensor.size(1))
+        #reshaped_batch_tensor = batch_tensor.unsqueeze(dim=1).unsqueeze(dim=2)
+
+        # reshaped_batch_tensor = batch_tensor.reshape(batch_tensor.size(), 1, 1)
+        reshaped_batch_tensor = batch_tensor.unsqueeze(1).unsqueeze(2)
+        print("reshaped_batch_tensor dims")
+        print(reshaped_batch_tensor.shape)
+        # reshaped_batch_tensor = reshaped_batch_tensor.expand(batch_tensor.size(), -1, -1)
+        print("batch_tensor.size()")
+        print(batch_tensor.size())
+        print("pos_tensor.size(0)")
+        print(pos_tensor.size(0))
+        print("x_tensor.size(1)")
+        print(x_tensor.size(1))
+        expanded_batch_tensor = reshaped_batch_tensor.repeat(batch_tensor.size(), pos_tensor.size(0), x_tensor.size(1), 1)
+        #expanded_batch_tensor = reshaped_batch_tensor.expand(-1, -1, x_tensor.size(1))
+
+        print("expanded_batch_tensor dims")
+        print(expanded_batch_tensor.shape)
+
+        reshaped_x_tensor = x_tensor.unsqueeze(dim=0)
+        print("reshaped_x_tensor shape")
+        print(reshaped_x_tensor.shape)
+        #expanded_x_tensor = reshaped_x_tensor.expand(batch_tensor.size())
+        print("batch_tensor.size(0)")
+        print(batch_tensor.size(0))
+        print("x_tensor.size(0)")
+        print(x_tensor.size(0))
+        print("x_tensor.size(1)")
+        print(x_tensor.size(1))
+        expanded_x_tensor = reshaped_x_tensor.repeat(batch_tensor.size(0), x_tensor.size(0), x_tensor.size(1))
+        print("expanded_x_tensor shape")
+        print(expanded_x_tensor.shape)
+
+        reshaped_pos_tensor = pos_tensor.unsqueeze(dim=0).unsqueeze(dim=2)
+        print("reshaped_pos_tensor shape")
+        print(reshaped_pos_tensor.shape)
+        expanded_pos_tensor = reshaped_pos_tensor.repeat(batch_tensor.size(0), pos_tensor.size(0), x_tensor.size(1), pos_tensor.size(1))
+        print("expanded_pos_tensor shape")
+        print(expanded_pos_tensor.shape)
+
+
+
+        # reshaped_pos_tensor = pos_tensor.unsqueeze(dim=0).unsqueeze(dim=2).squeeze(dim=3)
+        # reshaped_x_tensor = x_tensor.unsqueeze(dim=0)
+
+        # print("reshaped_pos_tensor dims")
+        # print(reshaped_pos_tensor.shape)
+        # print("reshaped_x_tensor dims")
+        # print(reshaped_x_tensor.shape)
+
+        combined_data = torch.cat((reshaped_batch_tensor, reshaped_pos_tensor, reshaped_x_tensor), dim=0)
+
+        # print("batch_tensor shape")
+        # print(batch_tensor.shape)
+        # print("pos_tensor shape")
+        # print(pos_tensor.shape)
+        # print("x_tensor shape")
+        # print(x_tensor.shape)
+        # print("y_tensor shape")
+        # print(y_tensor.shape)
+        print("combined data shape")
+        print(combined_data.shape)
+        # ensor(data.batch.size(0), data.pos.size(0), data.x.size(1))
+        out = model(combined_data)
 
         pred = out.max(dim=1)[1]
 
