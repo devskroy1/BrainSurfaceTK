@@ -285,29 +285,36 @@ class RandLANet(nn.Module):
             torch.Tensor, shape (B, num_classes, N)
                 segmentation scores for each point
         """
+        print("Inside pointnet_randla_net forward")
         #N = input.size(1)
         N = input.size(1)
         B = input.size(0)
         d_in = input.size(2)
-        print("input")
-        print(input)
+        # print("input")
+        # print(input)
         print("N")
         print(N)
-        print("B")
-        print(B)
-        print("d_in")
-        print(d_in)
+        # print("B")
+        # print(B)
+        # print("d_in")
+        # print(d_in)
 
         d = self.decimation
-        print("decimation")
-        print(d)
+        # print("decimation")
+        # print(d)
 
-        coords = input.pos.clone().cpu()
-        input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
-        print("input_expanded shape")
-        print(input_expanded.shape)
+        #coords = input.pos.clone().cpu()
+        coords = input[..., :3]
+        print("coords")
+        print(coords)
+        print(coords.shape)
+        #coords = input[..., :3].clone().cpu()
 
-        x = self.fc_start(input.x.unsqueeze(0).expand(B, -1, -1)).transpose(-2,-1).unsqueeze(-1)
+        #input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
+        #print("input_expanded shape")
+        #print(input_expanded.shape)
+        x = self.fc_start(input[:10, :10, :10]).transpose(-2, -1).unsqueeze(-1)
+        #x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
         x = self.bn_start(x) # shape (B, d, N, 1)
 
         decimation_ratio = 1
@@ -315,20 +322,21 @@ class RandLANet(nn.Module):
         # <<<<<<<<<< ENCODER
         x_stack = []
         permutation = torch.randperm(N)
-        coords = coords[permutation, :]
+        print("permutn")
+        print(permutation)
+        print("permutn size")
+        print(permutation.size())
+        #coords = coords[permutation, :]
+        coords = coords[:, permutation]
         print("coords shape")
         print(coords.shape)
+        x = x[:,:,permutation]
         print("x shape")
         print(x.shape)
-        x = x[:,:,permutation]
 
-        coords = coords.unsqueeze(0).expand(B, -1, -1)
-        print("coords shape after expanding")
-        print(coords.shape)
-        coords = coords.repeat()
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
-            x = lfa(coords[:,:N//decimation_ratio, :], x)
+            x = lfa(coords[:,:N//decimation_ratio], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
             x = x[:,:,:N//decimation_ratio]
@@ -341,8 +349,8 @@ class RandLANet(nn.Module):
         # <<<<<<<<<< DECODER
         for mlp in self.decoder:
             neighbors, _ = knn(
-                coords[:,:N//decimation_ratio, :].cpu().contiguous(), # original set
-                coords[:,:d*N//decimation_ratio, :].cpu().contiguous(), # upsampled set
+                coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
+                coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
                 1
             ) # shape (B, N, 1)
             neighbors = neighbors.to(self.device)
