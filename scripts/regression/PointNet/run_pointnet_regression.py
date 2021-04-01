@@ -13,13 +13,14 @@ import csv
 import itertools
 import torch
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import ConcatDataset, Subset, DataLoader
+from torch.utils.data import ConcatDataset, ChainDataset, IterableDataset, Dataset, Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.main.pointnet2 import train, test_regression
 
 from models.pointnet.src.utils import get_data_path, data, drop_points
+from utils.droppedDataset import DroppedDataset
 
 PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
@@ -169,6 +170,8 @@ if __name__ == '__main__':
         #Could use points under any region in the segmentn.
         #Extract points for which label == 1, label == 39 etc. Get index by label and drop points by label.
         #Might need padding if point size is not the same.
+    print("len(test_dataset)")
+    print(len(test_dataset))
     for label in range(num_labels):
         list_datasets = []
         for d in range(len(test_dataset)):
@@ -189,19 +192,25 @@ if __name__ == '__main__':
             subset_x = Subset(test_dataset[d].x, valid_indices)
             subset_pos = Subset(test_dataset[d].pos, valid_indices)
             subset_y = Subset(test_dataset[d].y, valid_indices)
-            test_subset = ConcatDataset([subset_pos, subset_x, subset_y])
+            #test_subset = ConcatDataset([subset_pos, subset_x, subset_y])
+            test_subset = DroppedDataset(subset_x, subset_pos, subset_y)
+            test_subset.x = subset_x
+            test_subset.pos = subset_pos
+            test_subset.y = subset_y
 
-            print("test_subset ConcatDataset")
-            print(test_subset)
-            print("subset dataset")
-            print(test_subset.dataset)
+            print("len(test_dataset[d].x)")
+            print(len(test_dataset[d].x))
+            print("len(test_subset.x)")
+            print(len(test_subset.x))
+
+            print("test subset pos")
+            print(test_subset.pos)
+
             # print("len(subset_x)")
             # print(len(subset_x))
             # subset_pos = Subset(test_dataset[d].pos, valid_indices)
             print("len(valid_indices)")
             print(len(valid_indices))
-            print("len(test_dataset[d]) before taking Subset")
-            print(len(test_dataset[d]))
             #test_subset = Subset(test_dataset[d], valid_indices)
             # print("test_dataset[d].x")
             # print(test_dataset[d].x)
@@ -214,27 +223,33 @@ if __name__ == '__main__':
             # print("test_subset.dataset.pos")
             # print(test_subset.dataset.pos)
 
-            print("len(test_dataset[d])")
-            print(len(test_dataset[d]))
-            print("len(test_subset)")
-            print(len(test_subset))
-            print("len(test_subset.x)")
-            print(len(test_subset.x))
+            # print("len(test_dataset[d])")
+            # print(len(test_dataset[d]))
+            # print("len(test_subset)")
+            # print(len(test_subset))
+            # print("len(test_subset.x)")
+            # print(len(test_subset.x))
+            #
+            # print("test_dataset[d]")
+            # print(test_dataset[d])
+            # print("subset dataset")
+            # print(test_subset.dataset)
 
-            print("test_dataset[d]")
-            print(test_dataset[d])
-            print("subset dataset")
-            print(test_subset.dataset)
             list_datasets.append(test_subset)
-        # print("len(list_datasets)")
-        # print(len(list_datasets))
+        print("len(list_datasets)")
+        print(len(list_datasets))
+
         test_dataset_combined = ConcatDataset(list_datasets)
+
         # print("test_dataset_combined")
         # print(test_dataset_combined)
         # print("len(test_dataset_combined)")
         # print(len(test_dataset_combined))
 
-        #test_dataloader_dropped = itertools.chain(list_datasets)
+        #test_datasets_chain = itertools.chain(list_datasets)
+
+        #test_dataset_chained = ChainDataset(list_datasets)
+
         test_dataloader_dropped = DataLoader(test_dataset_combined, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         print("test_dataloader_dropped")
@@ -244,9 +259,12 @@ if __name__ == '__main__':
         print(len(test_loader))
         # print("len(test_dataloader_dropped)")
         # print(len(test_dataloader_dropped))
+
+        #Do padding for input to maintain input size. Should have same number of vertices per sample.
+        #Same region for each subject should be same size, for training. Could use Batch size 1.
         for dropped_data in test_dataloader_dropped:
-            print("dropped data")
-            print(dropped_data)
+            print("dropped data dataset")
+            print(dropped_data.dataset)
             pred_dropped = model(dropped_data)
             print("pred_dropped")
             print(pred_dropped)
