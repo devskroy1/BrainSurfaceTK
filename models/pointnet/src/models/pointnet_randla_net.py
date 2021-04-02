@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from torch_points_kernels import knn
+#from torch_points_kernels import knn
 #import torch_points_kernels.points_cpu as tpcpu
-#from torch_geometric.nn import knn
+from torch_geometric.nn import knn
 
 #TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
 # def knn(x, k):
@@ -211,10 +211,10 @@ class LocalFeatureAggregation(nn.Module):
         # print(coords.cpu())
 
         #Torch geometric knn function - use for CUDA
-        #knn_output = knn(coords, coords, self.num_neighbors)
+        knn_output = knn(coords, coords, self.num_neighbors)
 
         #torch_points_kernels knn function - use only for CPU
-        knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
         print("knn output")
         print(knn_output)
         print("knn output shape")
