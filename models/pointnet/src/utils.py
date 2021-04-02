@@ -57,7 +57,8 @@ def save_to_log(experiment_description, prefix=''):
         add_first_line = True
         filename = PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'
         dirname = os.path.dirname(filename)
-        os.makedirs(dirname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
 
     if add_first_line:
         with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'w+') as log_record:

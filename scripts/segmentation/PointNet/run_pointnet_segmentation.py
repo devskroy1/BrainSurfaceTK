@@ -30,6 +30,7 @@ if __name__ == '__main__':
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
+    #TODO: CHANGE RECORDING TO TRUE
     recording = True
     REPROCESS = True
 

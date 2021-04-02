@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-import torch_points_kernels.points_cpu as tpcpu
+from torch_points_kernels import knn
+#import torch_points_kernels.points_cpu as tpcpu
 #from torch_geometric.nn import knn
 
 #TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
@@ -19,24 +20,25 @@ import torch_points_kernels.points_cpu as tpcpu
 #     idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
 #     return idx
 
-def knn(pos_support, pos, k):
-    """Dense knn serach
-    Arguments:
-        pos_support - [B,N,3] support points
-        pos - [B,M,3] centre of queries
-        k - number of neighboors, needs to be > N
-    Returns:
-        idx - [B,M,k]
-        dist2 - [B,M,k] squared distances
-    """
-    print("pos_support dim")
-    print(pos_support.dim())
-    print("pos dim")
-    print(pos.dim())
-    assert pos_support.dim() == 3 and pos.dim() == 3
-    if pos_support.is_cuda:
-        raise ValueError("CUDA version not implemented, use pytorch geometric")
-    return tpcpu.dense_knn(pos_support, pos, k)
+#TODO: Use this function
+# def knn(pos_support, pos, k):
+#     """Dense knn serach
+#     Arguments:
+#         pos_support - [B,N,3] support points
+#         pos - [B,M,3] centre of queries
+#         k - number of neighboors, needs to be > N
+#     Returns:
+#         idx - [B,M,k]
+#         dist2 - [B,M,k] squared distances
+#     """
+#     print("pos_support dim")
+#     print(pos_support.dim())
+#     print("pos dim")
+#     print(pos.dim())
+#     assert pos_support.dim() == 3 and pos.dim() == 3
+#     if pos_support.is_cuda:
+#         raise ValueError("CUDA version not implemented, use pytorch geometric")
+#     return tpcpu.dense_knn(pos_support, pos, k)
 
 class SharedMLP(nn.Module):
     def __init__(
@@ -202,8 +204,21 @@ class LocalFeatureAggregation(nn.Module):
         print("Inside lfa forward()")
         print("coords shape")
         print(coords.shape)
-        #TODO: use top commented line - torch_points_kernels knn function
+
+        print("num neighbours")
+        print(self.num_neighbors)
+        # print("coords.cpu()")
+        # print(coords.cpu())
+
+        #Torch geometric knn function - use for CUDA
+        #knn_output = knn(coords, coords, self.num_neighbors)
+
+        #torch_points_kernels knn function - use only for CPU
         knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        print("knn output")
+        print(knn_output)
+        print("knn output shape")
+        print(knn_output.shape)
         #DGCNN knn function - don't use this
         # knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
         print("Inside Randla-net LocalFeatureAggregation forward()")
@@ -313,10 +328,11 @@ class RandLANet(nn.Module):
         #input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
         #print("input_expanded shape")
         #print(input_expanded.shape)
-        x = self.fc_start(input[:10, :10, :10]).transpose(-2, -1).unsqueeze(-1)
-        #x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
-        x = self.bn_start(x) # shape (B, d, N, 1)
-
+        #x = self.fc_start(input[:10, :10, :10]).transpose(-2, -1).unsqueeze(-1)
+        x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
+        print("Got past fc_start")
+        #x = self.bn_start(x) # shape (B, d, N, 1)
+        print("Got past bn_start")
         decimation_ratio = 1
 
         # <<<<<<<<<< ENCODER
@@ -327,10 +343,11 @@ class RandLANet(nn.Module):
         print("permutn size")
         print(permutation.size())
         #coords = coords[permutation, :]
-        coords = coords[:, permutation]
+
+        #coords = coords[:, permutation]
         print("coords shape")
         print(coords.shape)
-        x = x[:,:,permutation]
+        #x = x[:,:,permutation]
         print("x shape")
         print(x.shape)
 

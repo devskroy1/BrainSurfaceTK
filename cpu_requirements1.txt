@@ -19,7 +19,6 @@ icc-rt==2020.0.133
 idna==2.9
 imageio==2.8.0
 importlib-metadata==1.6.0
-intel-numpy==1.15.1
 intel-openmp==2020.0.133
 isodate==0.6.0
 joblib==0.14.1
@@ -31,8 +30,6 @@ Markdown==3.2.2
 matplotlib==3.2.1
 meshio==4.0.12
 mkl==2019.0
-mkl-fft==1.0.0.17
-mkl-random==1.0.0.8
 mock==4.0.2
 mod-wsgi-httpd==2.4.41.1
 networkx==2.4
@@ -69,15 +66,13 @@ six==1.12.0
 sklearn==0.0
 sqlparse==0.3.1
 tbb==2019.0
-tbb4py==2019.0
 tensorboard==2.0.0
 tensorboard-plugin-wit==1.6.0.post3
 tensorboardX==2.0
 testresources
-torch==1.5.0+cpu
-torchvision==0.6.0+cpu
+torch==1.7.0+cpu
+torchvision==0.8.1+cpu
 tqdm==4.46.0
 urllib3==1.25.9
-vtk==8.1.2
 Werkzeug==1.0.1
 zipp==3.1.0
