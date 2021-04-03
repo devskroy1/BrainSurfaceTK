@@ -1,5 +1,6 @@
 import numpy as np
-import tensorflow as tf
+import torch
+import torch.nn as nn
 
 def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   """Helper to create a Variable stored on CPU memory.
@@ -10,9 +11,11 @@ def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   Returns:
     Variable Tensor
   """
-  with torch.device('/cpu:0'):
+  with torch.device('cpu:0'):
     dtype = torch.float16 if use_fp16 else torch.float32
-    var = torch.Tensor(name, shape, initializer=initializer, dtype=dtype)
+    zeros = torch.zeros(shape, dtype=dtype)
+    var = initializer(zeros)
+    #var = torch.Tensor(name, shape, initializer=initializer, dtype=dtype)
   return var
 
 def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
@@ -30,13 +33,16 @@ def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
     Variable Tensor
   """
   if use_xavier:
-    initializer = tf.contrib.layers.xavier_initializer()
+    #initializer = tf.contrib.layers.xavier_initializer()
+    initializer = nn.init.xavier_uniform_()
   else:
-    initializer = tf.truncated_normal_initializer(stddev=stddev)
+    #initializer = tf.truncated_normal_initializer(stddev=stddev)
+    initializer = nn.init.trunc_normal_(std=stddev)
+
   var = _variable_on_cpu(name, shape, initializer)
   if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
+    weight_decay = torch.multiply(0.5 * torch.sum(torch.square(var)), wd)
+    #tf.add_to_collection('losses', weight_decay)
   return var
 
 
@@ -45,11 +51,12 @@ def conv1d(inputs,
            kernel_size,
            scope,
            stride=1,
-           padding='SAME',
+           padding=0,
+           data_format='NHWC',
            use_xavier=True,
            stddev=1e-3,
            weight_decay=0.0,
-           activation_fn=tf.nn.relu,
+           activation_fn=nn.ReLU,
            bn=False,
            bn_decay=None,
            is_training=None):
@@ -60,7 +67,7 @@ def conv1d(inputs,
     kernel_size: int
     scope: string
     stride: int
-    padding: 'SAME' or 'VALID'
+    padding: int
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
     weight_decay: float
@@ -72,35 +79,45 @@ def conv1d(inputs,
     Variable tensor
   """
   #with tf.variable_scope(scope) as sc:
-  num_in_channels = inputs.get_shape()[-1].value
-  kernel_shape = [kernel_size,
-                    num_in_channels, num_output_channels]
-  kernel = _variable_with_weight_decay('weights',
-                                         shape=kernel_shape,
-                                         use_xavier=use_xavier,
-                                         stddev=stddev,
-                                         wd=weight_decay)
-  outputs = nn.conv1d(inputs, kernel,
-                       stride=stride,
-                       padding=padding)
+  assert (data_format == 'NHWC' or data_format == 'NCHW')
+  if data_format == 'NHWC':
+      #num_in_channels = inputs.get_shape()[-1].value
+      num_in_channels = inputs.size(3)
+  elif data_format == 'NCHW':
+      #num_in_channels = inputs.get_shape()[1].value
+      num_in_channels = inputs.size(1)
+  # kernel_shape = [kernel_size,
+  #                   num_in_channels, num_output_channels]
+  # kernel = _variable_with_weight_decay('weights',
+  #                                        shape=kernel_shape,
+  #                                        use_xavier=use_xavier,
+  #                                        stddev=stddev,
+  #                                        wd=weight_decay)
+
+  conv = nn.Conv1d(num_in_channels, num_output_channels, kernel_size, stride, padding)
+
   # biases = _variable_on_cpu('biases', [num_output_channels],
   #                         tf.constant_initializer(0.0))
 
-  biases = torch.Tensor([0.0] * num_output_channels, dtype=torch.float32)
-  outputs = outputs + biases
+  # biases = torch.Tensor([0.0] * num_output_channels, dtype=torch.float32)
+  # outputs = outputs + biases
 
   # outputs = tf.nn.bias_add(outputs, biases)
 
+  outputs = conv(inputs)
   if bn:
-    num_features = outputs.size(outputs.dim() - 1)
-    # outputs = batch_norm_for_conv1d(outputs, is_training,
-    #                                 bn_decay=bn_decay, scope='bn')
+      # outputs = batch_norm_for_conv2d(outputs, is_training,
+      #                                 bn_decay=bn_decay, scope='bn')
+      num_features = outputs.size(1)
+      if is_training:
+          batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).train()
+      else:
+          batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).eval()
+      outputs = batch_norm(outputs)
 
-    outputs = nn.BatchNorm1d(num_features, momentum=1 - bn_decay)
-
-    if activation_fn is not None:
-      outputs = activation_fn(outputs)
-    return outputs
+  if activation_fn is not None:
+    outputs = activation_fn(outputs)
+  return outputs
 
 
 def conv2d(inputs,
@@ -108,11 +125,12 @@ def conv2d(inputs,
            kernel_size,
            scope,
            stride=[1, 1],
-           padding='SAME',
+           padding=0,
+           data_format='NHWC',
            use_xavier=True,
            stddev=1e-3,
            weight_decay=0.0,
-           activation_fn=tf.nn.relu,
+           activation_fn=nn.ReLU,
            bn=False,
            bn_decay=None,
            is_training=None):
@@ -123,7 +141,7 @@ def conv2d(inputs,
     kernel_size: a list of 2 ints
     scope: string
     stride: a list of 2 ints
-    padding: 'SAME' or 'VALID'
+    padding: int
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
     weight_decay: float
@@ -135,33 +153,40 @@ def conv2d(inputs,
     Variable tensor
   """
   #with tf.variable_scope(scope) as sc:
-  kernel_h, kernel_w = kernel_size
-  num_in_channels = inputs.get_shape()[-1].value
-  kernel_shape = [kernel_h, kernel_w,
-                  num_in_channels, num_output_channels]
-  kernel = _variable_with_weight_decay('weights',
-                                       shape=kernel_shape,
-                                       use_xavier=use_xavier,
-                                       stddev=stddev,
-                                       wd=weight_decay)
-  stride_h, stride_w = stride
-  outputs = tf.nn.conv2d(inputs.size(2), kernel.size(3), (kernel.size(0), kernel.size(1)),
-                         [stride_h, stride_w],
-                         padding=padding)
+  # kernel_h, kernel_w = kernel_size
+  assert (data_format == 'NHWC' or data_format == 'NCHW')
+  if data_format == 'NHWC':
+      #num_in_channels = inputs.get_shape()[-1].value
+      num_in_channels = inputs.size(3)
+  elif data_format == 'NCHW':
+      #num_in_channels = inputs.get_shape()[1].value
+      num_in_channels = inputs.size(1)
+
+  # kernel_shape = [kernel_h, kernel_w,
+  #                 num_in_channels, num_output_channels]
+
+  # kernel = _variable_with_weight_decay('weights',
+  #                                      shape=kernel_shape,
+  #                                      use_xavier=use_xavier,
+  #                                      stddev=stddev,
+  #                                      wd=weight_decay)
+  # stride_h, stride_w = stride
+  conv = nn.Conv2d(num_in_channels, num_output_channels, kernel_size, stride, padding)
   # biases = _variable_on_cpu('biases', [num_output_channels],
   #                           tf.constant_initializer(0.0))
   #
   #
   # outputs = tf.nn.bias_add(outputs, biases)
-
-  biases = torch.Tensor([0.0] * num_output_channels, dtype=torch.float32)
-  outputs = outputs + biases
-
+  outputs = conv(inputs)
   if bn:
     # outputs = batch_norm_for_conv2d(outputs, is_training,
     #                                 bn_decay=bn_decay, scope='bn')
-    num_features = outputs.size(outputs.dim() - 1)
-    outputs = nn.BatchNorm2d(num_features, momentum= 1 - bn_decay)
+    num_features = outputs.size(1)
+    if is_training:
+        batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).train()
+    else:
+        batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).eval()
+    outputs = batch_norm(outputs)
 
   if activation_fn is not None:
     outputs = activation_fn(outputs)
