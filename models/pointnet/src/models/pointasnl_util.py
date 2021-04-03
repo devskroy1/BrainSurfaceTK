@@ -52,6 +52,31 @@ def knn_query(k, support_pts, query_pts):
 #     idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
 #     return idx
 
+def sampling(npoint, pts, feature=None):
+    '''
+    inputs:
+    npoint: scalar, number of points to sample
+    pointcloud: N * D, input point cloud
+    output:
+    sub_pts: npoint * D, sub-sampled point cloud
+    '''
+    batch_size = pts.size(0)
+    batch_pts = torch.arange(0, batch_size)
+    fps_index = fps(pts, batch_pts)
+
+    #fps_idx = tf_sampling.farthest_point_sample(npoint, pts)
+
+    batch_indices = torch.tile(torch.reshape(batch_pts, (-1, 1, 1)), (1, npoint,1))
+    idx = torch.cat([batch_indices, torch.unsqueeze(fps_index, dim=2)], dim=2)
+    idx = idx.reshape([batch_size, npoint, 2])
+    if feature is None:
+        #return tf.gather_nd(pts, idx)
+        return pts[list(idx.T)]
+
+    else:
+        #return tf.gather_nd(pts, idx), tf.gather_nd(feature, idx)
+        return pts[list(idx.T)], feature[list(idx.T)]
+
 def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2):
     '''
     K: neighbor size
@@ -65,7 +90,7 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     if use_knn:
         #point_indices = tf.py_func(knn_query, [K, src_xyz, q_xyz], tf.int32)
 
-        #TODO: Use pytorch geometric knn as torch points kernels knn not implemented on CUDA
+        #TODO: Use pytorch geometric knn function since torch points kernels knn function not implemented on CUDA
         #Work out how to get rid of batch dimension
         point_indices = knn(src_xyz, q_xyz, K)
 
@@ -79,27 +104,31 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
         idx = torch.cat([batch_indices, point_indices.expand(3)], dim=3)
         idx = idx.reshape([batch_size, npoint, K, 2])
 
-        if feature is None:
+        #grouped_xyz = tf.gather_nd(src_xyz, idx)
+        grouped_xyz = src_xyz[list(idx.T)]
 
-            params_size = list(src_xyz.size())
-
-            assert len(idx.size()) == 2
-            assert len(params_size) >= idx.size(1)
-            # Generate indices
-            idx = idx.t().long()
-            ndim = idx.size(0)
-            index = torch.zeros_like(idx[0]).long()
-            m = 1
-
-            for i in range(ndim)[::-1]:
-                index += idx[i] * m
-                m *= src_xyz.size(i)
-
-            src_xyz = src_xyz.reshape((-1, *tuple(torch.tensor(src_xyz.size()[ndim:]))))
-            grouped_xyz = src_xyz[index]
+        # if feature is None:
+        #
+        #     params_size = list(src_xyz.size())
+        #
+        #     assert len(idx.size()) == 2
+        #     assert len(params_size) >= idx.size(1)
+        #     # Generate indices
+        #     idx = idx.t().long()
+        #     ndim = idx.size(0)
+        #     index = torch.zeros_like(idx[0]).long()
+        #     m = 1
+        #
+        #     for i in range(ndim)[::-1]:
+        #         index += idx[i] * m
+        #         m *= src_xyz.size(i)
+        #
+        #     src_xyz = src_xyz.reshape((-1, *tuple(torch.tensor(src_xyz.size()[ndim:]))))
+        #     grouped_xyz = src_xyz[index]
 
     #TODO: Implement gather_nd in pytorch
-    grouped_feature = tf.gather_nd(feature, idx)
+    #grouped_feature = tf.gather_nd(feature, idx)
+    grouped_feature = feature[list(idx.T)]
 
     if use_xyz:
         grouped_feature = torch.cat([grouped_xyz, grouped_feature], dim=-1)
@@ -109,7 +138,6 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 def weight_net_hidden(xyz, hidden_units, scope, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
 
     net = xyz
-    #mod_list = nn.ModuleList()
     for i, num_hidden_units in enumerate(hidden_units):
         net = conv2d(net, num_hidden_units, kernel_size=[1,1], padding=0, stride=[1,1], bn=True,
                      is_training=is_training, activation_fn=activation_fn, bn_decay=bn_decay, weight_decay=weight_decay)
@@ -149,8 +177,6 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     # normalized_xyz = grouped_xyz - tf.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), [1, 1, nsample, 1])
     normalized_xyz = grouped_xyz - torch.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), (1, 1, nsample, 1))
     new_point = torch.cat([normalized_xyz, new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
-
-    mod_list = nn.ModuleList()
 
     # transformed_feature = nn.conv2d(new_point, bottleneck_channel * 2, [1, 1],
     #                                      padding='VALID', stride=[1, 1],
@@ -228,24 +254,26 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
     """
     #with tf.variable_scope(scope) as sc:
     bottleneck_channel = mlp[0]
-    batch_size, npoint, nsample, channel = new_point.get_shape()
-    ndataset = feature.get_shape()[1]
+    [batch_size, npoint, nsample, channel] = list(new_point.size())
+    ndataset = feature.size(1)
     feature = torch.unsqueeze(feature, dim=2) #(batch_size, ndataset, 1, channel)
     # transformed_feature = tf_util.conv2d(feature, bottleneck_channel * 2, [1,1],
     #                                         padding='VALID', stride=[1,1],
     #                                         bn=bn, is_training=is_training,
     #                                         scope='conv_kv', bn_decay=bn_decay, weight_decay = weight_decay, activation_fn=None)
 
-    transformed_feature = nn.conv2d(feature, bottleneck_channel * 2, kernel_size=(1, 1), padding=0, stride=1)
-    bn = nn.BatchNorm2d()
+    transformed_feature = conv2d(feature, bottleneck_channel * 2, kernel_size=[1, 1],
+                                 padding=0, stride=[1, 1], bn=bn, is_training=is_training,
+                                 bn_decay=bn_decay, weight_decay=weight_decay, activation_fn=None)
 
     # transformed_new_point = nn.conv2d(new_point, bottleneck_channel, [1,1],
     #                                         padding='VALID', stride=[1,1],
     #                                         bn=bn, is_training=is_training,
     #                                         scope='conv_query', bn_decay=bn_decay, weight_decay = weight_decay, activation_fn=None) #(batch_size, npoint, nsample, bottleneck_channel)
 
-    transformed_new_point = nn.conv2d(new_point, bottleneck_channel, kernel_size=(1, 1), padding=0, stride=1)
-    bn = nn.BatchNorm2d()
+    transformed_new_point = conv2d(new_point, bottleneck_channel, kernel_size=[1,1],
+                                   padding=0, stride=[1,1], bn=bn, is_training=is_training,
+                                   bn_decay=bn_decay, weight_decay = weight_decay, activation_fn=None)
 
     transformed_new_point = torch.reshape(transformed_new_point, [batch_size, npoint*nsample, bottleneck_channel])
     transformed_feature1 = torch.squeeze(transformed_feature[:,:,:,:bottleneck_channel], dim=2) #(batch_size, ndataset, bottleneck_channel)
@@ -266,7 +294,9 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
         #                                     bn=bn, is_training=is_training,
         #                                     scope='conv_attention_map', bn_decay=bn_decay, weight_decay = weight_decay)
 
-        attention_map = nn.conv2d(new_point, bottleneck_channel, kernel_size=(1, 1), padding=0, stride=1)
+        attention_map = conv2d(merged_feature, 1, kernel_size=[1,1],
+                                  padding=0, stride=[1,1], bn=bn, is_training=is_training,
+                                  bn_decay=bn_decay, weight_decay = weight_decay)
 
         attention_map = torch.reshape(attention_map, (batch_size, npoint*nsample, ndataset))
     softmax = nn.Softmax(dim=-1)
@@ -277,7 +307,9 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
     #                                         bn=bn, is_training=is_training,
     #                                         scope='conv_back_project', bn_decay=bn_decay, weight_decay = weight_decay)
 
-    new_nonlocal_point = nn.conv2d(torch.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]), mlp[-1], kernel_size=(1, 1), padding=0, stride=1)
+    new_nonlocal_point = conv2d(torch.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]),
+                                mlp[-1], kernel_size=[1, 1], padding=0, stride=[1,1],
+                                bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay = weight_decay)
 
     new_nonlocal_point = torch.squeeze(new_nonlocal_point, dim=1)  # (batch_size, npoints, mlp2[-1])
 
@@ -296,7 +328,7 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
     '''
     #with tf.variable_scope(scope) as sc:
 
-    batch_size, num_points, num_channel = feature.get_shape()
+    [batch_size, num_points, num_channel] = list(feature.size())
     '''Farthest Point Sampling'''
     if num_points == npoint:
         new_xyz = xyz
@@ -315,7 +347,7 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
 
     '''Point NonLocal Cell'''
     if NL:
-        new_nonlocal_point = PointNonLocalCell(feature, tf.expand_dims(new_feature, axis=1),
+        new_nonlocal_point = PointNonLocalCell(feature, torch.unsqueeze(new_feature, dim=1),
                                                [max(32, num_channel//2), nl_channel],
                                                is_training, bn_decay, weight_decay, scope, bn)
 
@@ -326,7 +358,8 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
     #                              bn=bn, is_training=is_training, scope='skip',
     #                              bn_decay=bn_decay, weight_decay=weight_decay)
 
-    skip_spatial = nn.conv1d(skip_spatial,  mlp[-1], kernel_size=(1, 1), padding=0, stride=1)
+    skip_spatial = conv1d(skip_spatial,  mlp[-1], kernel_size=1, padding=0, stride=1,
+                          bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
 
     '''Point Local Cell'''
     for i, num_out_channel in enumerate(mlp):
@@ -336,53 +369,30 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
             #                             bn=bn, is_training=is_training,
             #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
 
-            new_point = nn.conv2d(new_point, num_out_channel, kernel_size=(1, 1), padding=0, stride=1)
+            new_point = conv2d(new_point, num_out_channel, kernel_size=[1, 1],
+                               padding=0, stride=[1,1], bn=bn, is_training=is_training,
+                               bn_decay=bn_decay, weight_decay=weight_decay)
 
     weight = weight_net_hidden(grouped_xyz, [32], scope = 'weight_net', is_training=is_training, bn_decay = bn_decay, weight_decay = weight_decay)
-    new_point = torch.transpose(new_point, [0, 1, 3, 2])
+    new_point = torch.transpose(new_point, 2, 3)
     new_point = torch.matmul(new_point, weight)
-    new_point = tf_util.conv2d(new_point, mlp[-1], [1,new_point.get_shape()[2].value],
-                                    padding=0, stride=[1,1],
-                                    bn=bn, is_training=is_training,
-                                    scope='after_conv', bn_decay=bn_decay, weight_decay = weight_decay)
+    new_point = conv2d(new_point, mlp[-1], kernel_size=[1,new_point.size(2)],
+                                    padding=0, stride=[1,1], bn=bn, is_training=is_training,
+                                    bn_decay=bn_decay, weight_decay=weight_decay)
 
-    new_point = tf.squeeze(new_point, [2])  # (batch_size, npoints, mlp2[-1])
+    new_point = torch.squeeze(new_point, 2)  # (batch_size, npoints, mlp2[-1])
 
-    new_point = tf.add(new_point,skip_spatial)
+    # new_point = tf.add(new_point,skip_spatial)
+
+    new_point = new_point + skip_spatial
 
     if NL:
-        new_point = tf.add(new_point, new_nonlocal_point)
+        #new_point = tf.add(new_point, new_nonlocal_point)
+        new_point = new_point + new_nonlocal_point
 
     '''Feature Fushion'''
-    new_point = tf_util.conv1d(new_point, mlp[-1], 1,
+    new_point = conv1d(new_point, mlp[-1], kernel_size=1,
                               padding=0, stride=1, bn=bn, is_training=is_training,
-                              scope='aggregation', bn_decay=bn_decay, weight_decay=weight_decay)
+                              bn_decay=bn_decay, weight_decay=weight_decay)
 
     return new_xyz, new_point
-
-def placeholder_inputs(batch_size, num_point, channel):
-    pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, 3))
-    feature_pts_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, channel))
-    labels_pl = tf.placeholder(tf.int32, shape=(batch_size, num_point))
-    return pointclouds_pl, feature_pts_pl, labels_pl
-
-
-
-def get_repulsion_loss(pred, nsample=20, radius=0.07):
-    # pred: (batch_size, npoint,3)
-    idx, pts_cnt = tf_grouping.query_ball_point(radius, nsample, pred, pred)
-    tf.summary.histogram('smooth/unque_index', pts_cnt)
-
-    grouped_pred = tf_grouping.group_point(pred, idx)  # (batch_size, npoint, nsample, 3)
-    grouped_pred -= tf.expand_dims(pred, 2)
-
-    ##get the uniform loss
-    h = 0.03
-    dist_square = tf.reduce_sum(grouped_pred ** 2, axis=-1)
-    dist_square, idx = tf.nn.top_k(-dist_square, 5)
-    dist_square = -dist_square[:, :, 1:]  # remove the first one
-    dist_square = tf.maximum(1e-12,dist_square)
-    dist = tf.sqrt(dist_square)
-    weight = tf.exp(-dist_square/h**2)
-    uniform_loss = tf.reduce_mean(radius-dist*weight)
-    return uniform_loss

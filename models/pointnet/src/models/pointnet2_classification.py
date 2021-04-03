@@ -72,6 +72,7 @@ class Net(torch.nn.Module):
                                                     as_neighbor=as_neighbor[1])
 
         #End of code from ASNL repo
+
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
         self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
         self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
@@ -84,6 +85,24 @@ class Net(torch.nn.Module):
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
     def forward(self, data):
+
+        new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
+                                                weight_decay, scope, bn)
+
+        print("data.x shape")
+        print(data.x.shape)
+
+        print("data.pos shape")
+        print(data.pos.shape)
+
+        print("data.batch shape")
+        print(data.batch.shape)
+
+        inchannel = 6 if use_normal else 3
+        pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, inchannel))
+        labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
+        return pointclouds_pl, labels_pl
+
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa1a_out = self.sa1a_module(*sa1_out)
