@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction
+from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping
 
 class SAModule(torch.nn.Module):
     def __init__(self, ratio, r, nn):
@@ -42,34 +42,35 @@ def MLP(channels, batch_norm=True):
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_local_features, num_global_features):
+    def __init__(self, num_local_features, num_global_features, batch_size):
         super(Net, self).__init__()
 
         self.num_global_features = num_global_features
+        self.batch_size = batch_size
 
         #Start of code from pointASNL repo
-        batch_size = point_cloud.get_shape()[0].value
-        end_points = {}
-        if use_normal:
-            l0_xyz = tf.slice(point_cloud, [0, 0, 0], [-1, -1, 3])
-            l0_points = tf.slice(point_cloud, [0, 0, 3], [-1, -1, 3])
-        else:
-            l0_xyz = point_cloud
-            l0_points = point_cloud
-
-        end_points['l0_xyz'] = l0_xyz
-        as_neighbor = [12, 12] if adaptive_sample else [0, 0]
-
-        # Set abstraction layers: pointASNL
-        l1_xyz, l1_points = PointASNLSetAbstraction(l0_xyz, l0_points, npoint=512, nsample=32, mlp=[64, 64, 128],
-                                                    is_training=is_training, bn_decay=bn_decay,
-                                                    weight_decay=weight_decay, scope='layer1',
-                                                    as_neighbor=as_neighbor[0])
-        end_points['l1_xyz'] = l1_xyz
-        l2_xyz, l2_points = PointASNLSetAbstraction(l1_xyz, l1_points, npoint=128, nsample=64, mlp=[128, 128, 256],
-                                                    is_training=is_training, bn_decay=bn_decay,
-                                                    weight_decay=weight_decay, scope='layer2',
-                                                    as_neighbor=as_neighbor[1])
+        # batch_size = point_cloud.get_shape()[0].value
+        # end_points = {}
+        # if use_normal:
+        #     l0_xyz = tf.slice(point_cloud, [0, 0, 0], [-1, -1, 3])
+        #     l0_points = tf.slice(point_cloud, [0, 0, 3], [-1, -1, 3])
+        # else:
+        #     l0_xyz = point_cloud
+        #     l0_points = point_cloud
+        #
+        # end_points['l0_xyz'] = l0_xyz
+        # as_neighbor = [12, 12] if adaptive_sample else [0, 0]
+        #
+        # # Set abstraction layers: pointASNL
+        # l1_xyz, l1_points = PointASNLSetAbstraction(l0_xyz, l0_points, npoint=512, nsample=32, mlp=[64, 64, 128],
+        #                                             is_training=is_training, bn_decay=bn_decay,
+        #                                             weight_decay=weight_decay, scope='layer1',
+        #                                             as_neighbor=as_neighbor[0])
+        # end_points['l1_xyz'] = l1_xyz
+        # l2_xyz, l2_points = PointASNLSetAbstraction(l1_xyz, l1_points, npoint=128, nsample=64, mlp=[128, 128, 256],
+        #                                             is_training=is_training, bn_decay=bn_decay,
+        #                                             weight_decay=weight_decay, scope='layer2',
+        #                                             as_neighbor=as_neighbor[1])
 
         #End of code from ASNL repo
 
@@ -86,8 +87,17 @@ class Net(torch.nn.Module):
 
     def forward(self, data):
 
-        new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
-                                                weight_decay, scope, bn)
+        # new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
+        #                                         weight_decay, scope, bn)
+
+        print("data")
+        print(data)
+
+        print("data.batch")
+        print(data.batch)
+
+        print("data.y")
+        print(data.y)
 
         print("data.x shape")
         print(data.x.shape)
@@ -98,10 +108,30 @@ class Net(torch.nn.Module):
         print("data.batch shape")
         print(data.batch.shape)
 
-        inchannel = 6 if use_normal else 3
-        pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, inchannel))
-        labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
-        return pointclouds_pl, labels_pl
+        print("data.y shape")
+        print(data.y.shape)
+
+        num_points = data.x.size(0)
+        num_local_features = data.x.size(1)
+        num_coords = data.pos.size(1)
+        features = data.x.reshape(self.batch_size, num_points // self.batch_size, num_local_features)
+        xyz = data.pos.reshape(self.batch_size, num_points // self.batch_size, num_coords)
+
+        new_xyz, new_feature = sampling(npoint=512, pts=xyz, feature=features)
+        grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
+
+        #TODO: Need to update is_training depending on whether you're training model or evaluating model
+        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn_decay=None,
+                                                weight_decay=None, bn=True)
+        #
+        # new_features = data.x.unsqueeze(dim=0)
+        # new_xyz = data.pos.unsqueeze(dim=0)
+        # new_batch = data.batch.unsqueeze(dim=1).unsqueeze(dim=2)
+        #
+        # inchannel = 6 if use_normal else 3
+        # pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, inchannel))
+        # labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
+        # return pointclouds_pl, labels_pl
 
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)

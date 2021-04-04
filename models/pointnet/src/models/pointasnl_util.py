@@ -135,7 +135,7 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
     return grouped_xyz, grouped_feature, idx
 
-def weight_net_hidden(xyz, hidden_units, scope, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
+def weight_net_hidden(xyz, hidden_units, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
 
     net = xyz
     for i, num_hidden_units in enumerate(hidden_units):
@@ -143,7 +143,7 @@ def weight_net_hidden(xyz, hidden_units, scope, is_training, bn_decay=None, weig
                      is_training=is_training, activation_fn=activation_fn, bn_decay=bn_decay, weight_decay=weight_decay)
     return net
 
-def nonlinear_transform(data_in, mlp, scope, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
+def nonlinear_transform(data_in, mlp, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
 
     #with tf.variable_scope(scope) as sc:
 
@@ -164,7 +164,7 @@ def nonlinear_transform(data_in, mlp, scope, is_training, bn_decay=None, weight_
 
     return net
 
-def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_decay, scope, bn=True, scaled=True):
+def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_decay, bn=True, scaled=True):
     """Input
         grouped_feature: (batch_size, npoint, nsample, channel) TF tensor
         grouped_xyz: (batch_size, npoint, nsample, 3)
@@ -227,7 +227,7 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     # new_group_weights = nn.softmax(new_group_features, axis=2)  # (batch_size, npoint,nsample, mlp[-1)
     return new_group_weights
 
-def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, scope, bn):
+def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, bn):
     # with tf.variable_scope(scope) as sc:
     [nsample, num_channel] = list(group_feature.size()[-2:])
     if num_neighbor == 0:
@@ -236,7 +236,7 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
         return new_xyz, new_feature
     shift_group_xyz = group_xyz[:, :, :num_neighbor, :]
     shift_group_points = group_feature[:, :, :num_neighbor, :]
-    sample_weight = SampleWeights(shift_group_points, shift_group_xyz, [32, 1 + num_channel], is_training, bn_decay, weight_decay, scope, bn)
+    sample_weight = SampleWeights(shift_group_points, shift_group_xyz, [32, 1 + num_channel], is_training, bn_decay, weight_decay, bn)
     # new_weight_xyz = tf.tile(torch.unsqueeze(sample_weight[:,:,:, 0],-1), [1, 1, 1, 3])
     new_weight_xyz = torch.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1), (1, 1, 1, 3))
     new_weight_feature = sample_weight[:,:,:, 1:]
@@ -245,7 +245,7 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
 
     return new_xyz, new_feature
 
-def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay, scope, bn=True, scaled=True, mode='dot'):
+def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay, bn=True, scaled=True, mode='dot'):
     """Input
         feature: (batch_size, ndataset, channel) TF tensor
         new_point: (batch_size, npoint, nsample, channel)
@@ -315,7 +315,7 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
 
     return new_nonlocal_point
 
-def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_decay, weight_decay, scope, bn=True, use_knn=True, radius=None, as_neighbor=8, NL=True):
+def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_decay, weight_decay, bn=True, use_knn=True, radius=None, as_neighbor=8, NL=True):
     ''' Input:
             xyz: (batch_size, ndataset, 3) TF tensor
             feature: (batch_size, ndataset, channel) TF tensor
@@ -341,7 +341,7 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
 
     '''Adaptive Sampling'''
     if num_points != npoint:
-        new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay, weight_decay, scope, bn)
+        new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay, weight_decay, bn)
     grouped_xyz -= torch.tile(torch.unsqueeze(new_xyz, 2), (1, 1, nsample, 1))  # translation normalization
     new_point = torch.cat([grouped_xyz, new_point], dim=-1)
 
@@ -349,7 +349,7 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
     if NL:
         new_nonlocal_point = PointNonLocalCell(feature, torch.unsqueeze(new_feature, dim=1),
                                                [max(32, num_channel//2), nl_channel],
-                                               is_training, bn_decay, weight_decay, scope, bn)
+                                               is_training, bn_decay, weight_decay, bn)
 
     '''Skip Connection'''
     skip_spatial = torch.max(new_point, dim=2)
@@ -373,7 +373,7 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
                                padding=0, stride=[1,1], bn=bn, is_training=is_training,
                                bn_decay=bn_decay, weight_decay=weight_decay)
 
-    weight = weight_net_hidden(grouped_xyz, [32], scope = 'weight_net', is_training=is_training, bn_decay = bn_decay, weight_decay = weight_decay)
+    weight = weight_net_hidden(grouped_xyz, [32], is_training=is_training, bn_decay = bn_decay, weight_decay = weight_decay)
     new_point = torch.transpose(new_point, 2, 3)
     new_point = torch.matmul(new_point, weight)
     new_point = conv2d(new_point, mlp[-1], kernel_size=[1,new_point.size(2)],

@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(numb_local_features, numb_global_features).to(device)
+    model = Net(numb_local_features, numb_global_features, batch_size).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=gamma)
 
