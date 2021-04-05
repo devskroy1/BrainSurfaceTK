@@ -2,6 +2,36 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+def gather_nd(params, indices):
+
+    print("Inside gather_nd pytorch")
+    out_shape = indices.shape
+    print("outshape")
+    print(out_shape)
+    indices = indices.unsqueeze(0).transpose(0, -1)  # roll last axis to fring
+    ndim = indices.shape[0]
+    print("indices shape")
+    print(indices.shape)
+    print("ndim")
+    print(ndim)
+    indices = indices.long()
+    print("indices shape")
+    print(indices.shape)
+    print("indices[0] shape")
+    print(indices[0].shape)
+    idx = torch.zeros_like(indices[0], device=indices.device).long()
+    print("idx shape")
+    print(idx.shape)
+    m = 1
+
+    for i in range(ndim)[::-1]:
+        idx += indices[i] * m
+        m *= params.size(i)
+    print("idx shape just before torch.take call")
+    print(idx.shape)
+    out = torch.take(params, idx)
+    return out.view(out_shape)
+
 def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   """Helper to create a Variable stored on CPU memory.
   Args:

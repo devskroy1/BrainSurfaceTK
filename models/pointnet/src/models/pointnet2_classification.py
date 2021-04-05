@@ -2,7 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping
+from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping, weight_net_hidden
+from models.pointnet.src.models.pytorch_utils import conv1d, conv2d
 
 class SAModule(torch.nn.Module):
     def __init__(self, ratio, r, nn):
@@ -42,11 +43,12 @@ def MLP(channels, batch_norm=True):
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_local_features, num_global_features, batch_size):
+    def __init__(self, num_local_features, num_global_features, batch_size, mlp):
         super(Net, self).__init__()
 
         self.num_global_features = num_global_features
         self.batch_size = batch_size
+        self.mlp = mlp
 
         #Start of code from pointASNL repo
         # batch_size = point_cloud.get_shape()[0].value
@@ -117,23 +119,44 @@ class Net(torch.nn.Module):
         features = data.x.reshape(self.batch_size, num_points // self.batch_size, num_local_features)
         xyz = data.pos.reshape(self.batch_size, num_points // self.batch_size, num_coords)
 
+        #PointASNL SetAbstraction layer - Adaptive Sampling module
+
         new_xyz, new_feature = sampling(npoint=512, pts=xyz, feature=features)
+        print("After exiting from sampling")
+        print("new_xyz shape")
+        print(new_xyz.shape)
+        print("new_feature shape")
+        print(new_feature.shape)
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
 
         #TODO: Need to update is_training depending on whether you're training model or evaluating model
         new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn_decay=None,
                                                 weight_decay=None, bn=True)
-        #
-        # new_features = data.x.unsqueeze(dim=0)
-        # new_xyz = data.pos.unsqueeze(dim=0)
-        # new_batch = data.batch.unsqueeze(dim=1).unsqueeze(dim=2)
-        #
-        # inchannel = 6 if use_normal else 3
-        # pointclouds_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, inchannel))
-        # labels_pl = tf.placeholder(tf.int32, shape=(batch_size))
-        # return pointclouds_pl, labels_pl
 
-        sa0_out = (data.x, data.pos, data.batch)
+        grouped_xyz -= torch.tile(torch.unsqueeze(new_xyz, dim=2), [1, 1, 32, 1])  # translation normalization
+        new_point = torch.cat([grouped_xyz, new_point], dim=-1)
+
+        '''Skip Connection'''
+        skip_spatial = torch.max(new_point, dim=2)
+        skip_spatial = conv1d(skip_spatial, mlp[-1], kernel_size=1, padding=0, stride=1,
+                              bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
+
+        weight = weight_net_hidden(grouped_xyz, [32], is_training=is_training, bn_decay=bn_decay,
+                                   weight_decay=weight_decay)
+        new_point = torch.transpose(new_point, 2, 3)
+        new_point = torch.matmul(new_point, weight)
+        new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
+                           padding=0, stride=[1, 1], bn=bn, is_training=is_training,
+                           bn_decay=bn_decay, weight_decay=weight_decay)
+
+        new_point = torch.squeeze(new_point, 2)  # (batch_size, npoints, mlp2[-1])
+
+        new_point = new_point + skip_spatial
+
+        #POINTNET CLASSIFICN NETWORK
+
+        #sa0_out = (data.x, data.pos, data.batch)
+        sa0_out = (new_point, new_xyz, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa1a_out = self.sa1a_module(*sa1_out)
         sa2_out = self.sa2_module(*sa1a_out)
