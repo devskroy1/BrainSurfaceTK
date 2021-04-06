@@ -222,6 +222,8 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     """
     [batch_size, npoint, nsample, channel] = list(new_point.size())
     bottleneck_channel = max(32,channel//2)
+    print("bottleneck_channel")
+    print(bottleneck_channel)
     # normalized_xyz = grouped_xyz - tf.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), [1, 1, nsample, 1])
     normalized_xyz = grouped_xyz.cpu().numpy() - np.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2).cpu().numpy(), (1, 1, nsample, 1))
     new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device='cuda:0'), new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
@@ -251,9 +253,22 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
                                    bn_decay=bn_decay, weight_decay=weight_decay,
                                    activation_fn=None)
 
-    transformed_feature1 = transformed_feature[:, :, :, :bottleneck_channel]
-    feature = transformed_feature[:, :, :, bottleneck_channel:]
+    #Original code
+    #transformed_feature1 = transformed_feature[:, :, :, :bottleneck_channel]
+    #New code
+    transformed_feature1 = transformed_feature[:, :bottleneck_channel, :, :]
 
+    # Original code
+    #feature = transformed_feature[:, :, :, bottleneck_channel:]
+    # New code
+    feature = transformed_feature[:, bottleneck_channel:, :, :]
+
+    print("transformed_new_point shape")
+    print(transformed_new_point.shape)
+    print("transformed_feature.shape")
+    print(transformed_feature.shape)
+    print("transformed_feature1.shape")
+    print(transformed_feature1.shape)
     weights = torch.matmul(transformed_new_point, transformed_feature1)  # (batch_size, npoint, nsample, nsample)
     if scaled:
         bottleneck_channel = bottleneck_channel.type(torch.FloatTensor)
