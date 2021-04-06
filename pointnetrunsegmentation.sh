@@ -11,4 +11,4 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-python3 ./scripts/segmentation/PointNet/run_pointnet_segmentation.py
+CUDA_LAUNCH_BLOCKING=1 python3 ./scripts/segmentation/PointNet/run_pointnet_segmentation.py

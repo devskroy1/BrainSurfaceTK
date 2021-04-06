@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-#from torch_points_kernels import knn
+from torch_points_kernels import knn
 #import torch_points_kernels.points_cpu as tpcpu
-from torch_geometric.nn import knn
+#from torch_geometric.nn import knn
 
 #TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
 # def knn(x, k):
@@ -107,21 +107,41 @@ class LocalSpatialEncoding(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d, N, K)
         """
+        print("Inside LocSE forward()")
+        print("coords shape")
+        print(coords.shape)
+        print("features shape")
+        print(features.shape)
+        # print("knn_output shape")
+        # print(knn_output.shape)
+        B = coords.size(0)
+        N = coords.size(1)
+        K = self.num_neighbors
         # finding neighboring points
         idx, dist = knn_output
-        print("idx")
-        print(idx)
+
+        #Reshapes needed for torch geometric knn
+        # idx = idx.reshape(B, N, K)
+        # dist = dist.reshape(B, N, K)
+
+        # print("idx")
+        # print(idx)
         print("idx shape")
         print(idx.shape)
-        print("dist")
-        print(dist)
+        # print("dist")
+        # print(dist)
         print("dist shape")
         print(dist.shape)
-        B, N, K = idx.size()
+
+        #B, N, K = idx.size()
         # idx(B, N, K), coords(B, N, 3)
         # neighbors[b, i, n, k] = coords[b, idx[b, n, k], i] = extended_coords[b, i, extended_idx[b, i, n, k], k]
         extended_idx = idx.unsqueeze(1).expand(B, 3, N, K)
         extended_coords = coords.transpose(-2,-1).unsqueeze(-1).expand(B, 3, N, K)
+        print("extended_idx shape")
+        print(extended_idx.shape)
+        print("extended_coords shape")
+        print(extended_coords.shape)
         neighbors = torch.gather(extended_coords, 2, extended_idx) # shape (B, 3, N, K)
         # if USE_CUDA:
         #     neighbors = neighbors.cuda()
@@ -210,20 +230,26 @@ class LocalFeatureAggregation(nn.Module):
         # print("coords.cpu()")
         # print(coords.cpu())
 
+        batch_size = coords.size(0)
+        num_points = coords.size(1)
+
+        knn_coords = coords.reshape(batch_size * num_points, 3)
         #Torch geometric knn function - use for CUDA
-        knn_output = knn(coords, coords, self.num_neighbors)
+        #knn_output = knn(knn_coords, knn_coords, self.num_neighbors)
 
         #torch_points_kernels knn function - use only for CPU
-        #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
         print("knn output")
         print(knn_output)
-        print("knn output shape")
-        print(knn_output.shape)
+
+        #Use for CUDA
+        # print("knn output shape")
+        # print(knn_output.shape)
+
         #DGCNN knn function - don't use this
         # knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
-        print("Inside Randla-net LocalFeatureAggregation forward()")
-        print("features")
-        print(features)
+        # print("features")
+        # print(features)
         print("features.shape")
         print(features.shape)
 
@@ -248,11 +274,11 @@ class RandLANet(nn.Module):
         self.num_neighbors = num_neighbors
         self.decimation = decimation
 
-        self.fc_start = nn.Linear(d_in, 8)
+        self.fc_start = nn.Linear(d_in, 8).to(device)
         self.bn_start = nn.Sequential(
             nn.BatchNorm2d(8, eps=1e-6, momentum=0.99),
             nn.LeakyReLU(0.2)
-        )
+        ).to(device)
 
         # encoding layers
         self.encoder = nn.ModuleList([
@@ -260,9 +286,9 @@ class RandLANet(nn.Module):
             LocalFeatureAggregation(32, 64, num_neighbors, device),
             LocalFeatureAggregation(128, 128, num_neighbors, device),
             LocalFeatureAggregation(256, 256, num_neighbors, device)
-        ])
+        ]).to(device)
 
-        self.mlp = SharedMLP(512, 512, activation_fn=nn.ReLU())
+        self.mlp = SharedMLP(512, 512, activation_fn=nn.ReLU()).to(device)
 
         # decoding layers
         decoder_kwargs = dict(
@@ -275,7 +301,7 @@ class RandLANet(nn.Module):
             SharedMLP(512, 128, **decoder_kwargs),
             SharedMLP(256, 32, **decoder_kwargs),
             SharedMLP(64, 8, **decoder_kwargs)
-        ])
+        ]).to(device)
 
         # final semantic prediction
         self.fc_end = nn.Sequential(
@@ -283,10 +309,10 @@ class RandLANet(nn.Module):
             SharedMLP(64, 32, bn=True, activation_fn=nn.ReLU()),
             nn.Dropout(),
             SharedMLP(32, num_classes)
-        )
+        ).to(device)
         self.device = device
 
-        self = self.to(device)
+        # self = self.to(device)
 
     def forward(self, input):
         r"""
@@ -301,9 +327,17 @@ class RandLANet(nn.Module):
                 segmentation scores for each point
         """
         print("Inside pointnet_randla_net forward")
+        print("input shape")
+        print(input.shape)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        input = input.to(device)
+
         #N = input.size(1)
         N = input.size(1)
         B = input.size(0)
+        print("Batch size B")
+        print(B)
         d_in = input.size(2)
         # print("input")
         # print(input)
@@ -319,20 +353,39 @@ class RandLANet(nn.Module):
         # print(d)
 
         #coords = input.pos.clone().cpu()
-        coords = input[..., :3]
-        print("coords")
-        print(coords)
+
+        #For CUDA
+        #coords = input[..., :3]
+        #local_features = input[..., 3:]
+
+        #For CPU
+        coords = input[..., :3].clone().cpu()
+        local_features = input[..., 3:].clone().cpu()
+
+        print("coords shape")
         print(coords.shape)
+        print("local_features shape")
+        print(local_features.shape)
         #coords = input[..., :3].clone().cpu()
 
         #input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
         #print("input_expanded shape")
         #print(input_expanded.shape)
         #x = self.fc_start(input[:10, :10, :10]).transpose(-2, -1).unsqueeze(-1)
-        x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
+
+        #Original code
+        #x = self.fc_start(input).transpose(-2,-1).unsqueeze(-1)
+
+        #New code
+        x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
+
         print("Got past fc_start")
-        #x = self.bn_start(x) # shape (B, d, N, 1)
+        print("x shape")
+        print(x.shape)
+        x = self.bn_start(x) # shape (B, d, N, 1)
         print("Got past bn_start")
+        print("x shape")
+        print(x.shape)
         decimation_ratio = 1
 
         # <<<<<<<<<< ENCODER
@@ -344,10 +397,10 @@ class RandLANet(nn.Module):
         print(permutation.size())
         #coords = coords[permutation, :]
 
-        #coords = coords[:, permutation]
+        coords = coords[:, permutation]
         print("coords shape")
         print(coords.shape)
-        #x = x[:,:,permutation]
+        x = x[:,:,permutation]
         print("x shape")
         print(x.shape)
 
@@ -368,6 +421,8 @@ class RandLANet(nn.Module):
             neighbors, _ = knn(
                 coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
                 coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
+                # coords[:, :N // decimation_ratio],  # original set
+                # coords[:, :d * N // decimation_ratio],  # upsampled set
                 1
             ) # shape (B, N, 1)
             neighbors = neighbors.to(self.device)
