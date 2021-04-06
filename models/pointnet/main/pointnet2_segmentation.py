@@ -41,6 +41,11 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
 
         pred = out.max(dim=1)[1]
 
+        print("After model forward inside train()")
+        print("out shape")
+        print(out.shape)
+        print("data.y shape")
+        print(data.y.shape)
         loss = F.nll_loss(out, data.y)
         loss.backward()
         optimizer.step()
