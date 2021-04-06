@@ -118,11 +118,18 @@ class LocalSpatialEncoding(nn.Module):
         N = coords.size(1)
         K = self.num_neighbors
         # finding neighboring points
+        # print("Inside LocSE forward()")
+        # print("knn_output")
+        # print(knn_output)
         idx, dist = knn_output
+        # print("idx")
+        # print(idx)
+        # print("dist")
+        # print(dist)
 
         #Reshapes needed for torch geometric knn
-        # idx = idx.reshape(B, N, K)
-        # dist = dist.reshape(B, N, K)
+        idx = idx.reshape(B, N, K)
+        dist = dist.reshape(B, N, K)
 
         # print("idx")
         # print(idx)
@@ -239,6 +246,7 @@ class LocalFeatureAggregation(nn.Module):
 
         #torch_points_kernels knn function - use only for CPU
         knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+
         # print("knn output")
         # print(knn_output)
 
@@ -355,8 +363,8 @@ class RandLANet(nn.Module):
         #coords = input.pos.clone().cpu()
 
         #For CUDA
-        #coords = input[..., :3]
-        #local_features = input[..., 3:]
+        # coords = input[..., :3]
+        # local_features = input[..., 3:]
 
         #For CPU
         coords = input[..., :3].clone().cpu()
