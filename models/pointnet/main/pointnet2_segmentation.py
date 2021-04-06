@@ -34,16 +34,8 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
     print_per = 10
 
     for idx, data in enumerate(train_loader):
-        # print("data.y")
-        # print(data.y)
-        # print("data.y size")
-        # print(data.y.size())
-        # print("Inside randla-net training loop")
-        # print("type data")
-        # print(type(data))
+
         data = data.to(device)
-        # print("type data")
-        # print(type(data))
         optimizer.zero_grad()
 
         #Shape: B
@@ -55,25 +47,26 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         # Shape: B
         y_tensor = torch.tensor(data.y)
 
-        print("Inside pointnet2_segmentn train()")
+        #print("Inside pointnet2_segmentn train()")
         #Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
         # sometimes it is 10002, sometimes 10003.
         # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
-        print("batch_tensor shape")
-        print(batch_tensor.shape)
-        print("pos_tensor.shape")
-        print(pos_tensor.shape)
-        print("x_tensor shape")
-        print(x_tensor.shape)
-        print("y_tensor shape")
-        print(y_tensor.shape)
+        #Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
+        # print("batch_tensor shape")
+        # print(batch_tensor.shape)
+        # print("pos_tensor.shape")
+        # print(pos_tensor.shape)
+        # print("x_tensor shape")
+        # print(x_tensor.shape)
+        # print("y_tensor shape")
+        # print(y_tensor.shape)
 
         num_points = pos_tensor.size(0)
         d_in = x_tensor.size(1)
         batch_size = torch.max(batch_tensor).item() + 1
 
-        print("batch size")
-        print(batch_size)
+        # print("batch size")
+        # print(batch_size)
 
         quot = num_points // batch_size
         num_points_multiple = quot * batch_size
@@ -90,93 +83,33 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
 
         pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-
-        #batch_tensor_reshaped = batch_tensor.reshape(batch_tensor.size(), pos_tensor.size(0), x_tensor.size(1))
-        #reshaped_batch_tensor = batch_tensor.unsqueeze(dim=1).unsqueeze(dim=2)
-
-        # reshaped_batch_tensor = batch_tensor.reshape(batch_tensor.size(), 1, 1)
-        #reshaped_batch_tensor = batch_tensor.unsqueeze(1).unsqueeze(2)
-
-        # print("reshaped_batch_tensor dims")
-        # print(reshaped_batch_tensor.shape)
-        # # reshaped_batch_tensor = reshaped_batch_tensor.expand(batch_tensor.size(), -1, -1)
-        # print("batch_tensor.size()")
-        # print(batch_tensor.size())
-        # print("pos_tensor.size(0)")
-        # print(pos_tensor.size(0))
-        # print("x_tensor.size(1)")
-        # print(x_tensor.size(1))
-        #expanded_batch_tensor = reshaped_batch_tensor.repeat(batch_tensor.size(), pos_tensor.size(0), x_tensor.size(1), 1)
-        #expanded_batch_tensor = reshaped_batch_tensor.expand(-1, x_tensor.size(0), x_tensor.size(1))
-
-        # print("expanded_batch_tensor dims")
-        # print(expanded_batch_tensor.shape)
-
-        #reshaped_x_tensor = x_tensor.unsqueeze(dim=0)
-        # print("reshaped_x_tensor shape")
-        # print(reshaped_x_tensor.shape)
-
-        #expanded_x_tensor = reshaped_x_tensor.expand(batch_tensor.size(0), -1, -1)
-
-        # print("batch_tensor.size(0)")
-        # print(batch_tensor.size(0))
-        # print("x_tensor.size(0)")
-        # print(x_tensor.size(0))
-        # print("x_tensor.size(1)")
-        # print(x_tensor.size(1))
-        #expanded_x_tensor = reshaped_x_tensor.repeat(batch_tensor.size(0), x_tensor.size(0), x_tensor.size(1))
-        # print("expanded_x_tensor shape")
-        # print(expanded_x_tensor.shape)
-
-        #reshaped_pos_tensor = pos_tensor.unsqueeze(dim=0)
-        # print("reshaped_pos_tensor shape")
-        # print(reshaped_pos_tensor.shape)
-        #expanded_pos_tensor = reshaped_pos_tensor.expand(batch_tensor.size(0), -1, x_tensor.size(1))
-        #expanded_pos_tensor = reshaped_pos_tensor.repeat(batch_tensor.size(0), pos_tensor.size(0), x_tensor.size(1), pos_tensor.size(1))
-        # print("expanded_pos_tensor shape")
-        # print(expanded_pos_tensor.shape)
-
-
-
-        # reshaped_pos_tensor = pos_tensor.unsqueeze(dim=0).unsqueeze(dim=2).squeeze(dim=3)
-        # reshaped_x_tensor = x_tensor.unsqueeze(dim=0)
-
-        # print("reshaped_pos_tensor dims")
-        # print(reshaped_pos_tensor.shape)
-        # print("reshaped_x_tensor dims")
-        # print(reshaped_x_tensor.shape)
-
-        #combined_data = torch.cat((expanded_batch_tensor, expanded_pos_tensor, expanded_x_tensor), dim=0)
-
-        # print("batch_tensor shape")
-        # print(batch_tensor.shape)
-        # print("pos_tensor shape")
-        # print(pos_tensor.shape)
-        # print("x_tensor shape")
-        # print(x_tensor.shape)
-        # print("y_tensor shape")
-        # print(y_tensor.shape)
-
-        # print("combined data shape")
-        # print(combined_data.shape)
-
-        # ensor(data.batch.size(0), data.pos.size(0), data.x.size(1))
         out = model(pos_feature_data)
-        print("after model forward")
-        print("out shape")
-        print(out.shape)
+        # print("after model forward")
+        # print("out shape")
+        # print(out.shape)
 
         pred = out.max(dim=1)[1]
 
-        loss = F.nll_loss(out, data.y)
+        #New code
+        loss = F.nll_loss(out, y_tensor_slice)
+        #Original code
+        #loss = F.nll_loss(out, data.y)
+
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-        correct_nodes += out.max(dim=1)[1].eq(data.y).sum().item()
+        #New code
+        correct_nodes += out.max(dim=1)[1].eq(y_tensor_slice).sum().item()
+        #Original code
+        #correct_nodes += out.max(dim=1)[1].eq(data.y).sum().item()
         total_nodes += data.num_nodes
 
         # Mean Jaccard indeces PER LABEL (18 numbers)
-        i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+
+        #New code
+        i, u = i_and_u(out.max(dim=1)[1], y_tensor_slice, num_labels, batch=batch_tensor_slice)
+        #Original code
+        #i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
 
         # Add to totals
         i_total, u_total = add_i_and_u(i, u, i_total, u_total, idx)
@@ -232,33 +165,103 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
 
             # 1. Get predictions and loss
             data = data.to(device)
-            out = model(data)
+
+            # Shape: B
+            batch_tensor = torch.tensor(data.batch)
+            # Shape: N x 3
+            pos_tensor = torch.tensor(data.pos)
+            # Shape: N x d_in
+            x_tensor = torch.tensor(data.x)
+            # Shape: B
+            y_tensor = torch.tensor(data.y)
+
+            # print("Inside pointnet2_segmentn train()")
+            # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
+            # sometimes it is 10002, sometimes 10003.
+            # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
+            # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
+            # print("batch_tensor shape")
+            # print(batch_tensor.shape)
+            # print("pos_tensor.shape")
+            # print(pos_tensor.shape)
+            # print("x_tensor shape")
+            # print(x_tensor.shape)
+            # print("y_tensor shape")
+            # print(y_tensor.shape)
+
+            num_points = pos_tensor.size(0)
+            d_in = x_tensor.size(1)
+            batch_size = torch.max(batch_tensor).item() + 1
+
+            # print("batch size")
+            # print(batch_size)
+
+            quot = num_points // batch_size
+            num_points_multiple = quot * batch_size
+
+            pos_tensor_slice = pos_tensor[:num_points_multiple, :]
+            x_tensor_slice = x_tensor[:num_points_multiple, :]
+            batch_tensor_slice = batch_tensor[:num_points_multiple]
+            y_tensor_slice = y_tensor[:num_points_multiple]
+
+            pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
+            x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
+
+            # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
+            # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
+
+            pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
+
+
+            out = model(pos_feature_data)
 
             pred = out.max(dim=1)[1]
 
-            loss = F.nll_loss(out, data.y)
+            #Original code
+            #loss = F.nll_loss(out, data.y)
+
+            #New code
+            loss = F.nll_loss(out, y_tensor_slice)
             total_loss.append(loss)
 
 
             # 2. Get d (positions), _y (actual labels), _out (predictions)
-            d = data.pos.cpu().detach().numpy()
-            _y = data.y.cpu().detach().numpy()
+            #Original code
+            #d = data.pos.cpu().detach().numpy()
+            # _y = data.y.cpu().detach().numpy()
+            # _out = out.max(dim=1)[1].cpu().detach().numpy()
+
+            #New code
+            d = pos_tensor_slice.cpu().detach().numpy()
+            _y = y_tensor_slice.cpu().detach().numpy()
             _out = out.max(dim=1)[1].cpu().detach().numpy()
 
-
             # Mean Jaccard indeces PER LABEL (18 numbers)
-            i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+
+            #Original code
+            #i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+            #New code
+            i, u = i_and_u(out.max(dim=1)[1], y_tensor_slice, num_labels, batch=batch_tensor_slice)
+
             i_total, u_total = add_i_and_u(i, u, i_total, u_total, batch_idx)
 
+            #Original code
+            # if batch_idx == 0:
+            #     all_preds = pred
+            #     all_datay = data.y
+            #
+            # else:
+            #     all_preds = torch.cat((all_preds, pred))
+            #     all_datay = torch.cat((all_datay, data.y))
 
+            #New code
             if batch_idx == 0:
                 all_preds = pred
-                all_datay = data.y
+                all_datay = y_tensor_slice
 
             else:
                 all_preds = torch.cat((all_preds, pred))
-                all_datay = torch.cat((all_datay, data.y))
-
+                all_datay = torch.cat((all_datay, y_tensor_slice))
 
             if recording:
                 # 3. Create directory where to place the data
@@ -277,7 +280,10 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
 
 
             # 5. Get accuracy
-            correct_nodes += pred.eq(data.y).sum().item()
+            #Original code
+            #correct_nodes += pred.eq(data.y).sum().item()
+            #New code
+            correct_nodes += pred.eq(y_tensor_slice).sum().item()
             total_nodes += data.num_nodes
 
         # Mean IoU over all batches and per class (i.e. array of shape 18 - [0.5, 0.7, 0.85, ... ]

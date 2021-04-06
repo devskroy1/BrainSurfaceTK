@@ -107,11 +107,11 @@ class LocalSpatialEncoding(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d, N, K)
         """
-        print("Inside LocSE forward()")
-        print("coords shape")
-        print(coords.shape)
-        print("features shape")
-        print(features.shape)
+        # print("Inside LocSE forward()")
+        # print("coords shape")
+        # print(coords.shape)
+        # print("features shape")
+        # print(features.shape)
         # print("knn_output shape")
         # print(knn_output.shape)
         B = coords.size(0)
@@ -126,22 +126,22 @@ class LocalSpatialEncoding(nn.Module):
 
         # print("idx")
         # print(idx)
-        print("idx shape")
-        print(idx.shape)
+        # print("idx shape")
+        # print(idx.shape)
         # print("dist")
         # print(dist)
-        print("dist shape")
-        print(dist.shape)
+        # print("dist shape")
+        # print(dist.shape)
 
         #B, N, K = idx.size()
         # idx(B, N, K), coords(B, N, 3)
         # neighbors[b, i, n, k] = coords[b, idx[b, n, k], i] = extended_coords[b, i, extended_idx[b, i, n, k], k]
         extended_idx = idx.unsqueeze(1).expand(B, 3, N, K)
         extended_coords = coords.transpose(-2,-1).unsqueeze(-1).expand(B, 3, N, K)
-        print("extended_idx shape")
-        print(extended_idx.shape)
-        print("extended_coords shape")
-        print(extended_coords.shape)
+        # print("extended_idx shape")
+        # print(extended_idx.shape)
+        # print("extended_coords shape")
+        # print(extended_coords.shape)
         neighbors = torch.gather(extended_coords, 2, extended_idx) # shape (B, 3, N, K)
         # if USE_CUDA:
         #     neighbors = neighbors.cuda()
@@ -221,12 +221,12 @@ class LocalFeatureAggregation(nn.Module):
             -------
             torch.Tensor, shape (B, 2*d_out, N, 1)
         """
-        print("Inside lfa forward()")
-        print("coords shape")
-        print(coords.shape)
+        # print("Inside lfa forward()")
+        # print("coords shape")
+        # print(coords.shape)
 
-        print("num neighbours")
-        print(self.num_neighbors)
+        # print("num neighbours")
+        # print(self.num_neighbors)
         # print("coords.cpu()")
         # print(coords.cpu())
 
@@ -239,8 +239,8 @@ class LocalFeatureAggregation(nn.Module):
 
         #torch_points_kernels knn function - use only for CPU
         knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
-        print("knn output")
-        print(knn_output)
+        # print("knn output")
+        # print(knn_output)
 
         #Use for CUDA
         # print("knn output shape")
@@ -250,11 +250,11 @@ class LocalFeatureAggregation(nn.Module):
         # knn_output = knn(coords.cpu().contiguous(), self.num_neighbors)
         # print("features")
         # print(features)
-        print("features.shape")
-        print(features.shape)
-
-        print("knn_output")
-        print(knn_output)
+        # print("features.shape")
+        # print(features.shape)
+        #
+        # print("knn_output")
+        # print(knn_output)
         x = self.mlp1(features)
 
         x = self.lse1(coords, x, knn_output)
@@ -311,7 +311,7 @@ class RandLANet(nn.Module):
             SharedMLP(32, num_classes)
         ).to(device)
         self.device = device
-
+        self.num_classes = num_classes
         # self = self.to(device)
 
     def forward(self, input):
@@ -326,9 +326,9 @@ class RandLANet(nn.Module):
             torch.Tensor, shape (B, num_classes, N)
                 segmentation scores for each point
         """
-        print("Inside pointnet_randla_net forward")
-        print("input shape")
-        print(input.shape)
+        # print("Inside pointnet_randla_net forward")
+        # print("input shape")
+        # print(input.shape)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         input = input.to(device)
@@ -336,13 +336,13 @@ class RandLANet(nn.Module):
         #N = input.size(1)
         N = input.size(1)
         B = input.size(0)
-        print("Batch size B")
-        print(B)
+        # print("Batch size B")
+        # print(B)
         d_in = input.size(2)
         # print("input")
         # print(input)
-        print("N")
-        print(N)
+        # print("N")
+        # print(N)
         # print("B")
         # print(B)
         # print("d_in")
@@ -362,10 +362,10 @@ class RandLANet(nn.Module):
         coords = input[..., :3].clone().cpu()
         local_features = input[..., 3:].clone().cpu()
 
-        print("coords shape")
-        print(coords.shape)
-        print("local_features shape")
-        print(local_features.shape)
+        # print("coords shape")
+        # print(coords.shape)
+        # print("local_features shape")
+        # print(local_features.shape)
         #coords = input[..., :3].clone().cpu()
 
         #input_expanded = input.x.unsqueeze(0).expand(2, -1, -1)
@@ -379,30 +379,30 @@ class RandLANet(nn.Module):
         #New code
         x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
 
-        print("Got past fc_start")
-        print("x shape")
-        print(x.shape)
+        # print("Got past fc_start")
+        # print("x shape")
+        # print(x.shape)
         x = self.bn_start(x) # shape (B, d, N, 1)
-        print("Got past bn_start")
-        print("x shape")
-        print(x.shape)
+        # print("Got past bn_start")
+        # print("x shape")
+        # print(x.shape)
         decimation_ratio = 1
 
         # <<<<<<<<<< ENCODER
         x_stack = []
         permutation = torch.randperm(N)
-        print("permutn")
-        print(permutation)
-        print("permutn size")
-        print(permutation.size())
+        # print("permutn")
+        # print(permutation)
+        # print("permutn size")
+        # print(permutation.size())
         #coords = coords[permutation, :]
 
         coords = coords[:, permutation]
-        print("coords shape")
-        print(coords.shape)
+        # print("coords shape")
+        # print(coords.shape)
         x = x[:,:,permutation]
-        print("x shape")
-        print(x.shape)
+        # print("x shape")
+        # print(x.shape)
 
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
@@ -443,4 +443,5 @@ class RandLANet(nn.Module):
 
         scores = self.fc_end(x)
 
-        return scores.squeeze(-1)
+        scores = scores.squeeze(-1)
+        return scores.reshape(B*N, self.num_classes)
