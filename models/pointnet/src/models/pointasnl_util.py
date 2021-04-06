@@ -63,25 +63,25 @@ def sampling(npoint, pts, feature=None):
     batch_size = pts.size(0)
     batch_pts = torch.arange(0, batch_size).to(device='cuda:0')
 
-    print("pts device")
-    print(pts.device)
-    print("batch_pts device")
-    print(batch_pts.device)
+    # print("pts device")
+    # print(pts.device)
+    # print("batch_pts device")
+    # print(batch_pts.device)
     fps_index = fps(pts, batch_pts)
 
     #fps_idx = tf_sampling.farthest_point_sample(npoint, pts)
 
     batch_indices = np.tile(torch.reshape(batch_pts, (-1, 1, 1)).cpu().numpy(), (1, npoint,1))
-    print("batch indices shape")
-    print(batch_indices.shape)
-    print("fps_index")
-    print(fps_index)
-    print("fps_index.shape")
-    print(fps_index.shape)
+    # print("batch indices shape")
+    # print(batch_indices.shape)
+    # print("fps_index")
+    # print(fps_index)
+    # print("fps_index.shape")
+    # print(fps_index.shape)
 
-    expanded_fps_index = fps_index.unsqueeze(dim=1).unsqueeze(dim=2).expand(-1, npoint, -1)
-    print("unsqueezed fps_index.shape")
-    print(expanded_fps_index.shape)
+    expanded_fps_index = fps_index.unsqueeze(dim=1).unsqueeze(dim=2).expand(-1, npoint, 2)
+    # print("unsqueezed fps_index.shape")
+    # print(expanded_fps_index.shape)
 
     idx = torch.cat([torch.from_numpy(batch_indices).to(device='cuda:0'), expanded_fps_index], dim=2)
     # print("idx shape before set_shape")
@@ -95,13 +95,13 @@ def sampling(npoint, pts, feature=None):
 
     else:
         #return tf.gather_nd(pts, idx), tf.gather_nd(feature, idx)
-        print("Just before returning from sampling function")
-        print("pts shape")
-        print(pts.shape)
-        print("feature shape")
-        print(feature.shape)
-        print("idx shape")
-        print(idx.shape)
+        # print("Just before returning from sampling function")
+        # print("pts shape")
+        # print(pts.shape)
+        # print("feature shape")
+        # print(feature.shape)
+        # print("idx shape")
+        # print(idx.shape)
         #return pts[list(idx)], feature[list(idx)]
         return gather_nd(pts, idx), gather_nd(feature, idx)
         #return pts[list(idx.T)], feature[list(idx.T)]
@@ -113,6 +113,7 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     q_xyz: query point xyz (batch_size, npoint, 3)
     '''
 
+    print("Inside grouping function")
     batch_size = src_xyz.size(0)
     ndataset = src_xyz.size(1)
     npoint = q_xyz.size(1)
@@ -122,17 +123,18 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
         #TODO: Use pytorch geometric knn function since torch points kernels knn function not implemented on CUDA
         #Work out how to get rid of batch dimension
-        print("src_xyz shape")
-        print(src_xyz.shape)
-        print("q_xyz shape")
-        print(q_xyz.shape)
+        # print("src_xyz shape")
+        # print(src_xyz.shape)
+        # print("q_xyz shape")
+        # print(q_xyz.shape)
 
-        print("npoint")
-        print(npoint)
+        # print("npoint")
+        # print(npoint)
         reshaped_src_xyz = src_xyz.reshape(batch_size * ndataset, 3)
         reshaped_q_xyz = q_xyz.reshape(batch_size * npoint, 3)
         point_indices = knn(reshaped_src_xyz, reshaped_q_xyz, K)
 
+        point_indices = point_indices.reshape(-1, npoint, K, batch_size)
         # batch_indices = tf.tile(tf.reshape(tf.range(batch_size), (-1, 1, 1, 1)), (1, npoint, K, 1))
         # idx = tf.concat([batch_indices, tf.expand_dims(point_indices, axis=3)], axis=3)
         # idx.set_shape([batch_size, npoint, K, 2])
@@ -140,7 +142,11 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
         batch_indices = np.tile(torch.arange(0, batch_size).view(-1, 1, 1, 1).cpu().numpy(), (1, npoint, K, 1))
 
-        idx = torch.cat([batch_indices, point_indices.expand(3)], dim=3)
+        print("batch_indices shape")
+        print(batch_indices.shape)
+        print("point_indices.shape")
+        print(point_indices.shape)
+        idx = torch.cat([torch.from_numpy(batch_indices).to(device='cuda:0'), point_indices], dim=3)
 
         #idx = idx.reshape([batch_size, npoint, K, 2])
 
@@ -217,8 +223,8 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     [batch_size, npoint, nsample, channel] = list(new_point.size())
     bottleneck_channel = max(32,channel//2)
     # normalized_xyz = grouped_xyz - tf.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), [1, 1, nsample, 1])
-    normalized_xyz = grouped_xyz - np.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2).cpu().numpy(), (1, 1, nsample, 1))
-    new_point = torch.cat([normalized_xyz, new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
+    normalized_xyz = grouped_xyz.cpu().numpy() - np.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2).cpu().numpy(), (1, 1, nsample, 1))
+    new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device='cuda:0'), new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
 
     # transformed_feature = nn.conv2d(new_point, bottleneck_channel * 2, [1, 1],
     #                                      padding='VALID', stride=[1, 1],
@@ -226,6 +232,8 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     #                                      scope='conv_kv_ds', bn_decay=bn_decay, weight_decay=weight_decay,
     #                                      activation_fn=None)
 
+    print("new_point shape")
+    print(new_point.shape)
     transformed_feature = conv2d(new_point, bottleneck_channel * 2, kernel_size=[1, 1],
                                  padding=0, stride=[1,1], bn=bn, is_training=is_training,
                                  bn_decay=bn_decay, weight_decay=weight_decay,

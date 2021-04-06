@@ -4,31 +4,35 @@ import torch.nn as nn
 
 def gather_nd(params, indices):
 
-    print("Inside gather_nd pytorch")
+    # print("Inside gather_nd pytorch")
+    # print("params shape")
+    # print(params.shape)
+    # print("indices shape")
+    # print(indices.shape)
     out_shape = indices.shape
-    print("outshape")
-    print(out_shape)
-    indices = indices.unsqueeze(0).transpose(0, -1)  # roll last axis to fring
+    # print("outshape")
+    # print(out_shape)
+    indices = indices.unsqueeze(-1).transpose(0, -1)  # roll last axis to fring
     ndim = indices.shape[0]
-    print("indices shape")
-    print(indices.shape)
-    print("ndim")
-    print(ndim)
+    # print("indices shape")
+    # print(indices.shape)
+    # print("ndim")
+    # print(ndim)
     indices = indices.long()
-    print("indices shape")
-    print(indices.shape)
-    print("indices[0] shape")
-    print(indices[0].shape)
+    # print("indices shape")
+    # print(indices.shape)
+    # print("indices[0] shape")
+    # print(indices[0].shape)
     idx = torch.zeros_like(indices[0], device=indices.device).long()
-    print("idx shape")
-    print(idx.shape)
+    # print("idx shape")
+    # print(idx.shape)
     m = 1
 
     for i in range(ndim)[::-1]:
         idx += indices[i] * m
         m *= params.size(i)
-    print("idx shape just before torch.take call")
-    print(idx.shape)
+    # print("idx shape just before torch.take call")
+    # print(idx.shape)
     out = torch.take(params, idx)
     return out.view(out_shape)
 
@@ -79,7 +83,6 @@ def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
 def conv1d(inputs,
            num_output_channels,
            kernel_size,
-           scope,
            stride=1,
            padding=0,
            data_format='NHWC',
@@ -123,8 +126,12 @@ def conv1d(inputs,
   #                                        use_xavier=use_xavier,
   #                                        stddev=stddev,
   #                                        wd=weight_decay)
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-  conv = nn.Conv1d(num_in_channels, num_output_channels, kernel_size, stride, padding)
+  conv = nn.Conv1d(num_in_channels, num_output_channels, kernel_size, stride, padding).to(device)
+
+  if data_format == 'NHWC':
+    inputs = inputs.transpose(2, -1).transpose(1, 2)
 
   # biases = _variable_on_cpu('biases', [num_output_channels],
   #                         tf.constant_initializer(0.0))
@@ -134,15 +141,26 @@ def conv1d(inputs,
 
   # outputs = tf.nn.bias_add(outputs, biases)
 
-  outputs = conv(inputs)
+  outputs = conv(inputs.to(device))
+
+  outputs = outputs.to(device)
   if bn:
       # outputs = batch_norm_for_conv2d(outputs, is_training,
       #                                 bn_decay=bn_decay, scope='bn')
       num_features = outputs.size(1)
+
       if is_training:
-          batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).train()
+          if bn_decay is None:
+              batch_norm = nn.BatchNorm1d(num_features).to(device).train()
+          else:
+              batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).to(device).train()
+
       else:
-          batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).eval()
+          if bn_decay is None:
+              batch_norm = nn.BatchNorm1d(num_features).to(device).eval()
+          else:
+              batch_norm = nn.BatchNorm1d(num_features, momentum=1 - bn_decay).to(device).eval()
+
       outputs = batch_norm(outputs)
 
   if activation_fn is not None:
@@ -153,7 +171,6 @@ def conv1d(inputs,
 def conv2d(inputs,
            num_output_channels,
            kernel_size,
-           scope,
            stride=[1, 1],
            padding=0,
            data_format='NHWC',
@@ -201,21 +218,47 @@ def conv2d(inputs,
   #                                      stddev=stddev,
   #                                      wd=weight_decay)
   # stride_h, stride_w = stride
-  conv = nn.Conv2d(num_in_channels, num_output_channels, kernel_size, stride, padding)
+  print("num_in_channels")
+  print(num_in_channels)
+
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+  # if torch.cuda.is_available():
+  #   conv = nn.Conv2d(num_in_channels, num_output_channels, kernel_size, stride, padding).cuda()
+  # else:
+  #   conv = nn.Conv2d(num_in_channels, num_output_channels, kernel_size, stride, padding)
+
+  conv = nn.Conv2d(num_in_channels, num_output_channels, kernel_size, stride, padding).to(device)
+
   # biases = _variable_on_cpu('biases', [num_output_channels],
   #                           tf.constant_initializer(0.0))
   #
   #
   # outputs = tf.nn.bias_add(outputs, biases)
-  outputs = conv(inputs)
+  if data_format == 'NHWC':
+    inputs = inputs.transpose(2, -1).transpose(1, 2)
+  outputs = conv(inputs.to(device))
+  print("outputs shape")
+  print(outputs.shape)
+
+  outputs = outputs.to(device)
   if bn:
     # outputs = batch_norm_for_conv2d(outputs, is_training,
     #                                 bn_decay=bn_decay, scope='bn')
     num_features = outputs.size(1)
+    print("num_features")
+    print(num_features)
     if is_training:
-        batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).train()
+        if bn_decay is None:
+            batch_norm = nn.BatchNorm2d(num_features).to(device).train()
+        else:
+            batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).to(device).train()
+
     else:
-        batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).eval()
+        if bn_decay is None:
+            batch_norm = nn.BatchNorm2d(num_features).to(device).eval()
+        else:
+            batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).to(device).eval()
     outputs = batch_norm(outputs)
 
   if activation_fn is not None:
