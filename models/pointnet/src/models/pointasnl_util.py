@@ -296,36 +296,36 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
 
 def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, bn):
     # with tf.variable_scope(scope) as sc:
-    print("Inside AdaptiveSampling()")
+    #print("Inside AdaptiveSampling()")
     [nsample, num_channel] = list(group_feature.size()[-2:])
     if num_neighbor == 0:
         new_xyz = group_xyz[:, :, 0, :]
         new_feature = group_feature[:, :, 0, :]
         return new_xyz, new_feature
     shift_group_xyz = group_xyz[:, :, :num_neighbor, :]
-    print("group_feature shape")
-    print(group_feature.shape)
+    # print("group_feature shape")
+    # print(group_feature.shape)
     shift_group_points = group_feature[:, :, :num_neighbor, :]
     sample_weight = SampleWeights(shift_group_points, shift_group_xyz, [32, 1 + num_channel], is_training, bn_decay, weight_decay, bn)
-    print("sample weights shape")
-    print(sample_weight.shape)
-    print("shift_group_points shape")
-    print(shift_group_points.shape)
+    # print("sample weights shape")
+    # print(sample_weight.shape)
+    # print("shift_group_points shape")
+    # print(shift_group_points.shape)
     # new_weight_xyz = tf.tile(torch.unsqueeze(sample_weight[:,:,:, 0],-1), [1, 1, 1, 3])
     new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
-    print("new_weight_xyz shape")
-    print(new_weight_xyz.shape)
-    print("shift_group_xyz shape")
-    print(shift_group_xyz.shape)
+    # print("new_weight_xyz shape")
+    # print(new_weight_xyz.shape)
+    # print("shift_group_xyz shape")
+    # print(shift_group_xyz.shape)
     new_weight_feature = sample_weight[:,:,:, 1:]
-    print("new_weight_feature shape")
-    print(new_weight_feature.shape)
+    # print("new_weight_feature shape")
+    # print(new_weight_feature.shape)
     new_xyz = torch.sum(torch.multiply(shift_group_xyz, torch.from_numpy(new_weight_xyz)), dim=2)
     new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature), dim=2)
-    print("new_xyz")
-    print(new_xyz)
-    print("new_feature")
-    print(new_feature)
+    # print("new_xyz")
+    # print(new_xyz)
+    # print("new_feature")
+    # print(new_feature)
     return new_xyz, new_feature
 
 def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay, bn=True, scaled=True, mode='dot'):

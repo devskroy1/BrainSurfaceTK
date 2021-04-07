@@ -18,11 +18,14 @@ class SAModule(torch.nn.Module):
         # print(pos.shape)
         # print("batch vector shape")
         # print(batch.shape)
+        #print("Inside SAModule forward")
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
         x = self.conv(x, (pos, pos[idx]), edge_index)
+        # print("x shape after calling conv")
+        # print(x.shape)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
 
@@ -81,10 +84,22 @@ class Net(torch.nn.Module):
 
         #End of code from ASNL repo
 
+        #Original code for vanilla pointnet++ classificn
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
-        self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
-        self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
-        self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        # self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
+        # self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
+        # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+        #
+        # self.lin1 = Lin(1024 + num_global_features, 512)
+        # self.lin2 = Lin(512, 256)
+        # self.lin3 = Lin(256, 128)
+        # self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
+
+        #New code for point asnl and pointnet++
+        self.sa1_module = SAModule(0.5, 0.2, MLP([128 + num_local_features, 128, 128, 160]))
+        self.sa1a_module = SAModule(0.5, 0.2, MLP([160 + 3, 160, 160, 192]))
+        self.sa2_module = SAModule(0.25, 0.4, MLP([192 + 3, 192, 192, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
         self.lin1 = Lin(1024 + num_global_features, 512)
@@ -141,8 +156,8 @@ class Net(torch.nn.Module):
         # print(new_feature.shape)
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
 
-        print("new_point shape after calling grouping()")
-        print(new_point.shape)
+        # print("new_point shape after calling grouping()")
+        # print(new_point.shape)
         #TODO: Need to update is_training depending on whether you're training model or evaluating model
         new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
                                                 is_training=True, bn=True, bn_decay=None, weight_decay=None)
@@ -154,8 +169,8 @@ class Net(torch.nn.Module):
         # print(new_feature.shape)
         grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
-        print("new_point.shape after cat")
-        print(new_point.shape)
+        # print("new_point.shape after cat")
+        # print(new_point.shape)
         '''Skip Connection'''
         skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
         # print("skip spatial max shape")
@@ -163,28 +178,28 @@ class Net(torch.nn.Module):
 
         skip_spatial = conv1d(skip_spatial_max, self.mlp[-1], kernel_size=1, padding=0, stride=1,
                               bn=True, is_training=True)
-        print("skip_spatial shape")
-        print(skip_spatial.shape)
+        # print("skip_spatial shape")
+        # print(skip_spatial.shape)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
-        print("weight shape from weight_net_hidden()")
-        print(weight.shape)
+        # print("weight shape from weight_net_hidden()")
+        # print(weight.shape)
         new_point = new_point.transpose(2, 3)
-        print("new_point.shape after transpose")
-        print(new_point.shape)
+        # print("new_point.shape after transpose")
+        # print(new_point.shape)
         new_point = torch.matmul(new_point, weight)
-        print("new_point.shape after matmul with weight")
-        print(new_point.shape)
+        # print("new_point.shape after matmul with weight")
+        # print(new_point.shape)
         new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
                            padding=0, stride=[1, 1], bn=True, is_training=True)
-        print("new_point.shape after conv2d")
-        print(new_point.shape)
+        # print("new_point.shape after conv2d")
+        # print(new_point.shape)
         new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
-        print("new_point.shape after squeeze")
-        print(new_point.shape)
+        # print("new_point.shape after squeeze")
+        # print(new_point.shape)
         new_point = new_point + skip_spatial
-        print("new_point.shape after addition of skip_spatial")
-        print(new_point.shape)
+        # print("new_point.shape after addition of skip_spatial")
+        # print(new_point.shape)
         # print("new_point shape")
         # print(new_point.shape)
         # print("new_xyz shape")
@@ -225,7 +240,14 @@ class Net(torch.nn.Module):
         sa1a_out = self.sa1a_module(*sa1_out)
         sa2_out = self.sa2_module(*sa1a_out)
         sa3_out = self.sa3_module(*sa2_out)
+
         x, pos, batch = sa3_out
+        print("x shape")
+        print(x.shape)
+        print("pos shape")
+        print(pos.shape)
+        print("batch shape")
+        print(batch.shape)
 
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
@@ -237,4 +259,6 @@ class Net(torch.nn.Module):
         x = F.relu(self.lin3(x))
         # x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin4(x)
+        print("x shape after final lin layer")
+        print(x.shape)
         return F.log_softmax(x, dim=-1)
