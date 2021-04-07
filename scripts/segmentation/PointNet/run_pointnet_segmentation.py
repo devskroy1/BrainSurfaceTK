@@ -112,15 +112,21 @@ if __name__ == '__main__':
         num_local_features = 0
     print(f'Unique labels found: {num_labels}')
 
+    # print("torch.cuda.version")
+    # print(torch.cuda.version)
+
     if not torch.cuda.is_available():
         print('You are running on a CPU.')
 
+    print("Got past cuda available check")
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("Got past initing device")
     model = Net(num_labels, num_local_features, num_global_features=None).to(device)
+    print("Got past initing Model")
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
-
+    print("Got past initing opt and sched")
     id = '0'
     writer = None
     if recording:
@@ -146,10 +152,12 @@ if __name__ == '__main__':
 
         # 1. Start recording time
         start = time.time()
-
+        print("Epoch: ")
+        print(epoch)
+        print("Just before calling train")
         # 2. Make a training step
         train(model, train_loader, epoch, device, optimizer, num_labels, writer, recording=recording)
-
+        print("Just after calling train")
         if recording:
             writer.add_scalar('Training Time/epoch', time.time() - start, epoch)
 

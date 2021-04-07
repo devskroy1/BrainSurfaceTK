@@ -27,20 +27,31 @@ PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
 
 def train(model, train_loader, epoch, device, optimizer, num_labels, writer, recording=False):
+    print("Inside train function")
     model.train()
+    print("Just after calling model.train()")
 
     total_loss = correct_nodes = total_nodes = 0
     i_total, u_total = None, None
     print_per = 10
-
+    print("Just before entering for loop")
+    print("train_loader")
+    print(train_loader)
+    print("enumerate(train_loader")
+    print(enumerate(train_loader))
     for idx, data in enumerate(train_loader):
-
+        print("Inside train for loop")
         data = data.to(device)
         optimizer.zero_grad()
+        print("Just before calling model fwd")
         out = model(data)
-
+        print("Just after calling model fwd")
         pred = out.max(dim=1)[1]
 
+        print("out shape")
+        print(out.shape)
+        print("data.y.shape")
+        print(data.y.shape)
         loss = F.nll_loss(out, data.y)
         loss.backward()
         optimizer.step()

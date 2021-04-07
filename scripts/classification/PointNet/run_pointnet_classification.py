@@ -61,7 +61,7 @@ if __name__ == '__main__':
     target_class = 'gender'
     task = 'classification'
     numb_epochs = 200
-    number_of_points = 10000
+    # number_of_points = 10000
 
     ################################################
 
@@ -95,6 +95,9 @@ if __name__ == '__main__':
         numb_local_features = 0
     numb_global_features = len(global_features)
 
+    if not torch.cuda.is_available():
+        print('You are running on a CPU.')
+
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = Net(num_local_features=numb_local_features, num_global_features=numb_global_features, batch_size=batch_size, mlp=[64,64,128]).to(device)
@@ -127,7 +130,7 @@ if __name__ == '__main__':
             config_file.write('Batch size - ' + str(batch_size) + '\n')
             config_file.write('Local features - ' + str(local_features) + '\n')
             config_file.write('Global feature - ' + str(global_features) + '\n')
-            config_file.write('Number of points - ' + str(number_of_points) + '\n')
+            #config_file.write('Number of points - ' + str(number_of_points) + '\n')
             config_file.write('Data res - ' + data_compression + '\n')
             config_file.write('Data type - ' + data_type + '\n')
             config_file.write('Data nativeness - ' + data_nativeness + '\n')
