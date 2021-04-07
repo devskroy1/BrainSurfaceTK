@@ -184,7 +184,7 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
     return grouped_xyz, grouped_feature, idx
 
-def weight_net_hidden(xyz, hidden_units, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
+def weight_net_hidden(xyz, hidden_units, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU()):
 
     net = xyz
     for i, num_hidden_units in enumerate(hidden_units):
@@ -192,7 +192,7 @@ def weight_net_hidden(xyz, hidden_units, is_training, bn_decay=None, weight_deca
                      is_training=is_training, activation_fn=activation_fn, bn_decay=bn_decay, weight_decay=weight_decay)
     return net
 
-def nonlinear_transform(data_in, mlp, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU):
+def nonlinear_transform(data_in, mlp, is_training, bn_decay=None, weight_decay = None, activation_fn=nn.ReLU()):
 
     #with tf.variable_scope(scope) as sc:
 
@@ -202,14 +202,14 @@ def nonlinear_transform(data_in, mlp, is_training, bn_decay=None, weight_decay =
         for i, out_ch in enumerate(mlp[0:(l-1)]):
             net = conv2d(net, out_ch, kernel_size=[1, 1],
                                 padding=0, stride=[1, 1],
-                                bn=True, is_training=is_training, activation_fn=nn.ReLU,
+                                bn=True, is_training=is_training, activation_fn=nn.ReLU(),
                                 bn_decay=bn_decay, weight_decay=weight_decay)
 
             #net = tf_util.dropout(net, keep_prob=0.5, is_training=is_training, scope='dp_nonlinear%d'%(i))
     net = conv2d(net, mlp[-1], kernel_size=[1, 1],
                         padding=0, stride=[1, 1],
                         bn=False, is_training=is_training, bn_decay=bn_decay,
-                        activation_fn=nn.Sigmoid, weight_decay=weight_decay)
+                        activation_fn=nn.Sigmoid(), weight_decay=weight_decay)
 
     return net
 

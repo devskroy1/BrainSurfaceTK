@@ -14,6 +14,10 @@ class SAModule(torch.nn.Module):
         self.conv = PointConv(nn)
 
     def forward(self, x, pos, batch):
+        # print("pos shape")
+        # print(pos.shape)
+        # print("batch vector shape")
+        # print(batch.shape)
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
@@ -130,46 +134,93 @@ class Net(torch.nn.Module):
         #PointASNL SetAbstraction layer - Adaptive Sampling module
 
         new_xyz, new_feature = sampling(npoint=512, pts=xyz, feature=features)
-        print("After exiting from sampling")
-        print("new_xyz shape")
-        print(new_xyz.shape)
-        print("new_feature shape")
-        print(new_feature.shape)
+        # print("After exiting from sampling")
+        # print("new_xyz shape")
+        # print(new_xyz.shape)
+        # print("new_feature shape")
+        # print(new_feature.shape)
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
 
+        print("new_point shape after calling grouping()")
+        print(new_point.shape)
         #TODO: Need to update is_training depending on whether you're training model or evaluating model
-        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn=True)
+        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
+                                                is_training=True, bn=True, bn_decay=None, weight_decay=None)
 
-        print("After exiting from AdaptiveSampling")
-        print("new_xyz shape")
-        print(new_xyz.shape)
-        print("new_feature shape")
-        print(new_feature.shape)
+        # print("After exiting from AdaptiveSampling")
+        # print("new_xyz shape")
+        # print(new_xyz.shape)
+        # print("new_feature shape")
+        # print(new_feature.shape)
         grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
-
+        print("new_point.shape after cat")
+        print(new_point.shape)
         '''Skip Connection'''
         skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
-        print("skip spatial max shape")
-        print(skip_spatial_max.shape)
+        # print("skip spatial max shape")
+        # print(skip_spatial_max.shape)
 
         skip_spatial = conv1d(skip_spatial_max, self.mlp[-1], kernel_size=1, padding=0, stride=1,
                               bn=True, is_training=True)
+        print("skip_spatial shape")
+        print(skip_spatial.shape)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
+        print("weight shape from weight_net_hidden()")
+        print(weight.shape)
         new_point = new_point.transpose(2, 3)
+        print("new_point.shape after transpose")
+        print(new_point.shape)
         new_point = torch.matmul(new_point, weight)
+        print("new_point.shape after matmul with weight")
+        print(new_point.shape)
         new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
                            padding=0, stride=[1, 1], bn=True, is_training=True)
-
+        print("new_point.shape after conv2d")
+        print(new_point.shape)
         new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
-
+        print("new_point.shape after squeeze")
+        print(new_point.shape)
         new_point = new_point + skip_spatial
-
+        print("new_point.shape after addition of skip_spatial")
+        print(new_point.shape)
+        # print("new_point shape")
+        # print(new_point.shape)
+        # print("new_xyz shape")
+        # print(new_xyz.shape)
+        # print("data.batch")
+        # print(data.batch)
         #POINTNET CLASSIFICN NETWORK
 
         #sa0_out = (data.x, data.pos, data.batch)
-        sa0_out = (new_point, new_xyz, data.batch)
+        npoint = new_xyz.size(1)
+        new_point_third_dim = new_point.size(2)
+        new_xyz_reshape = new_xyz.reshape(self.batch_size * npoint, 3)
+        new_point_reshape = new_point.reshape(self.batch_size * npoint, new_point_third_dim)
+
+        # new_xyz_batch0 = new_xyz[0, :, :]
+        # new_xyz_batch1 = new_xyz[1, :, :]
+        # new_xyz_concat = torch.cat([new_xyz_batch0, new_xyz_batch1], dim=0)
+        # print("tensors equal")
+        # print(torch.equal(new_xyz_reshape, new_xyz_concat))
+
+        batch_cat_tensor = torch.zeros(npoint, dtype=torch.int64)
+        for b in range(1, self.batch_size):
+
+            batch_tensor = torch.ones(npoint, dtype=torch.int64)
+            batch_tensor.new_full((1, npoint), b)
+            # print("batch_tensor shape")
+            # print(batch_tensor.shape)
+            # Expected to be 512
+            batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
+
+        # print("batch_cat_tensor shape")
+        # print(batch_cat_tensor.shape)
+        # #Expected to be 1024
+        # print("batch_cat_tensor")
+        # print(batch_cat_tensor)
+        sa0_out = (new_point_reshape, new_xyz_reshape, batch_cat_tensor)
         sa1_out = self.sa1_module(*sa0_out)
         sa1a_out = self.sa1a_module(*sa1_out)
         sa2_out = self.sa2_module(*sa1a_out)

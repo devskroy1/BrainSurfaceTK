@@ -89,7 +89,7 @@ def conv1d(inputs,
            use_xavier=True,
            stddev=1e-3,
            weight_decay=0.0,
-           activation_fn=nn.ReLU,
+           activation_fn=nn.ReLU(),
            bn=False,
            bn_decay=None,
            is_training=None):
@@ -166,9 +166,9 @@ def conv1d(inputs,
       outputs = batch_norm(outputs)
 
   if activation_fn is not None:
-    outputs = torch.as_tensor(activation_fn(outputs))
-    print("outputs of conv1d activn")
-    print(outputs)
+    # relu = nn.ReLU()
+    # outputs = relu(outputs)
+    outputs = activation_fn(outputs)
   if data_format == 'NHWC':
     outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs
@@ -183,7 +183,7 @@ def conv2d(inputs,
            use_xavier=True,
            stddev=1e-3,
            weight_decay=0.0,
-           activation_fn=nn.ReLU,
+           activation_fn=nn.ReLU(),
            bn=False,
            bn_decay=None,
            is_training=None):
@@ -273,9 +273,9 @@ def conv2d(inputs,
     outputs = batch_norm(outputs)
 
   if activation_fn is not None:
+    # relu = nn.ReLU()
+    # outputs = relu(outputs)
     outputs = activation_fn(outputs)
-    print("outputs of conv2d activn")
-    print(outputs)
   if data_format == 'NHWC':
     outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs
