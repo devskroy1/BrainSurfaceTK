@@ -28,10 +28,14 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         data = data.to(device)
         pred = model(data)
         perd_label = pred.max(1)[1]
-        loss = F.nll_loss(pred, data.y[:, 0].long())
+        print("pred shape")
+        print(pred.shape)
+        print("data.y shape")
+        print(data.y.shape)
+        loss = F.nll_loss(pred, data.y)
         loss.backward()
         optimizer.step()
-        correct += perd_label.eq(data.y[:, 0].long()).sum().item()
+        correct += perd_label.eq(data.y).sum().item()
         loss_train += loss.item()
     acc = correct / len(train_loader.dataset)
 
@@ -72,7 +76,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
                                                 str(pred[i].item()), str(data.y[:, 0][i].item()),
                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
-                correct += pred.eq(data.y[:, 0].long()).sum().item()
+                correct += pred.eq(data.y).sum().item()
 
             acc = correct / len(loader.dataset)
 
@@ -99,7 +103,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
                           str(data.y[:, 0][i].item()).center(20, ' '),
                           indices[idx * len(pred) + i])
 
-            correct += pred.eq(data.y[:, 0].long()).sum().item()
+            correct += pred.eq(data.y).sum().item()
 
         acc = correct / len(loader.dataset)
 
