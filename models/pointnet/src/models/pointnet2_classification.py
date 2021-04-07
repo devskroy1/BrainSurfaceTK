@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
@@ -92,32 +93,39 @@ class Net(torch.nn.Module):
         # new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
         #                                         weight_decay, scope, bn)
 
-        print("data")
-        print(data)
-
-        print("data.batch")
-        print(data.batch)
-
-        print("data.y")
-        print(data.y)
-
-        print("data.x shape")
-        print(data.x.shape)
-
-        print("data.pos shape")
-        print(data.pos.shape)
-
-        print("data.batch shape")
-        print(data.batch.shape)
-
-        print("data.y shape")
-        print(data.y.shape)
+        # print("data")
+        # print(data)
+        #
+        # print("data.batch")
+        # print(data.batch)
+        #
+        # print("data.y")
+        # print(data.y)
+        #
+        # print("data.x shape")
+        # print(data.x.shape)
+        #
+        # print("data.pos shape")
+        # print(data.pos.shape)
+        #
+        # print("data.batch shape")
+        # print(data.batch.shape)
+        #
+        # print("data.y shape")
+        # print(data.y.shape)
 
         num_points = data.x.size(0)
         num_local_features = data.x.size(1)
         num_coords = data.pos.size(1)
-        features = data.x.reshape(self.batch_size, num_points // self.batch_size, num_local_features)
-        xyz = data.pos.reshape(self.batch_size, num_points // self.batch_size, num_coords)
+
+        quot = num_points // self.batch_size
+        num_points_multiple = quot * self.batch_size
+
+        data_x_slice = data.x[:num_points_multiple, :]
+        data_pos_slice = data.pos[:num_points_multiple, :]
+
+        features = data_x_slice.reshape(self.batch_size, quot, num_local_features)
+        xyz = data_pos_slice.reshape(self.batch_size, quot, num_coords)
 
         #PointASNL SetAbstraction layer - Adaptive Sampling module
 
@@ -133,23 +141,28 @@ class Net(torch.nn.Module):
         new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn_decay=None,
                                                 weight_decay=None, bn=True)
 
-        grouped_xyz -= torch.tile(torch.unsqueeze(new_xyz, dim=2), [1, 1, 32, 1])  # translation normalization
+        print("After exiting from AdaptiveSampling")
+        print("new_xyz shape")
+        print(new_xyz.shape)
+        print("new_feature shape")
+        print(new_feature.shape)
+        grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
 
         '''Skip Connection'''
         skip_spatial = torch.max(new_point, dim=2)
-        skip_spatial = conv1d(skip_spatial, mlp[-1], kernel_size=1, padding=0, stride=1,
+        skip_spatial = conv1d(skip_spatial, self.mlp[-1], kernel_size=1, padding=0, stride=1,
                               bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=is_training, bn_decay=bn_decay,
                                    weight_decay=weight_decay)
-        new_point = torch.transpose(new_point, 2, 3)
+        new_point = new_point.transpose(2, 3)
         new_point = torch.matmul(new_point, weight)
         new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
                            padding=0, stride=[1, 1], bn=bn, is_training=is_training,
                            bn_decay=bn_decay, weight_decay=weight_decay)
 
-        new_point = torch.squeeze(new_point, 2)  # (batch_size, npoints, mlp2[-1])
+        new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
 
         new_point = new_point + skip_spatial
 

@@ -60,8 +60,9 @@ def sampling(npoint, pts, feature=None):
     output:
     sub_pts: npoint * D, sub-sampled point cloud
     '''
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size = pts.size(0)
-    batch_pts = torch.arange(0, batch_size).to(device='cuda:0')
+    batch_pts = torch.arange(0, batch_size).to(device)
 
     # print("pts device")
     # print(pts.device)
@@ -83,7 +84,7 @@ def sampling(npoint, pts, feature=None):
     # print("unsqueezed fps_index.shape")
     # print(expanded_fps_index.shape)
 
-    idx = torch.cat([torch.from_numpy(batch_indices).to(device='cuda:0'), expanded_fps_index], dim=2)
+    idx = torch.cat([torch.from_numpy(batch_indices).to(device), expanded_fps_index], dim=2)
     # print("idx shape before set_shape")
     # print("idx shape")
     # print(idx.shape)
@@ -112,8 +113,8 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     src_xyz: original point xyz (batch_size, ndataset, 3)
     q_xyz: query point xyz (batch_size, npoint, 3)
     '''
-
-    print("Inside grouping function")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    #print("Inside grouping function")
     batch_size = src_xyz.size(0)
     ndataset = src_xyz.size(1)
     npoint = q_xyz.size(1)
@@ -142,11 +143,11 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
         batch_indices = np.tile(torch.arange(0, batch_size).view(-1, 1, 1, 1).cpu().numpy(), (1, npoint, K, 1))
 
-        print("batch_indices shape")
-        print(batch_indices.shape)
-        print("point_indices.shape")
-        print(point_indices.shape)
-        idx = torch.cat([torch.from_numpy(batch_indices).to(device='cuda:0'), point_indices], dim=3)
+        # print("batch_indices shape")
+        # print(batch_indices.shape)
+        # print("point_indices.shape")
+        # print(point_indices.shape)
+        idx = torch.cat([torch.from_numpy(batch_indices).to(device), point_indices], dim=3)
 
         #idx = idx.reshape([batch_size, npoint, K, 2])
 
@@ -220,22 +221,23 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
         Output
         (batch_size, npoint, nsample, 1)
     """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     [batch_size, npoint, nsample, channel] = list(new_point.size())
     bottleneck_channel = max(32,channel//2)
-    print("bottleneck_channel")
-    print(bottleneck_channel)
+    # print("bottleneck_channel")
+    # print(bottleneck_channel)
     # normalized_xyz = grouped_xyz - tf.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), [1, 1, nsample, 1])
     normalized_xyz = grouped_xyz.cpu().numpy() - np.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2).cpu().numpy(), (1, 1, nsample, 1))
-    new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device='cuda:0'), new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
+    new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device), new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
 
     # transformed_feature = nn.conv2d(new_point, bottleneck_channel * 2, [1, 1],
     #                                      padding='VALID', stride=[1, 1],
     #                                      bn=bn, is_training=is_training,
     #                                      scope='conv_kv_ds', bn_decay=bn_decay, weight_decay=weight_decay,
     #                                      activation_fn=None)
-
-    print("new_point shape")
-    print(new_point.shape)
+    #
+    # print("new_point shape")
+    # print(new_point.shape)
     transformed_feature = conv2d(new_point, bottleneck_channel * 2, kernel_size=[1, 1],
                                  padding=0, stride=[1,1], bn=bn, is_training=is_training,
                                  bn_decay=bn_decay, weight_decay=weight_decay,
@@ -254,31 +256,31 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
                                    activation_fn=None)
 
     #Original code
-    #transformed_feature1 = transformed_feature[:, :, :, :bottleneck_channel]
+    transformed_feature1 = transformed_feature[:, :, :, :bottleneck_channel]
     #New code
-    transformed_feature1 = transformed_feature[:, :bottleneck_channel, :, :]
+    #transformed_feature1 = transformed_feature[:, :bottleneck_channel, :, :]
 
     # Original code
-    #feature = transformed_feature[:, :, :, bottleneck_channel:]
+    feature = transformed_feature[:, :, :, bottleneck_channel:]
     # New code
-    feature = transformed_feature[:, bottleneck_channel:, :, :]
+    #feature = transformed_feature[:, bottleneck_channel:, :, :]
 
-    print("transformed_new_point shape")
-    print(transformed_new_point.shape)
-    print("transformed_feature.shape")
-    print(transformed_feature.shape)
-    print("transformed_feature1.shape")
-    print(transformed_feature1.shape)
-    weights = torch.matmul(transformed_new_point, transformed_feature1)  # (batch_size, npoint, nsample, nsample)
+    # print("transformed_new_point shape")
+    # print(transformed_new_point.shape)
+    # print("transformed_feature.shape")
+    # print(transformed_feature.shape)
+    # print("transformed_feature1.shape")
+    # print(transformed_feature1.shape)
+    weights = torch.matmul(transformed_new_point, transformed_feature1.transpose(2, -1))  # (batch_size, npoint, nsample, nsample)
     if scaled:
-        bottleneck_channel = bottleneck_channel.type(torch.FloatTensor)
-        weights = weights / torch.sqrt(bottleneck_channel)
+        bottleneck_channel_float = torch.as_tensor(bottleneck_channel, dtype=torch.float)
+        weights = weights / torch.sqrt(bottleneck_channel_float)
     softmax = nn.Softmax(dim=-1)
     weights = softmax(weights)
     channel = bottleneck_channel
 
     new_group_features = torch.matmul(weights, feature)
-    new_group_features = torch.reshape(new_group_features, (batch_size, npoint, nsample, channel))
+    new_group_features = new_group_features.reshape(batch_size, npoint, nsample, channel)
     for i, c in enumerate(mlps):
         activation = nn.ReLU() if i < len(mlps) - 1 else None
         new_group_features = conv2d(new_group_features, c, kernel_size=[1, 1],
@@ -294,20 +296,36 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
 
 def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, bn):
     # with tf.variable_scope(scope) as sc:
+    print("Inside AdaptiveSampling()")
     [nsample, num_channel] = list(group_feature.size()[-2:])
     if num_neighbor == 0:
         new_xyz = group_xyz[:, :, 0, :]
         new_feature = group_feature[:, :, 0, :]
         return new_xyz, new_feature
     shift_group_xyz = group_xyz[:, :, :num_neighbor, :]
+    print("group_feature shape")
+    print(group_feature.shape)
     shift_group_points = group_feature[:, :, :num_neighbor, :]
     sample_weight = SampleWeights(shift_group_points, shift_group_xyz, [32, 1 + num_channel], is_training, bn_decay, weight_decay, bn)
+    print("sample weights shape")
+    print(sample_weight.shape)
+    print("shift_group_points shape")
+    print(shift_group_points.shape)
     # new_weight_xyz = tf.tile(torch.unsqueeze(sample_weight[:,:,:, 0],-1), [1, 1, 1, 3])
-    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).cpu().numpy(), (1, 1, 1, 3))
+    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
+    print("new_weight_xyz shape")
+    print(new_weight_xyz.shape)
+    print("shift_group_xyz shape")
+    print(shift_group_xyz.shape)
     new_weight_feature = sample_weight[:,:,:, 1:]
-    new_xyz = torch.sum(torch.multiply(shift_group_xyz, torch.from_numpy(new_weight_xyz)))
-    new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature))
-
+    print("new_weight_feature shape")
+    print(new_weight_feature.shape)
+    new_xyz = torch.sum(torch.multiply(shift_group_xyz, torch.from_numpy(new_weight_xyz)), dim=2)
+    new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature), dim=2)
+    print("new_xyz")
+    print(new_xyz)
+    print("new_feature")
+    print(new_feature)
     return new_xyz, new_feature
 
 def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay, bn=True, scaled=True, mode='dot'):

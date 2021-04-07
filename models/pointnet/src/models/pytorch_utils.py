@@ -101,6 +101,7 @@ def conv1d(inputs,
     scope: string
     stride: int
     padding: int
+    data_format: 'NHWC' or 'NCHW'
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
     weight_decay: float
@@ -131,7 +132,8 @@ def conv1d(inputs,
   conv = nn.Conv1d(num_in_channels, num_output_channels, kernel_size, stride, padding).to(device)
 
   if data_format == 'NHWC':
-    inputs = inputs.transpose(2, -1).transpose(1, 2)
+    #inputs = inputs.transpose(2, -1).transpose(1, 2)
+    inputs = inputs.transpose(1, -1).transpose(2, -1)
 
   # biases = _variable_on_cpu('biases', [num_output_channels],
   #                         tf.constant_initializer(0.0))
@@ -165,6 +167,8 @@ def conv1d(inputs,
 
   if activation_fn is not None:
     outputs = activation_fn(outputs)
+  if data_format == 'NHWC':
+    outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs
 
 
@@ -189,6 +193,7 @@ def conv2d(inputs,
     scope: string
     stride: a list of 2 ints
     padding: int
+    data_format: 'NHWC' or 'NCHW'
     use_xavier: bool, use xavier_initializer if true
     stddev: float, stddev for truncated_normal init
     weight_decay: float
@@ -218,8 +223,8 @@ def conv2d(inputs,
   #                                      stddev=stddev,
   #                                      wd=weight_decay)
   # stride_h, stride_w = stride
-  print("num_in_channels")
-  print(num_in_channels)
+  # print("num_in_channels")
+  # print(num_in_channels)
 
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -235,19 +240,23 @@ def conv2d(inputs,
   #
   #
   # outputs = tf.nn.bias_add(outputs, biases)
+
   if data_format == 'NHWC':
-    inputs = inputs.transpose(2, -1).transpose(1, 2)
+    #inputs = inputs.transpose(2, -1).transpose(1, 2)
+    #2 512 12 9
+    inputs = inputs.transpose(1, -1).transpose(2, -1)
+
   outputs = conv(inputs.to(device))
-  print("outputs shape")
-  print(outputs.shape)
+  # print("outputs shape")
+  # print(outputs.shape)
 
   outputs = outputs.to(device)
   if bn:
     # outputs = batch_norm_for_conv2d(outputs, is_training,
     #                                 bn_decay=bn_decay, scope='bn')
     num_features = outputs.size(1)
-    print("num_features")
-    print(num_features)
+    # print("num_features")
+    # print(num_features)
     if is_training:
         if bn_decay is None:
             batch_norm = nn.BatchNorm2d(num_features).to(device).train()
@@ -263,4 +272,6 @@ def conv2d(inputs,
 
   if activation_fn is not None:
     outputs = activation_fn(outputs)
+  if data_format == 'NHWC':
+    outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs
