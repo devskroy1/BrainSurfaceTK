@@ -116,7 +116,7 @@ def conv1d(inputs,
   assert (data_format == 'NHWC' or data_format == 'NCHW')
   if data_format == 'NHWC':
       #num_in_channels = inputs.get_shape()[-1].value
-      num_in_channels = inputs.size(3)
+      num_in_channels = inputs.size(-1)
   elif data_format == 'NCHW':
       #num_in_channels = inputs.get_shape()[1].value
       num_in_channels = inputs.size(1)
@@ -166,7 +166,9 @@ def conv1d(inputs,
       outputs = batch_norm(outputs)
 
   if activation_fn is not None:
-    outputs = activation_fn(outputs)
+    outputs = torch.as_tensor(activation_fn(outputs))
+    print("outputs of conv1d activn")
+    print(outputs)
   if data_format == 'NHWC':
     outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs
@@ -209,7 +211,7 @@ def conv2d(inputs,
   assert (data_format == 'NHWC' or data_format == 'NCHW')
   if data_format == 'NHWC':
       #num_in_channels = inputs.get_shape()[-1].value
-      num_in_channels = inputs.size(3)
+      num_in_channels = inputs.size(-1)
   elif data_format == 'NCHW':
       #num_in_channels = inputs.get_shape()[1].value
       num_in_channels = inputs.size(1)
@@ -272,6 +274,8 @@ def conv2d(inputs,
 
   if activation_fn is not None:
     outputs = activation_fn(outputs)
+    print("outputs of conv2d activn")
+    print(outputs)
   if data_format == 'NHWC':
     outputs = outputs.transpose(1, 2).transpose(2, -1)
   return outputs

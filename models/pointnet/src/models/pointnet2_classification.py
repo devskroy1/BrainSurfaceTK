@@ -150,8 +150,11 @@ class Net(torch.nn.Module):
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
 
         '''Skip Connection'''
-        skip_spatial = torch.max(new_point, dim=2)
-        skip_spatial = conv1d(skip_spatial, self.mlp[-1], kernel_size=1, padding=0, stride=1,
+        skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
+        print("skip spatial max shape")
+        print(skip_spatial_max.shape)
+
+        skip_spatial = conv1d(skip_spatial_max, self.mlp[-1], kernel_size=1, padding=0, stride=1,
                               bn=True, is_training=True)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
