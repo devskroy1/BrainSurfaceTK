@@ -152,15 +152,13 @@ class Net(torch.nn.Module):
         '''Skip Connection'''
         skip_spatial = torch.max(new_point, dim=2)
         skip_spatial = conv1d(skip_spatial, self.mlp[-1], kernel_size=1, padding=0, stride=1,
-                              bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay=weight_decay)
+                              bn=True, is_training=True)
 
-        weight = weight_net_hidden(grouped_xyz, [32], is_training=is_training, bn_decay=bn_decay,
-                                   weight_decay=weight_decay)
+        weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
         new_point = new_point.transpose(2, 3)
         new_point = torch.matmul(new_point, weight)
         new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
-                           padding=0, stride=[1, 1], bn=bn, is_training=is_training,
-                           bn_decay=bn_decay, weight_decay=weight_decay)
+                           padding=0, stride=[1, 1], bn=True, is_training=True)
 
         new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
 
