@@ -138,8 +138,7 @@ class Net(torch.nn.Module):
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
 
         #TODO: Need to update is_training depending on whether you're training model or evaluating model
-        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn_decay=None,
-                                                weight_decay=None, bn=True)
+        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12, is_training=True, bn=True)
 
         print("After exiting from AdaptiveSampling")
         print("new_xyz shape")
