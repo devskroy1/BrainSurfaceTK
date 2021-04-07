@@ -16,7 +16,16 @@ class SAModule(torch.nn.Module):
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
+        print("pos shape")
+        print(pos.shape)
+        print("x shape before calling conv")
+        print(x.shape)
+        print("batch shape")
+        print(batch.shape)
         x = self.conv(x, (pos, pos[idx]), edge_index)
+        print("Inside SAModule forward()")
+        print("x shape after conv")
+        print(x.shape)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
 

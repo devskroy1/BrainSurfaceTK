@@ -26,9 +26,9 @@ if __name__ == '__main__':
     PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
     num_workers = 2
-    local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
-
+    
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
