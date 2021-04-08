@@ -462,6 +462,8 @@ class RandLANet(nn.Module):
 
         # print("coords shape just before permutn")
         # print(coords.shape)
+        #coords[:, permutation]
+
         coords = coords[:, permutation, :]
         # print("coords shape after permutn")
         # print(coords.shape)
