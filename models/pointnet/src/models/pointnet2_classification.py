@@ -107,6 +107,7 @@ class Net(torch.nn.Module):
         self.lin3 = Lin(256, 128)
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
+
     def forward(self, data):
 
         # new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
