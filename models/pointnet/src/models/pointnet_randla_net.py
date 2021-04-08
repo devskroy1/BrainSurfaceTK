@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from torch_points_kernels import knn
+#from torch_points_kernels import knn
 #import torch_points_kernels.points_cpu as tpcpu
-#from torch_geometric.nn import knn
+from torch_geometric.nn import knn
 
 #TODO: Remove comment. From DGCNN repo. Don't use this. Use torch_points_kernels knn function as it has correct return type
 # def knn(x, k):
@@ -122,14 +122,17 @@ class LocalSpatialEncoding(nn.Module):
         # print("knn_output")
         # print(knn_output)
         idx, dist = knn_output
+        # print("idx shape")
+        # print(idx.shape)
         # print("idx")
         # print(idx)
+
         # print("dist")
         # print(dist)
 
         #Reshapes needed for torch geometric knn
-        idx = idx.reshape(B, N, K)
-        dist = dist.reshape(B, N, K)
+        # idx = idx.reshape(B, N, K)
+        # dist = dist.reshape(B, N, K)
 
         # print("idx")
         # print(idx)
@@ -149,6 +152,15 @@ class LocalSpatialEncoding(nn.Module):
         # print(extended_idx.shape)
         # print("extended_coords shape")
         # print(extended_coords.shape)
+        # print("N")
+        # print(N)
+        # print("extended_idx shape")
+        # print(extended_idx.shape)
+        # print("extended_coords shape")
+        # print(extended_coords.shape)
+        # print("max extended idx")
+        # print(torch.max(extended_idx, dim=2))
+
         neighbors = torch.gather(extended_coords, 2, extended_idx) # shape (B, 3, N, K)
         # if USE_CUDA:
         #     neighbors = neighbors.cuda()
@@ -239,13 +251,56 @@ class LocalFeatureAggregation(nn.Module):
 
         batch_size = coords.size(0)
         num_points = coords.size(1)
+        # print("coords shape")
+        # print(coords.shape)
+        # print("batch size")
+        # print(batch_size)
+        # quot = num_points // batch_size
 
-        knn_coords = coords.reshape(batch_size * num_points, 3)
+        knn_out_batch_idx = torch.zeros((batch_size, num_points, self.num_neighbors), dtype=torch.int64)
+        knn_out_batch_dist = torch.zeros((batch_size, num_points, self.num_neighbors), dtype=torch.float32)
+        for b in range(batch_size):
+            knn_coords = coords[b, :, :]
+            knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbors)
+            # print("knn_output_idx shape")
+            # print(knn_output_idx.shape)
+            # print("knn_output_dist shape")
+            # print(knn_output_dist.shape)
+
+            knn_out_batch_idx[b] = knn_output_idx.reshape(num_points, self.num_neighbors)
+            knn_out_batch_dist[b] = knn_output_dist.reshape(num_points, self.num_neighbors)
+            #knn_coords = coords[b, :, :].reshape(num_points, 3)
+
+        knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
+        # print("knn_out_batch")
+        # print(knn_out_batch)
+        # print("knn_out_batch shape")
+        # print(knn_out_batch.shape)
+        # batch_cat_tensor = torch.zeros(quot, dtype=torch.int64)
+        # for b in range(1, batch_size):
+        #     batch_tensor = torch.ones(quot, dtype=torch.int64)
+        #     batch_tensor.new_full((1, quot), b)
+        #     print("batch_tensor shape")
+        #     print(batch_tensor.shape)
+        #     # Expected to be 16
+        #     batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
+
+        # print("num_points")
+        # print(num_points)
+        # print("batch_cat_tensor shape")
+        # print(batch_cat_tensor.shape)
+        #Should be num_points = 512
+
         #Torch geometric knn function - use for CUDA
-        #knn_output = knn(knn_coords, knn_coords, self.num_neighbors)
+        # knn_output = knn(x=knn_coords, y=knn_coords, k=self.num_neighbors)
+
+        # print("knn output")
+        # print(knn_output)
+        # print("knn_output shape")
+        # print(knn_output.shape)
 
         #torch_points_kernels knn function - use only for CPU
-        knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
+        #knn_output = knn(coords.cpu().contiguous(), coords.cpu().contiguous(), self.num_neighbors)
 
         # print("knn output")
         # print(knn_output)
@@ -265,10 +320,10 @@ class LocalFeatureAggregation(nn.Module):
         # print(knn_output)
         x = self.mlp1(features)
 
-        x = self.lse1(coords, x, knn_output)
+        x = self.lse1(coords, x, knn_out_batch)
         x = self.pool1(x)
 
-        x = self.lse2(coords, x, knn_output)
+        x = self.lse2(coords, x, knn_out_batch)
         x = self.pool2(x)
 
         return self.lrelu(self.mlp2(x) + self.shortcut(features))
@@ -344,13 +399,13 @@ class RandLANet(nn.Module):
         #N = input.size(1)
         N = input.size(1)
         B = input.size(0)
-        # print("Batch size B")
-        # print(B)
+        print("Batch size B")
+        print(B)
         d_in = input.size(2)
         # print("input")
         # print(input)
-        # print("N")
-        # print(N)
+        print("N")
+        print(N)
         # print("B")
         # print(B)
         # print("d_in")
@@ -363,12 +418,12 @@ class RandLANet(nn.Module):
         #coords = input.pos.clone().cpu()
 
         #For CUDA
-        # coords = input[..., :3]
-        # local_features = input[..., 3:]
+        coords = input[..., :3]
+        local_features = input[..., 3:]
 
         #For CPU
-        coords = input[..., :3].clone().cpu()
-        local_features = input[..., 3:].clone().cpu()
+        # coords = input[..., :3].clone().cpu()
+        # local_features = input[..., 3:].clone().cpu()
 
         # print("coords shape")
         # print(coords.shape)
@@ -405,38 +460,70 @@ class RandLANet(nn.Module):
         # print(permutation.size())
         #coords = coords[permutation, :]
 
-        coords = coords[:, permutation]
+        # print("coords shape just before permutn")
+        # print(coords.shape)
+        coords = coords[:, permutation, :]
+        # print("coords shape after permutn")
+        # print(coords.shape)
         # print("coords shape")
         # print(coords.shape)
-        x = x[:,:,permutation]
+
+        # print("x shape before permutn")
+        # print(x.shape)
+        #x = x[:,:,permutation]
+        x = x[:, :, permutation, :]
+        # print("x shape after permutn")
+        # print(x.shape)
+
         # print("x shape")
         # print(x.shape)
 
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
-            x = lfa(coords[:,:N//decimation_ratio], x)
+            x = lfa(coords[:,:N//decimation_ratio, :], x)
             x_stack.append(x.clone())
             decimation_ratio *= d
-            x = x[:,:,:N//decimation_ratio]
+            x = x[:,:,:N//decimation_ratio, :]
 
 
         # # >>>>>>>>>> ENCODER
-
+        print("x shape before mlp")
+        print(x.shape)
         x = self.mlp(x)
+        print("x shape after mlp")
+        print(x.shape)
 
         # <<<<<<<<<< DECODER
         for mlp in self.decoder:
-            neighbors, _ = knn(
-                coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
-                coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
-                # coords[:, :N // decimation_ratio],  # original set
-                # coords[:, :d * N // decimation_ratio],  # upsampled set
-                1
-            ) # shape (B, N, 1)
-            neighbors = neighbors.to(self.device)
+            knn_batch_neighbours = torch.zeros((B, d * (N // decimation_ratio), 1), dtype=torch.int64)
 
-            extended_neighbors = neighbors.unsqueeze(1).expand(-1, x.size(1), -1, 1)
+            for b in range(B):
+                neighbors, _ = knn(
+                    #coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
+                    #coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
+                    coords[b, :N // decimation_ratio, :],  # original set
+                    coords[b, :d * (N // decimation_ratio), :],  # upsampled set
+                    1
+                )
+                # print("coords shape")
+                # print(coords.shape)
+                # print("N // decimation_ratio")
+                # print(N // decimation_ratio)
+                # print("d * N // decimation_ratio")
+                # print(d * N // decimation_ratio)
+                #
+                print("neighbours shape")
+                print(neighbors.shape)
+                knn_batch_neighbours[b] = neighbors.reshape(d * (N // decimation_ratio), 1)
 
+            knn_batch_neighbours = knn_batch_neighbours.to(self.device)
+
+            extended_neighbors = knn_batch_neighbours.unsqueeze(1).expand(-1, x.size(1), -1, 1)
+
+            print("x shape")
+            print(x.shape)
+            print("extended_neighbors.shape")
+            print(extended_neighbors.shape)
             x_neighbors = torch.gather(x, -2, extended_neighbors)
 
             x = torch.cat((x_neighbors, x_stack.pop()), dim=1)
@@ -447,7 +534,7 @@ class RandLANet(nn.Module):
 
         # >>>>>>>>>> DECODER
         # inverse permutation
-        x = x[:,:,torch.argsort(permutation)]
+        x = x[:,:,torch.argsort(permutation),:]
 
         scores = self.fc_end(x)
 

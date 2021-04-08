@@ -83,7 +83,8 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
 
         pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-        out = model(pos_feature_data)
+        pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
+        out = model(pos_feature_data_float)
         # print("after model forward")
         # print("out shape")
         # print(out.shape)
