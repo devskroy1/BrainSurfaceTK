@@ -26,14 +26,14 @@ if __name__ == '__main__':
     PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
     num_workers = 2
-    local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     target_class = 'gender'
     task = 'classification'
     numb_epochs = 200
-    number_of_points = 10000
+    #number_of_points = 10000
 
     ################################################
 
@@ -88,6 +88,9 @@ if __name__ == '__main__':
         data_compression=data_compression,
         hemisphere=hemisphere
     )
+
+    print("num labels")
+    print(num_labels)
 
     if len(local_features) > 0:
         numb_local_features = train_dataset[0].x.size(1)
@@ -127,7 +130,7 @@ if __name__ == '__main__':
             config_file.write('Batch size - ' + str(batch_size) + '\n')
             config_file.write('Local features - ' + str(local_features) + '\n')
             config_file.write('Global feature - ' + str(global_features) + '\n')
-            config_file.write('Number of points - ' + str(number_of_points) + '\n')
+            #config_file.write('Number of points - ' + str(number_of_points) + '\n')
             config_file.write('Data res - ' + data_compression + '\n')
             config_file.write('Data type - ' + data_type + '\n')
             config_file.write('Data nativeness - ' + data_nativeness + '\n')
