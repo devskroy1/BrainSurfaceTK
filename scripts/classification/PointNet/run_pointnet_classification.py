@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 32
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(num_local_features=numb_local_features, num_global_features=numb_global_features, batch_size=batch_size, mlp=[64,64,128]).to(device)
+    model = Net(num_local_features=numb_local_features, num_global_features=numb_global_features, mlp=[64,64,128]).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=gamma)
 

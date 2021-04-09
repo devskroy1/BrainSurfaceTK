@@ -27,10 +27,10 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     for data in train_loader:
         data = data.to(device)
         pred = model(data)
-        print("pred shape")
-        print(pred.shape)
-        print("data.y shape")
-        print(data.y.shape)
+        # print("pred shape")
+        # print(pred.shape)
+        # print("data.y shape")
+        # print(data.y.shape)
         perd_label = pred.max(1)[1]
         loss = F.nll_loss(pred, data.y[:, 0].long())
         loss.backward()

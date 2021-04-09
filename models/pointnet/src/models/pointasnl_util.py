@@ -60,15 +60,31 @@ def sampling(npoint, pts, feature=None):
     output:
     sub_pts: npoint * D, sub-sampled point cloud
     '''
+    # print("Inside sampling()")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size = pts.size(0)
     batch_pts = torch.arange(0, batch_size).to(device)
-
+    N = pts.size(1)
+    # print("N")
+    # print(N)
+    # print("npoint")
+    # print(npoint)
     # print("pts device")
     # print(pts.device)
     # print("batch_pts device")
     # print(batch_pts.device)
-    fps_index = fps(pts, batch_pts)
+
+    fps_batch_idx = torch.zeros((batch_size, npoint), dtype=torch.int64)
+    for b in range(batch_size):
+        pts_batch = pts[b, :, :]
+        fps_index = fps(x=pts_batch, batch=None, ratio=npoint/N)
+        # print("fps_index shape")
+        # print(fps_index.shape)
+        #Should be npoint = 512
+
+        fps_batch_idx[b] = fps_index
+
+    #fps_index = fps(pts, batch_pts)
 
     #fps_idx = tf_sampling.farthest_point_sample(npoint, pts)
 
@@ -80,14 +96,16 @@ def sampling(npoint, pts, feature=None):
     # print("fps_index.shape")
     # print(fps_index.shape)
 
-    expanded_fps_index = fps_index.unsqueeze(dim=1).unsqueeze(dim=2).expand(-1, npoint, 2)
+    #expanded_fps_index = fps_index.unsqueeze(dim=1).unsqueeze(dim=2).expand(-1, npoint, 2)
     # print("unsqueezed fps_index.shape")
     # print(expanded_fps_index.shape)
-
-    idx = torch.cat([torch.from_numpy(batch_indices).to(device), expanded_fps_index], dim=2)
+    idx = torch.cat([torch.from_numpy(batch_indices).to(device), fps_batch_idx.unsqueeze(2)], dim=2)
     # print("idx shape before set_shape")
+
     # print("idx shape")
     # print(idx.shape)
+    #Should be (32, 512, 2)
+
     #idx = idx.reshape(batch_size, npoint, 2)
     if feature is None:
         #return tf.gather_nd(pts, idx)
@@ -116,9 +134,13 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     #print("Inside grouping function")
     batch_size = src_xyz.size(0)
+    # print("Inside grouping function")
+    # print("batch_size")
+    # print(batch_size)
     ndataset = src_xyz.size(1)
     npoint = q_xyz.size(1)
-
+    # print("npoint")
+    # print(npoint)
     if use_knn:
         #point_indices = tf.py_func(knn_query, [K, src_xyz, q_xyz], tf.int32)
 
@@ -131,11 +153,27 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
         # print("npoint")
         # print(npoint)
-        reshaped_src_xyz = src_xyz.reshape(batch_size * ndataset, 3)
-        reshaped_q_xyz = q_xyz.reshape(batch_size * npoint, 3)
-        point_indices = knn(reshaped_src_xyz, reshaped_q_xyz, K)
 
-        point_indices = point_indices.reshape(-1, npoint, K, batch_size)
+        knn_out_batch_idx = torch.zeros((batch_size, npoint, K), dtype=torch.int64)
+        for b in range(batch_size):
+            src_xyz_batch = src_xyz[b, :, :]
+            q_xyz_batch = q_xyz[b, :, :]
+            knn_output_idxs, _ = knn(src_xyz_batch, q_xyz_batch, K)
+            # print("knn_output_idx shape")
+            # print(knn_output_idx.shape)
+            # print("knn_output_dist shape")
+            # print(knn_output_dist.shape)
+
+            knn_out_batch_idx[b] = knn_output_idxs.reshape(npoint, K)
+
+        # reshaped_src_xyz = src_xyz.reshape(batch_size * ndataset, 3)
+        # reshaped_q_xyz = q_xyz.reshape(batch_size * npoint, 3)
+        # point_indices = knn(reshaped_src_xyz, reshaped_q_xyz, K)
+        point_indices = knn_out_batch_idx.unsqueeze(dim=3)
+        # print("point_indices shape")
+
+        # print(point_indices.shape)
+        # point_indices = point_indices.reshape(-1, npoint, K, batch_size)
         # batch_indices = tf.tile(tf.reshape(tf.range(batch_size), (-1, 1, 1, 1)), (1, npoint, K, 1))
         # idx = tf.concat([batch_indices, tf.expand_dims(point_indices, axis=3)], axis=3)
         # idx.set_shape([batch_size, npoint, K, 2])
@@ -145,10 +183,11 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
 
         # print("batch_indices shape")
         # print(batch_indices.shape)
-        # print("point_indices.shape")
-        # print(point_indices.shape)
         idx = torch.cat([torch.from_numpy(batch_indices).to(device), point_indices], dim=3)
-
+        # print("src_xyz shape")
+        # print(src_xyz.shape)
+        # print("idx shape")
+        # print(idx.shape)
         #idx = idx.reshape([batch_size, npoint, K, 2])
 
         #grouped_xyz = tf.gather_nd(src_xyz, idx)
@@ -296,12 +335,16 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
 
 def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, bn):
     # with tf.variable_scope(scope) as sc:
-    #print("Inside AdaptiveSampling()")
+    # print("Inside AdaptiveSampling()")
     [nsample, num_channel] = list(group_feature.size()[-2:])
+    # print("num_channel")
+    # print(num_channel)
     if num_neighbor == 0:
         new_xyz = group_xyz[:, :, 0, :]
         new_feature = group_feature[:, :, 0, :]
         return new_xyz, new_feature
+    # print("group_xyz shape")
+    # print(group_xyz.shape)
     shift_group_xyz = group_xyz[:, :, :num_neighbor, :]
     # print("group_feature shape")
     # print(group_feature.shape)
@@ -320,6 +363,11 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
     new_weight_feature = sample_weight[:,:,:, 1:]
     # print("new_weight_feature shape")
     # print(new_weight_feature.shape)
+    new_shift_group_xyz = np.tile(torch.unsqueeze(shift_group_xyz[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
+    #new_xyz = torch.sum(torch.multiply(shift_group_xyz.expand(shift_group_xyz.size(0), shift_group_xyz.size(1), shift_group_xyz.size(2), 3), torch.from_numpy(new_weight_xyz)), dim=2)
+
+    #new_xyz = torch.sum(torch.multiply(torch.from_numpy(new_shift_group_xyz), torch.from_numpy(new_weight_xyz)), dim=2)
+
     new_xyz = torch.sum(torch.multiply(shift_group_xyz, torch.from_numpy(new_weight_xyz)), dim=2)
     new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature), dim=2)
     # print("new_xyz")

@@ -14,12 +14,23 @@ class SAModule(torch.nn.Module):
         self.conv = PointConv(nn)
 
     def forward(self, x, pos, batch):
+        # print("Inside SAModule forward")
         # print("pos shape")
         # print(pos.shape)
         # print("batch vector shape")
         # print(batch.shape)
-        #print("Inside SAModule forward")
+        # print("batch vector")
+        # print(batch)
+
+        # print("Inside SAModule forward")
+        # print("pos shape")
+        # print(pos.shape)
+        # print("before calling fps")
         idx = fps(pos, batch, ratio=self.ratio)
+        # print("After calling fps")
+        # print("idx shape")
+        # print(idx.shape)
+
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
@@ -36,6 +47,11 @@ class GlobalSAModule(torch.nn.Module):
         self.nn = nn
 
     def forward(self, x, pos, batch):
+        # print("Inside GlobalSAModule forward()")
+        # print("batch shape")
+        # print(batch.shape)
+        # print("batch")
+        # print(batch)
         x = self.nn(torch.cat([x, pos], dim=1))
         x = global_max_pool(x, batch)
         pos = pos.new_zeros((x.size(0), 3))
@@ -51,11 +67,10 @@ def MLP(channels, batch_norm=True):
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_local_features, num_global_features, batch_size, mlp):
+    def __init__(self, num_local_features, num_global_features, mlp):
         super(Net, self).__init__()
 
         self.num_global_features = num_global_features
-        self.batch_size = batch_size
         self.mlp = mlp
 
         #Start of code from pointASNL repo
@@ -107,7 +122,6 @@ class Net(torch.nn.Module):
         self.lin3 = Lin(256, 128)
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
-
     def forward(self, data):
 
         # new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
@@ -134,18 +148,22 @@ class Net(torch.nn.Module):
         # print("data.y shape")
         # print(data.y.shape)
 
+        batch_size = data.y.size(0)
+
         num_points = data.x.size(0)
+        # print("num_points")
+        # print(num_points)
         num_local_features = data.x.size(1)
         num_coords = data.pos.size(1)
 
-        quot = num_points // self.batch_size
-        num_points_multiple = quot * self.batch_size
+        quot = num_points // batch_size
+        num_points_multiple = quot * batch_size
 
         data_x_slice = data.x[:num_points_multiple, :]
         data_pos_slice = data.pos[:num_points_multiple, :]
 
-        features = data_x_slice.reshape(self.batch_size, quot, num_local_features)
-        xyz = data_pos_slice.reshape(self.batch_size, quot, num_coords)
+        features = data_x_slice.reshape(batch_size, quot, num_local_features)
+        xyz = data_pos_slice.reshape(batch_size, quot, num_coords)
 
         #PointASNL SetAbstraction layer - Adaptive Sampling module
 
@@ -155,6 +173,12 @@ class Net(torch.nn.Module):
         # print(new_xyz.shape)
         # print("new_feature shape")
         # print(new_feature.shape)
+        # print("Just before calling grouping()")
+        # print("xyz shape")
+        # print(xyz.shape)
+        # print("new_xyz shape")
+        # print(new_xyz.shape)
+
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
 
         # print("new_point shape after calling grouping()")
@@ -163,11 +187,12 @@ class Net(torch.nn.Module):
         new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
                                                 is_training=True, bn=True, bn_decay=None, weight_decay=None)
 
-        # print("After exiting from AdaptiveSampling")
-        # print("new_xyz shape")
-        # print(new_xyz.shape)
+        print("After exiting from AdaptiveSampling")
+        print("new_xyz shape")
+        print(new_xyz.shape)
         # print("new_feature shape")
         # print(new_feature.shape)
+        grouped_xyz = np.tile(grouped_xyz.cpu().numpy(), (1, 1, 32, 1))
         grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
         # print("new_point.shape after cat")
@@ -199,8 +224,8 @@ class Net(torch.nn.Module):
         # print("new_point.shape after squeeze")
         # print(new_point.shape)
         new_point = new_point + skip_spatial
-        # print("new_point.shape after addition of skip_spatial")
-        # print(new_point.shape)
+        print("new_point.shape after addition of skip_spatial")
+        print(new_point.shape)
         # print("new_point shape")
         # print(new_point.shape)
         # print("new_xyz shape")
@@ -210,10 +235,15 @@ class Net(torch.nn.Module):
         #POINTNET CLASSIFICN NETWORK
 
         #sa0_out = (data.x, data.pos, data.batch)
+        first_dim = new_xyz.size(0)
         npoint = new_xyz.size(1)
+
+
+        #new_xyz shape: (Batch size, npoint, 3) = (32, 32, 3)
+
         new_point_third_dim = new_point.size(2)
-        new_xyz_reshape = new_xyz.reshape(self.batch_size * npoint, 3)
-        new_point_reshape = new_point.reshape(self.batch_size * npoint, new_point_third_dim)
+        new_xyz_reshape = new_xyz.reshape(batch_size * npoint, 3)
+        new_point_reshape = new_point.reshape(batch_size * npoint, new_point_third_dim)
 
         # new_xyz_batch0 = new_xyz[0, :, :]
         # new_xyz_batch1 = new_xyz[1, :, :]
@@ -221,11 +251,13 @@ class Net(torch.nn.Module):
         # print("tensors equal")
         # print(torch.equal(new_xyz_reshape, new_xyz_concat))
 
+        # print("npoint")
+        # print(npoint)
         batch_cat_tensor = torch.zeros(npoint, dtype=torch.int64)
-        for b in range(1, self.batch_size):
+        for b in range(1, batch_size):
 
-            batch_tensor = torch.ones(npoint, dtype=torch.int64)
-            batch_tensor.new_full((1, npoint), b)
+            batch_tensor = torch.ones(npoint, dtype=torch.int64) * b
+            # batch_tensor = batch_tensor.new_full((, npoint), b)
             # print("batch_tensor shape")
             # print(batch_tensor.shape)
             # Expected to be 512
@@ -233,22 +265,42 @@ class Net(torch.nn.Module):
 
         # print("batch_cat_tensor shape")
         # print(batch_cat_tensor.shape)
-        # #Expected to be 1024
+        #Expected to be 1024
         # print("batch_cat_tensor")
         # print(batch_cat_tensor)
+
+        # print("self.batch_size")
+        # print(self.batch_size)
+        # print("new_point_reshape shape")
+        # print(new_point_reshape.shape)
+        # print("new_xyz_reshape shape")
+        # print(new_xyz_reshape.shape)
         sa0_out = (new_point_reshape, new_xyz_reshape, batch_cat_tensor)
+
         sa1_out = self.sa1_module(*sa0_out)
+        # sa1_out_x, sa1_out_pos, sa1_out_batch = sa1_out
+        # print("sa1_out_x shape")
+        # print(sa1_out_x.shape)
+
         sa1a_out = self.sa1a_module(*sa1_out)
+        # sa1a_out_x, sa1a_out_pos, sa1a_out_batch = sa1a_out
+        # print("sa1a_out_x shape")
+        # print(sa1a_out_x.shape)
+
         sa2_out = self.sa2_module(*sa1a_out)
+        # sa2_out_x, sa2_out_pos, sa2_out_batch = sa2_out
+        # print("sa2_out_x shape")
+        # print(sa2_out_x.shape)
+
         sa3_out = self.sa3_module(*sa2_out)
 
         x, pos, batch = sa3_out
-        print("x shape")
-        print(x.shape)
-        print("pos shape")
-        print(pos.shape)
-        print("batch shape")
-        print(batch.shape)
+        # print("x shape")
+        # print(x.shape)
+        # print("pos shape")
+        # print(pos.shape)
+        # print("batch shape")
+        # print(batch.shape)
 
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
@@ -260,6 +312,6 @@ class Net(torch.nn.Module):
         x = F.relu(self.lin3(x))
         # x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin4(x)
-        print("x shape after final lin layer")
-        print(x.shape)
+        # print("x shape after final lin layer")
+        # print(x.shape)
         return F.log_softmax(x, dim=-1)
