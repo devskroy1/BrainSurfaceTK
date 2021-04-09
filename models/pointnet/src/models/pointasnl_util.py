@@ -117,10 +117,10 @@ def sampling(npoint, pts, feature=None):
         # print("Just before returning from sampling function")
         # print("pts shape")
         # print(pts.shape)
-        # print("feature shape")
-        # print(feature.shape)
         # print("idx shape")
         # print(idx.shape)
+        # print("feature shape")
+        # print(feature.shape)
         #return pts[list(idx)], feature[list(idx)]
         return gather_nd(pts, idx), gather_nd(feature, idx)
         #return pts[list(idx.T)], feature[list(idx.T)]
@@ -131,10 +131,15 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
     src_xyz: original point xyz (batch_size, ndataset, 3)
     q_xyz: query point xyz (batch_size, npoint, 3)
     '''
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     #print("Inside grouping function")
     batch_size = src_xyz.size(0)
     # print("Inside grouping function")
+    # print("src_xyz shape")
+    # print(src_xyz.shape)
+    # print("q_xyz shape")
+    # print(q_xyz.shape)
     # print("batch_size")
     # print(batch_size)
     ndataset = src_xyz.size(1)

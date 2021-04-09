@@ -168,6 +168,8 @@ class Net(torch.nn.Module):
         #PointASNL SetAbstraction layer - Adaptive Sampling module
 
         new_xyz, new_feature = sampling(npoint=512, pts=xyz, feature=features)
+        new_xyz = new_xyz.transpose(0, 1)
+        new_feature = new_feature.transpose(0, 1)
         # print("After exiting from sampling")
         # print("new_xyz shape")
         # print(new_xyz.shape)
@@ -180,19 +182,26 @@ class Net(torch.nn.Module):
         # print(new_xyz.shape)
 
         grouped_xyz, new_point, idx = grouping(feature=features, K=32, src_xyz=xyz, q_xyz=new_xyz)
-
+        grouped_xyz = grouped_xyz.transpose(0, 2)
+        new_point = new_point.transpose(0, 2)
+        # print("grouped_xyz shape after calling grouping()")
+        # print(grouped_xyz.shape)
         # print("new_point shape after calling grouping()")
         # print(new_point.shape)
+        # print("idx shape after calling grouping()")
+        # print(idx.shape)
+
         #TODO: Need to update is_training depending on whether you're training model or evaluating model
         new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
                                                 is_training=True, bn=True, bn_decay=None, weight_decay=None)
 
-        print("After exiting from AdaptiveSampling")
-        print("new_xyz shape")
-        print(new_xyz.shape)
+        # print("After exiting from AdaptiveSampling")
+        # print("new_xyz shape")
+        # print(new_xyz.shape)
         # print("new_feature shape")
         # print(new_feature.shape)
-        grouped_xyz = np.tile(grouped_xyz.cpu().numpy(), (1, 1, 32, 1))
+        #grouped_xyz = np.tile(grouped_xyz.cpu().numpy(), (1, 1, 32, 1))
+
         grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
         # print("new_point.shape after cat")
@@ -224,8 +233,8 @@ class Net(torch.nn.Module):
         # print("new_point.shape after squeeze")
         # print(new_point.shape)
         new_point = new_point + skip_spatial
-        print("new_point.shape after addition of skip_spatial")
-        print(new_point.shape)
+        # print("new_point.shape after addition of skip_spatial")
+        # print(new_point.shape)
         # print("new_point shape")
         # print(new_point.shape)
         # print("new_xyz shape")
@@ -237,7 +246,10 @@ class Net(torch.nn.Module):
         #sa0_out = (data.x, data.pos, data.batch)
         first_dim = new_xyz.size(0)
         npoint = new_xyz.size(1)
-
+        # print("batch size")
+        # print(batch_size)
+        # print("npoint")
+        # print(npoint)
 
         #new_xyz shape: (Batch size, npoint, 3) = (32, 32, 3)
 
