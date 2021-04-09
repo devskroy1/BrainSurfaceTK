@@ -76,11 +76,23 @@ class SharedMLP(nn.Module):
             -------
             torch.Tensor, shape (B, d_out, N, K)
         """
+        # print("Inside SharedMLP forward")
+        # print("input shape")
+        # print(input.shape)
+
         x = self.conv(input)
+
+        # print("conv output shape")
+        # print(x.shape)
+
         if self.batch_norm:
             x = self.batch_norm(x)
         if self.activation_fn:
             x = self.activation_fn(x)
+
+        # print("output shape after bn and activn")
+        # print(x.shape)
+        # print("Just before returning from SharedMLP forward")
         return x
 
 
@@ -399,13 +411,13 @@ class RandLANet(nn.Module):
         #N = input.size(1)
         N = input.size(1)
         B = input.size(0)
-        print("Batch size B")
-        print(B)
+        # print("Batch size B")
+        # print(B)
         d_in = input.size(2)
         # print("input")
         # print(input)
-        print("N")
-        print(N)
+        # print("N")
+        # print(N)
         # print("B")
         # print(B)
         # print("d_in")
@@ -483,52 +495,63 @@ class RandLANet(nn.Module):
         for lfa in self.encoder:
             # at iteration i, x.shape = (B, N//(d**i), d_in)
             x = lfa(coords[:,:N//decimation_ratio, :], x)
+            # print("x shape after lfa")
+            # print(x.shape)
             x_stack.append(x.clone())
             decimation_ratio *= d
             x = x[:,:,:N//decimation_ratio, :]
+            #x_stack.append(x.clone())
+            # print("x shape after slicing")
+            # print(x.shape)
 
 
         # # >>>>>>>>>> ENCODER
-        print("x shape before mlp")
-        print(x.shape)
+        # print("x shape before mlp")
+        # print(x.shape)
         x = self.mlp(x)
-        print("x shape after mlp")
-        print(x.shape)
+        # print("x shape after mlp")
+        # print(x.shape)
 
         # <<<<<<<<<< DECODER
         for mlp in self.decoder:
-            knn_batch_neighbours = torch.zeros((B, d * (N // decimation_ratio), 1), dtype=torch.int64)
-
+            knn_batch_neighbours = torch.zeros((B, d * N // decimation_ratio, 1), dtype=torch.int64)
+            # print("N // decimation_ratio")
+            # print(N // decimation_ratio)
+            # print("d * N // decimation_ratio")
+            # print(d * N // decimation_ratio)
             for b in range(B):
                 neighbors, _ = knn(
                     #coords[:,:N//decimation_ratio].cpu().contiguous(), # original set
                     #coords[:,:d*N//decimation_ratio].cpu().contiguous(), # upsampled set
                     coords[b, :N // decimation_ratio, :],  # original set
-                    coords[b, :d * (N // decimation_ratio), :],  # upsampled set
+                    coords[b, :d * N // decimation_ratio, :],  # upsampled set
+                    # coords[b, :d * (N // decimation_ratio), :],  # upsampled set
+                    # coords[b, :N // decimation_ratio, :],  # original set
                     1
                 )
-                # print("coords shape")
-                # print(coords.shape)
-                # print("N // decimation_ratio")
-                # print(N // decimation_ratio)
-                # print("d * N // decimation_ratio")
-                # print(d * N // decimation_ratio)
-                #
-                print("neighbours shape")
-                print(neighbors.shape)
-                knn_batch_neighbours[b] = neighbors.reshape(d * (N // decimation_ratio), 1)
+
+                # print("neighbours shape")
+                # print(neighbors.shape)
+                knn_batch_neighbours[b] = neighbors.reshape(d * N // decimation_ratio, 1)
 
             knn_batch_neighbours = knn_batch_neighbours.to(self.device)
 
             extended_neighbors = knn_batch_neighbours.unsqueeze(1).expand(-1, x.size(1), -1, 1)
 
-            print("x shape")
-            print(x.shape)
-            print("extended_neighbors.shape")
-            print(extended_neighbors.shape)
-            x_neighbors = torch.gather(x, -2, extended_neighbors)
+            top_x = x_stack.pop()
+            # print("top_x shape")
+            # print(top_x.shape)
+            # print("extended_neighbors.shape")
+            # print(extended_neighbors.shape)
+            x_neighbors = torch.gather(top_x, -2, extended_neighbors)
 
-            x = torch.cat((x_neighbors, x_stack.pop()), dim=1)
+            # print("x_neighbors shape")
+            # print(x_neighbors.shape)
+
+            # top_x = x_stack.pop()
+            # print("x_stack pop() shape")
+            # print(top_x.shape)
+            x = torch.cat((x_neighbors, top_x), dim=1)
 
             x = mlp(x)
 
