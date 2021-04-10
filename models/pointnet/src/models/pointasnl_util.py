@@ -62,8 +62,9 @@ def sampling(npoint, pts, feature=None):
     '''
     # print("Inside sampling()")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     batch_size = pts.size(0)
-    batch_pts = torch.arange(0, batch_size).to(device)
+    batch_pts = torch.arange(0, batch_size)
     N = pts.size(1)
     # print("N")
     # print(N)
@@ -89,6 +90,8 @@ def sampling(npoint, pts, feature=None):
     #fps_idx = tf_sampling.farthest_point_sample(npoint, pts)
 
     batch_indices = np.tile(torch.reshape(batch_pts, (-1, 1, 1)).cpu().numpy(), (1, npoint,1))
+    #batch_indices = torch.repeat(torch.reshape(batch_pts, (-1, 1, 1)), (1, npoint, 1))
+
     # print("batch indices shape")
     # print(batch_indices.shape)
     # print("fps_index")
@@ -99,7 +102,10 @@ def sampling(npoint, pts, feature=None):
     #expanded_fps_index = fps_index.unsqueeze(dim=1).unsqueeze(dim=2).expand(-1, npoint, 2)
     # print("unsqueezed fps_index.shape")
     # print(expanded_fps_index.shape)
-    idx = torch.cat([torch.from_numpy(batch_indices).to(device), fps_batch_idx.unsqueeze(2)], dim=2)
+
+    idx = torch.cat([torch.from_numpy(batch_indices).to(device), fps_batch_idx.unsqueeze(2).to(device)], dim=2)
+    #idx = torch.cat([batch_indices, fps_batch_idx.unsqueeze(2)], dim=2)
+
     # print("idx shape before set_shape")
 
     # print("idx shape")
@@ -185,10 +191,14 @@ def grouping(feature, K, src_xyz, q_xyz, use_xyz=True, use_knn=True, radius=0.2)
         # grouped_xyz = tf.gather_nd(src_xyz, idx)
 
         batch_indices = np.tile(torch.arange(0, batch_size).view(-1, 1, 1, 1).cpu().numpy(), (1, npoint, K, 1))
+        #batch_indices = torch.repeat(torch.arange(0, batch_size).view(-1, 1, 1, 1), (1, npoint, K, 1))
 
         # print("batch_indices shape")
         # print(batch_indices.shape)
-        idx = torch.cat([torch.from_numpy(batch_indices).to(device), point_indices], dim=3)
+
+        idx = torch.cat([torch.from_numpy(batch_indices).to(device), point_indices.to(device)], dim=3)
+        #idx = torch.cat([batch_indices, point_indices], dim=3)
+
         # print("src_xyz shape")
         # print(src_xyz.shape)
         # print("idx shape")
@@ -271,8 +281,12 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
     # print("bottleneck_channel")
     # print(bottleneck_channel)
     # normalized_xyz = grouped_xyz - tf.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), [1, 1, nsample, 1])
+
     normalized_xyz = grouped_xyz.cpu().numpy() - np.tile(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2).cpu().numpy(), (1, 1, nsample, 1))
-    new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device), new_point], dim=-1) # (batch_size, npoint, nsample, channel+3)
+    new_point = torch.cat([torch.from_numpy(normalized_xyz).to(device), new_point.to(device)], dim=-1) # (batch_size, npoint, nsample, channel+3)
+
+    # normalized_xyz = grouped_xyz - torch.repeat(torch.unsqueeze(grouped_xyz[:, :, 0, :], 2), (1, 1, nsample, 1))
+    # new_point = torch.cat([normalized_xyz, new_point], dim=-1)  # (batch_size, npoint, nsample, channel+3)
 
     # transformed_feature = nn.conv2d(new_point, bottleneck_channel * 2, [1, 1],
     #                                      padding='VALID', stride=[1, 1],
@@ -341,6 +355,7 @@ def SampleWeights(new_point, grouped_xyz, mlps, is_training, bn_decay, weight_de
 def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_decay, weight_decay, bn):
     # with tf.variable_scope(scope) as sc:
     # print("Inside AdaptiveSampling()")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     [nsample, num_channel] = list(group_feature.size()[-2:])
     # print("num_channel")
     # print(num_channel)
@@ -360,7 +375,11 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
     # print("shift_group_points shape")
     # print(shift_group_points.shape)
     # new_weight_xyz = tf.tile(torch.unsqueeze(sample_weight[:,:,:, 0],-1), [1, 1, 1, 3])
-    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
+
+    #new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().cpu().numpy(), (1, 1, 1, 3))
+    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().cpu().numpy(), (1, 1, 1, 3))
+    #new_weight_xyz = torch.repeat(torch.unsqueeze(sample_weight[:, :, :, 0], -1), (1, 1, 1, 3))
+
     # print("new_weight_xyz shape")
     # print(new_weight_xyz.shape)
     # print("shift_group_xyz shape")
@@ -368,13 +387,18 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
     new_weight_feature = sample_weight[:,:,:, 1:]
     # print("new_weight_feature shape")
     # print(new_weight_feature.shape)
-    new_shift_group_xyz = np.tile(torch.unsqueeze(shift_group_xyz[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
+    #new_shift_group_xyz = np.tile(torch.unsqueeze(shift_group_xyz[:, :, :, 0], -1).detach().numpy(), (1, 1, 1, 3))
     #new_xyz = torch.sum(torch.multiply(shift_group_xyz.expand(shift_group_xyz.size(0), shift_group_xyz.size(1), shift_group_xyz.size(2), 3), torch.from_numpy(new_weight_xyz)), dim=2)
 
     #new_xyz = torch.sum(torch.multiply(torch.from_numpy(new_shift_group_xyz), torch.from_numpy(new_weight_xyz)), dim=2)
 
-    new_xyz = torch.sum(torch.multiply(shift_group_xyz, torch.from_numpy(new_weight_xyz)), dim=2)
-    new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature), dim=2)
+    new_xyz = torch.sum(torch.multiply(shift_group_xyz.to(device), torch.from_numpy(new_weight_xyz).to(device)), dim=2)
+    new_feature = torch.sum(torch.multiply(shift_group_points.to(device), new_weight_feature.to(device)), dim=2)
+
+    # new_xyz = torch.sum(torch.multiply(shift_group_xyz, new_weight_xyz), dim=2)
+    # new_feature = torch.sum(torch.multiply(shift_group_points, new_weight_feature), dim=2)
+
+
     # print("new_xyz")
     # print(new_xyz)
     # print("new_feature")
@@ -424,6 +448,11 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
         tile_transformed_feature1 = np.tile(torch.unsqueeze(transformed_feature1, dim=1).cpu().numpy(), (1,npoint*nsample,1,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
         tile_transformed_new_point = np.tile(torch.reshape(transformed_new_point, (batch_size, npoint*nsample, 1, bottleneck_channel)).cpu().numpy(), (1,1,ndataset,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
         merged_feature = torch.cat([torch.from_numpy(tile_transformed_feature1), torch.from_numpy(tile_transformed_new_point)], dim=-1)
+
+        # tile_transformed_feature1 = torch.repeat(torch.unsqueeze(transformed_feature1, dim=1), (1, npoint * nsample, 1, 1))  # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
+        # tile_transformed_new_point = torch.repeat( torch.reshape(transformed_new_point, (batch_size, npoint * nsample, 1, bottleneck_channel)),
+        #                                          (1, 1, ndataset, 1))  # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
+        # merged_feature = torch.cat([tile_transformed_feature1, tile_transformed_new_point], dim=-1)
 
         # attention_map = tf_util.conv2d(merged_feature, 1, [1,1],
         #                                     padding='VALID', stride=[1,1],
@@ -479,6 +508,8 @@ def PointASNLSetAbstraction(xyz, feature, npoint, nsample, mlp, is_training, bn_
     if num_points != npoint:
         new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay, weight_decay, bn)
     grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, 2).cpu().numpy(), (1, 1, nsample, 1))  # translation normalization
+    #grouped_xyz -= torch.repeat(torch.unsqueeze(new_xyz, 2), (1, 1, nsample, 1))  # translation normalization
+
     new_point = torch.cat([grouped_xyz, new_point], dim=-1)
 
     '''Point NonLocal Cell'''
