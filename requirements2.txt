@@ -1,7 +1,7 @@
 mod-wsgi-standalone==4.7.1
 torch-scatter==2.0.6
 torch-sparse==0.6.9
-torch-cluster==1.5.8
-torch-spline-conv==1.2.0
+torch-cluster==1.5.9
+torch-spline-conv==1.2.1
 torch-geometric==1.4.3
 dgl-cu110
