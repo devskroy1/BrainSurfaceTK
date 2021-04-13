@@ -173,20 +173,20 @@ class LocalSpatialEncoding(nn.Module):
         # print("max extended idx")
         # print(torch.max(extended_idx, dim=2))
 
-        neighbors = torch.gather(extended_coords, 2, extended_idx) # shape (B, 3, N, K)
+        neighbors = torch.gather(extended_coords.to(self.device), 2, extended_idx.to(self.device)) # shape (B, 3, N, K)
         # if USE_CUDA:
         #     neighbors = neighbors.cuda()
 
         # relative point position encoding
         concat = torch.cat((
-            extended_coords,
-            neighbors,
-            extended_coords - neighbors,
-            dist.unsqueeze(-3)
+            extended_coords.to(self.device),
+            neighbors.to(self.device),
+            extended_coords.to(self.device) - neighbors.to(self.device),
+            dist.unsqueeze(-3).to(self.device)
         ), dim=-3).to(self.device)
         return torch.cat((
-            self.mlp(concat),
-            features.expand(B, -1, N, K)
+            self.mlp(concat).to(self.device),
+            features.expand(B, -1, N, K).to(self.device)
         ), dim=-3)
 
 

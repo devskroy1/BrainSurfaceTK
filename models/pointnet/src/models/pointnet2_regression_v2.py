@@ -58,16 +58,30 @@ class Net(torch.nn.Module):
 
     def forward(self, data):
         sa0_out = (data.x, data.pos, data.batch)
+        print("data.x shape")
+        print(data.x.shape)
+        print("data.pos shape")
+        print(data.pos.shape)
+
         sa1_out = self.sa1_module(*sa0_out)
+        sa1x_out, sa1pos_out, sa1batch_out = self.sa1_module(*sa0_out)
+        print("sa1x_out shape")
+        print(sa1x_out.shape)
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
-
+        print("sa3_out x shape")
+        print(x.shape)
         if self.num_global_features > 0:
             x = torch.cat((x, data.y[:, 1:self.num_global_features+1].view(-1, self.num_global_features)), 1)
 
         x = F.relu(self.lin1(x))
+        print("x shape after lin1")
+        print(x.shape)
         x = F.relu(self.lin2(x))
+        print("x shape after lin2")
+        print(x.shape)
         x = self.lin3(x)
-
+        print("x shape after lin3")
+        print(x.shape)
         return x.view(-1)

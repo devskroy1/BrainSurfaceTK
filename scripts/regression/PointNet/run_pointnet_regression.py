@@ -18,6 +18,7 @@ from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.main.pointnet2 import train, test_regression
 
 from models.pointnet.src.utils import get_data_path, data
+from models.pointnet.src.models.pointnet_randla_net import RandLANet
 
 PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
@@ -25,14 +26,14 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 if __name__ == '__main__':
 
     num_workers = 2
-    local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -93,9 +94,20 @@ if __name__ == '__main__':
         numb_local_features = 0
     numb_global_features = len(global_features)
 
+    d_in = numb_local_features
+    print("d_in")
+    print(d_in)
+    print("Num labels - should be 1")
+    print(num_labels)
+
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("torch.cuda.is_available()")
+    print(torch.cuda.is_available())
+
+    #model = RandLANet(d_in=d_in, num_classes=1, device=device)
     model = Net(numb_local_features, numb_global_features).to(device)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=gamma)
 

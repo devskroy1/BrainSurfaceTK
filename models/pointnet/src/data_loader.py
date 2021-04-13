@@ -40,6 +40,9 @@ class OurDataset(InMemoryDataset):
                IF THIS IS NOT ZERO, THE PROCESSING IS DONE FOR VALIDATION SET.
         '''
 
+        # print("reprocess")
+        # print(reprocess)
+
         # Train, test, validation
         self.train = train
         self.val = val
@@ -92,7 +95,7 @@ class OurDataset(InMemoryDataset):
             self.files_ending = files_ending
 
         # If the user asked to not reprocess and this is the train dataset, retrieve unique labels straight away
-        if not self.reprocess and train:
+        if not self.reprocess and train and task == 'segmentation':
             meta_data = read_meta()
             self.get_all_unique_labels(meta_data)
 
@@ -202,7 +205,7 @@ class OurDataset(InMemoryDataset):
 
 
     def get_all_unique_labels(self, meta_data):
-        print("Inside get_all_unique_labels")
+        #print("Inside get_all_unique_labels")
         '''
         Return unique mapping of drawem features such that
             Original: [0, 3, 5, 7, 9 ...]
@@ -258,12 +261,16 @@ class OurDataset(InMemoryDataset):
 
     def process_set(self):
 
+        # print("Inside process_set()")
         '''Reads and processes the data. Collates the processed data which is later saved.'''
         # 0. Get meta data
         meta_data = read_meta()
 
         # Get the mapping for the entire dataset, in order to normalise DRAWEM labels for segmentation
-        label_mapping = self.get_all_unique_labels(meta_data)
+        if self.task == 'segmentation':
+            label_mapping = self.get_all_unique_labels(meta_data)
+            # print("label_mapping")
+            # print(label_mapping)
 
         # 1. Initialise the variables
         data_list = []
