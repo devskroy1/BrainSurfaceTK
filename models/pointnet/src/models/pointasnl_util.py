@@ -377,7 +377,7 @@ def AdaptiveSampling(group_xyz, group_feature, num_neighbor, is_training, bn_dec
     # new_weight_xyz = tf.tile(torch.unsqueeze(sample_weight[:,:,:, 0],-1), [1, 1, 1, 3])
 
     #new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().cpu().numpy(), (1, 1, 1, 3))
-    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).detach().cpu().numpy(), (1, 1, 1, 3))
+    new_weight_xyz = np.tile(torch.unsqueeze(sample_weight[:, :, :, 0], -1).cpu().detach().numpy(), (1, 1, 1, 3))
     #new_weight_xyz = torch.repeat(torch.unsqueeze(sample_weight[:, :, :, 0], -1), (1, 1, 1, 3))
 
     # print("new_weight_xyz shape")

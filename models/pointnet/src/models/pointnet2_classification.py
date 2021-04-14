@@ -204,7 +204,7 @@ class Net(torch.nn.Module):
 
         #grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).detach().cpu().numpy(), (1, 1, 32, 1))  # translation normalization
         expanded_new_xyz = torch.unsqueeze(new_xyz, dim=2)
-        grouped_xyz -= np.tile(expanded_new_xyz.cpu().clone().numpy(), (1, 1, 32, 1))  # translation normalization
+        grouped_xyz -= np.tile(expanded_new_xyz.cpu().detach().numpy(), (1, 1, 32, 1))  # translation normalization
         #grouped_xyz -= torch.repeat(expanded_new_xyz, (1, 1, 32, 1))  # translation normalization
 
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
