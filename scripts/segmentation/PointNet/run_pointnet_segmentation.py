@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 32
+    batch_size = 2
     gamma = 0.9875
     target_class = ""
     task = 'segmentation'
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    #model = Net(num_labels, num_local_features, num_global_features=None).to(device)
+    model = Net(num_classes=num_labels, num_local_features=num_local_features, num_neighbours=16, decimation=4, num_global_features=None).to(device)
 
     # d_in = next(iter(train_loader))[0].size(-1)
     # print("About to initialise Randla-Net model")
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     d_in = num_local_features
     print("d_in")
     print(d_in)
-    model = RandLANet(d_in=d_in, num_classes=num_labels, device=device)
+    #model = RandLANet(d_in=d_in, num_classes=num_labels, device=device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)

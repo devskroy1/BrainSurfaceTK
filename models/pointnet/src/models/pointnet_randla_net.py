@@ -124,8 +124,6 @@ class LocalSpatialEncoding(nn.Module):
         # print(coords.shape)
         # print("features shape")
         # print(features.shape)
-        # print("knn_output shape")
-        # print(knn_output.shape)
         B = coords.size(0)
         N = coords.size(1)
         K = self.num_neighbors
@@ -136,6 +134,8 @@ class LocalSpatialEncoding(nn.Module):
         idx, dist = knn_output
         # print("idx shape")
         # print(idx.shape)
+        # print("dist shape")
+        # print(dist.shape)
         # print("idx")
         # print(idx)
 
@@ -177,6 +177,10 @@ class LocalSpatialEncoding(nn.Module):
         # if USE_CUDA:
         #     neighbors = neighbors.cuda()
 
+        # print("Inside locSE forward()")
+        # print("features shape")
+        # print(features.shape)
+
         # relative point position encoding
         concat = torch.cat((
             extended_coords.to(self.device),
@@ -184,9 +188,14 @@ class LocalSpatialEncoding(nn.Module):
             extended_coords.to(self.device) - neighbors.to(self.device),
             dist.unsqueeze(-3).to(self.device)
         ), dim=-3).to(self.device)
+        # print("concat shape")
+        # print(concat.shape)
+        expanded_features = features.expand(B, -1, N, K)
+        # print("expanded_features shape")
+        # print(expanded_features.shape)
         return torch.cat((
             self.mlp(concat).to(self.device),
-            features.expand(B, -1, N, K).to(self.device)
+            expanded_features.to(self.device)
         ), dim=-3)
 
 
@@ -211,8 +220,15 @@ class AttentivePooling(nn.Module):
             -------
             torch.Tensor, shape (B, d_out, N, 1)
         """
+        # print("Inside AttentivePooling forward()")
+        # print("x shape")
+        # print(x.shape)
         # computing attention scores
-        scores = self.score_fn(x.permute(0,2,3,1)).permute(0,3,1,2)
+        permuted_x = x.permute(0,2,3,1)
+        # print("permuted_x shape")
+        # print(permuted_x.shape)
+        #scores = self.score_fn(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+        scores = self.score_fn(permuted_x).permute(0,3,1,2)
 
         # sum over the neighbors
         features = torch.sum(scores * x, dim=-1, keepdim=True) # shape (B, d_in, N, 1)
@@ -330,7 +346,16 @@ class LocalFeatureAggregation(nn.Module):
         #
         # print("knn_output")
         # print(knn_output)
+
+        #x = lfa(coords[:, :N // decimation_ratio, :], x)
+
+        # print("features.shape")
+        # print(features.shape)
+
         x = self.mlp1(features)
+
+        # print("x shape after self.mlp1")
+        # print(x.shape)
 
         x = self.lse1(coords, x, knn_out_batch)
         x = self.pool1(x)

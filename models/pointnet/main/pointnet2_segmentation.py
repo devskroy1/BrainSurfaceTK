@@ -37,6 +37,7 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
 
         data = data.to(device)
         optimizer.zero_grad()
+        #out = model(data)
 
         #Shape: B
         batch_tensor = torch.tensor(data.batch)
@@ -85,6 +86,8 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
         pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
         out = model(pos_feature_data_float)
+
+
         # print("after model forward")
         # print("out shape")
         # print(out.shape)
