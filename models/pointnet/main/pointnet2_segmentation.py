@@ -40,13 +40,17 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         #out = model(data)
 
         #Shape: B
-        batch_tensor = torch.tensor(data.batch)
+        #batch_tensor = torch.tensor(data.batch)
+        batch_tensor = data.batch.clone().detach()
         #Shape: N x 3
-        pos_tensor = torch.tensor(data.pos)
+        #pos_tensor = torch.tensor(data.pos)
+        pos_tensor = data.pos.clone().detach()
         # Shape: N x d_in
-        x_tensor = torch.tensor(data.x)
+        #x_tensor = torch.tensor(data.x)
+        x_tensor = data.x.clone().detach()
         # Shape: B
-        y_tensor = torch.tensor(data.y)
+        #y_tensor = torch.tensor(data.y)
+        y_tensor = data.y.clone().detach()
 
         #print("Inside pointnet2_segmentn train()")
         #Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
@@ -84,7 +88,9 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
 
         pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-        pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
+        #pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
+        pos_feature_data_float = pos_feature_data.clone().detach()
+
         out = model(pos_feature_data_float)
 
 
@@ -170,14 +176,27 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
             # 1. Get predictions and loss
             data = data.to(device)
 
+            # # Shape: B
+            # batch_tensor = torch.tensor(data.batch)
+            # # Shape: N x 3
+            # pos_tensor = torch.tensor(data.pos)
+            # # Shape: N x d_in
+            # x_tensor = torch.tensor(data.x)
+            # # Shape: B
+            # y_tensor = torch.tensor(data.y)
+
             # Shape: B
-            batch_tensor = torch.tensor(data.batch)
+            # batch_tensor = torch.tensor(data.batch)
+            batch_tensor = data.batch.clone().detach()
             # Shape: N x 3
-            pos_tensor = torch.tensor(data.pos)
+            # pos_tensor = torch.tensor(data.pos)
+            pos_tensor = data.pos.clone().detach()
             # Shape: N x d_in
-            x_tensor = torch.tensor(data.x)
+            # x_tensor = torch.tensor(data.x)
+            x_tensor = data.x.clone().detach()
             # Shape: B
-            y_tensor = torch.tensor(data.y)
+            # y_tensor = torch.tensor(data.y)
+            y_tensor = data.y.clone().detach()
 
             # print("Inside pointnet2_segmentn train()")
             # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,

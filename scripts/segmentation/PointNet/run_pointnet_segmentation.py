@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 32
+    batch_size = 2
     gamma = 0.9875
     target_class = ""
     task = 'segmentation'
