@@ -25,14 +25,14 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 if __name__ == '__main__':
 
     num_workers = 2
-    local_features = []
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.001
-    batch_size = 2
+    batch_size = 32
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'scan_age'
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(numb_local_features, numb_global_features).to(device)
+    model = Net(numb_local_features, numb_global_features, mlp=[64,64,128]).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=gamma)
 

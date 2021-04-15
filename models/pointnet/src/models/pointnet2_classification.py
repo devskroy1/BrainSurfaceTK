@@ -72,6 +72,7 @@ class Net(torch.nn.Module):
 
         self.num_global_features = num_global_features
         self.mlp = mlp
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         #Start of code from pointASNL repo
         # batch_size = point_cloud.get_shape()[0].value
@@ -124,6 +125,7 @@ class Net(torch.nn.Module):
 
     def forward(self, data):
 
+        #data = data.to(self.device)
         # new_xyz, new_feature = AdaptiveSampling(grouped_xyz, new_point, as_neighbor, is_training, bn_decay,
         #                                         weight_decay, scope, bn)
 
@@ -203,8 +205,10 @@ class Net(torch.nn.Module):
         #grouped_xyz = np.tile(grouped_xyz.cpu().numpy(), (1, 1, 32, 1))
 
         #grouped_xyz -= np.tile(torch.unsqueeze(new_xyz, dim=2).detach().cpu().numpy(), (1, 1, 32, 1))  # translation normalization
-        expanded_new_xyz = torch.unsqueeze(new_xyz, dim=2)
-        grouped_xyz -= np.tile(expanded_new_xyz.cpu().detach().numpy(), (1, 1, 32, 1))  # translation normalization
+
+        # expanded_new_xyz = torch.unsqueeze(new_xyz, dim=2)
+        # grouped_xyz -= np.tile(expanded_new_xyz.cpu().detach().numpy(), (1, 1, 32, 1))  # translation normalization
+
         #grouped_xyz -= torch.repeat(expanded_new_xyz, (1, 1, 32, 1))  # translation normalization
 
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
@@ -257,6 +261,9 @@ class Net(torch.nn.Module):
 
         #new_xyz shape: (Batch size, npoint, 3) = (32, 32, 3)
 
+        new_xyz = new_xyz.to(self.device)
+        new_point = new_point.to(self.device)
+
         new_point_third_dim = new_point.size(2)
         new_xyz_reshape = new_xyz.reshape(batch_size * npoint, 3)
         new_point_reshape = new_point.reshape(batch_size * npoint, new_point_third_dim)
@@ -269,10 +276,10 @@ class Net(torch.nn.Module):
 
         # print("npoint")
         # print(npoint)
-        batch_cat_tensor = torch.zeros(npoint, dtype=torch.int64)
+        batch_cat_tensor = torch.zeros(npoint, dtype=torch.int64).to(self.device)
         for b in range(1, batch_size):
 
-            batch_tensor = torch.ones(npoint, dtype=torch.int64) * b
+            batch_tensor = torch.ones(npoint, dtype=torch.int64).to(self.device) * b
             # batch_tensor = batch_tensor.new_full((, npoint), b)
             # print("batch_tensor shape")
             # print(batch_tensor.shape)
