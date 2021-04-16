@@ -37,7 +37,7 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
 
         data = data.to(device)
         optimizer.zero_grad()
-        out = model(data)
+        out, feature_vector = model(data)
 
         pred = out.max(dim=1)[1]
 
@@ -110,7 +110,7 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
 
             # 1. Get predictions and loss
             data = data.to(device)
-            out = model(data)
+            out, feature_vector = model(data)
 
             pred = out.max(dim=1)[1]
 

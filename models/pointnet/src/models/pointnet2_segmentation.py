@@ -82,6 +82,10 @@ class Net(torch.nn.Module):
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)
+        sa2_x, sa2_pos, sa2_batch = sa2_out
+
+        feature_vector = sa2_x
+
         sa3_out = self.sa3_module(*sa2_out)
 
         fp3_out = self.fp3_module(*sa3_out, *sa2_out)
@@ -98,4 +102,4 @@ class Net(torch.nn.Module):
         print("Just before returning from model forward()")
         print("x shape")
         print(x.shape)
-        return F.log_softmax(x, dim=-1)
+        return F.log_softmax(x, dim=-1), feature_vector

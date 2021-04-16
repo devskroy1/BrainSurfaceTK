@@ -65,7 +65,9 @@ def test_classification(model, loader, indices, device, recording, results_folde
             for idx, data in enumerate(loader):
                 data = data.to(device)
                 with torch.no_grad():
-                    pred = model(data).max(1)[1]
+
+                    pred, final_feature_vector = model(data)
+                    pred = pred.max(1)[1]
 
                     for i in range(len(pred)):
                         print(str(pred[i].item()).center(20, ' '),
