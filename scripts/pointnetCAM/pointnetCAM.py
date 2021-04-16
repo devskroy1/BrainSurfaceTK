@@ -1,13 +1,15 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import grad
 
 class AdversialPointCloud():
 
-    def __init__(self, final_feature_vector, pred):
+    def __init__(self, final_feature_vector, pred, desiredClassLabel):
         self.final_feature_vector = final_feature_vector
         self.pred = pred
+        self.desiredClassLabel = desiredClassLabel
 
     def getGradient(self, poolingMode, class_activation_vector):
         # Compute gradient of the class prediction vector w.r.t. the feature vector. Use class_activation_vector[classIndex] to set which class shall be probed.
@@ -40,14 +42,15 @@ class AdversialPointCloud():
         maxgradients = torch.diagonal(maxgradients)
 
         # ReLU out the negative values
-        maxgradients = nn.ReLU(maxgradients)
+        relu = nn.ReLU()
+        maxgradients = relu(maxgradients)
         return maxgradients
 
     def drop_and_store_results(self, pointclouds_pl, labels_pl, sess, poolingMode, thresholdMode, numDeletePoints=None):
         # Some profiling
-        import time
-        start_time = time.time()
-        cpr.startProfiling()
+        # import time
+        # start_time = time.time()
+        # cpr.startProfiling()
 
         pcTempResult = pointclouds_pl.copy()
         delCount = []
@@ -56,21 +59,23 @@ class AdversialPointCloud():
         i = 0
 
         # Multiply the class activation vector with a one hot vector to look only at the classes of interest.
-        class_activation_vector = tf.multiply(self.pred, tf.one_hot(indices=desiredClassLabel, depth=40))
+        class_activation_vector = torch.multiply(self.pred, F.one_hot(self.desiredClassLabel, 40))
 
         while True:
             i += 1
             print("ITERATION: ", i)
             # Setup feed dict for current iteration
-            feed_dict = {self.pointclouds_pl: pcTempResult,
-                         self.labels_pl: labels_pl,
-                         self.is_training_pl: self.is_training}
+            # feed_dict = {self.pointclouds_pl: pcTempResult,
+            #              self.labels_pl: labels_pl,
+            #              self.is_training_pl: self.is_training}
 
-            maxgradients = self.getGradient(sess, poolingMode, class_activation_vector, feed_dict)
+            #maxgradients = self.getGradient(sess, poolingMode, class_activation_vector, feed_dict)
 
-            ops = {'pred': self.pred,
-                   'loss': self.classify_loss,
-                   'maxgradients': maxgradients}
+            maxgradients = self.getGradient(poolingMode, class_activation_vector)
+
+            # ops = {'pred': self.pred,
+            #        'loss': self.classify_loss,
+            #        'maxgradients': maxgradients}
 
             # ===================================================================
             # Evaluate over n batches now to get the accuracy for this iteration.
