@@ -26,7 +26,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
 
     for data in train_loader:
         data = data.to(device)
-        pred = model(data)
+        pred, final_feature_vector = model(data)
         perd_label = pred.max(1)[1]
         print("pred shape")
         print(pred.shape)

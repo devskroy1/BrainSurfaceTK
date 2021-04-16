@@ -85,6 +85,8 @@ class Net(torch.nn.Module):
         print(sa1a_batch.shape)
         sa2_out = self.sa2_module(*sa1a_out)
         sa2_x, sa2_pos, sa2_batch = sa2_out
+
+        feature_vector = sa2_x
         print("sa2_x.shape")
         print(sa2_x.shape)
         print("sa2_pos.shape")
@@ -111,4 +113,5 @@ class Net(torch.nn.Module):
         x = self.lin4(x)
         print("x shape after final lin layer")
         print(x.shape)
-        return F.log_softmax(x, dim=-1)
+
+        return F.log_softmax(x, dim=-1), feature_vector
