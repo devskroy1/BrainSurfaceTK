@@ -130,11 +130,13 @@ class AdversarialPointCloud():
         correct_nodes = total_nodes = 0
         total_loss = []
         #with torch.no_grad():
-        for batch_idx, data in enumerate(train_loader):
+        for batch_idx, data in enumerate(test_loader):
             # print("batch_idx")
             # print(batch_idx)
+
             if batch_idx == 25:
                 break
+
             # torch.cuda.empty_cache()
             # 1. Get predictions and loss
             data = data.to(device)
