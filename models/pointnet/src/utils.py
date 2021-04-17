@@ -11,15 +11,14 @@ def get_comment(data_nativeness, data_compression, data_type, hemisphere,
                 lr, batch_size, local_feature_combo, global_features,
                 target_class, log_descr=False):
 
-    comment = f'\nData nativeness: {data_nativeness}, \n' \
-              f'Data compression: {data_compression}, \n' \
-              f'Data type: {data_type}, \n' \
-              f'Hemispheres: {hemisphere}, \n' \
-              f'Local features: {local_feature_combo}, \n' \
-              f'Global features: {global_features}, \n' \
-              f'\n' \
-              f'Learning rate: {lr}, \n' \
-              f'Batch size: {batch_size}\n'
+    comment = '\nData nativeness: {}, \n'.format(data_nativeness) + \
+              'Data compression: {}, \n'.format(data_compression) + \
+              'Data type: {}, \n'.format(data_type) + \
+              'Hemispheres: {}, \n'.format(hemisphere) + \
+              'Local features: {}, \n'.format(local_feature_combo) + \
+              'Global features: {}, \n'.format(global_features) + '\n' + \
+              'Learning rate: {}, \n'.format(lr) + \
+              'Batch size: {}\n'.format(batch_size)
 
     if log_descr == True:
         # 0. Save to log_record.txt
@@ -39,7 +38,7 @@ def get_id(prefix=''):
     :return: The next expected id number of an experiment
              that hasn't yet been recorded!
     '''
-    with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'r') as log_record:
+    with open(PATH_TO_ROOT + 'logs/new/LOG_{}.txt'.format(prefix), 'r') as log_record:
         next_id = len(log_record.readlines()) + 1
 
     return str(next_id)
@@ -53,17 +52,17 @@ def save_to_log(experiment_description, prefix=''):
 
     # If the log file does not exist - create it
     add_first_line = False
-    if not os.path.exists(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'):
+    if not os.path.exists(PATH_TO_ROOT + 'logs/new/LOG_{}.txt'.format(prefix)):
         add_first_line = True
-        filename = PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt'
+        filename = PATH_TO_ROOT + 'logs/new/LOG_{}.txt'.format(prefix)
         dirname = os.path.dirname(filename)
         os.makedirs(dirname)
 
     if add_first_line:
-        with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'w+') as log_record:
-            log_record.write(f'LOG OF ALL THE EXPERIMENTS for {prefix}')
+        with open(PATH_TO_ROOT + 'logs/new/LOG_{}.txt'.format(prefix), 'w+') as log_record:
+            log_record.write('LOG OF ALL THE EXPERIMENTS for {}'.format(prefix))
 
-    with open(PATH_TO_ROOT + f'logs/new/LOG_{prefix}.txt', 'a+') as log_record:
+    with open(PATH_TO_ROOT + 'logs/new/LOG_{}.txt'.format(prefix), 'a+') as log_record:
         next_id = get_id(prefix=prefix)
         log_record.write('\n#{} ::: {}'.format(next_id, experiment_description))
 
@@ -144,37 +143,37 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
                        'veryinflated': 'veryinflated/',
                        'white': 'white/'}
 
-    hemisphere_paths = {'left_native_original': f'_left_{data_type}.vtk',
-                        'left_native_50':       f'_left_{data_type}_reducedby50percent.vtk',
-                        'left_native_90':       f'_left_{data_type}_reducedby90percent.vtk',
-                        'left_native_5k': f'_left_{data_type}_05k.vtk',
-                        'left_native_10k':      f'_left_{data_type}_10k.vtk',
-                        'left_native_20k':      f'_left_{data_type}_20k.vtk',
-                        'left_native_30k':      f'_left_{data_type}_30k.vtk',
+    hemisphere_paths = {'left_native_original': '_left_{}.vtk'.format(data_type),
+                        'left_native_50':       '_left_{}_reducedby50percent.vtk'.format(data_type),
+                        'left_native_90':       '_left_{}_reducedby90percent.vtk'.format(data_type),
+                        'left_native_5k': '_left_{}_05k.vtk'.format(data_type),
+                        'left_native_10k':      '_left_{}_10k.vtk'.format(data_type),
+                        'left_native_20k':      '_left_{}_20k.vtk'.format(data_type),
+                        'left_native_30k':      '_left_{}_30k.vtk'.format(data_type),
 
-                        'right_native_original': f'_right_{data_type}.vtk',
-                        'right_native_50':       f'_right_{data_type}_reducedby50percent.vtk',
-                        'right_native_90':       f'_right_{data_type}_reducedby90percent.vtk',
-                        'right_native_5k': f'_right_{data_type}_05k.vtk',
-                        'right_native_10k':      f'_right_{data_type}_10k.vtk',
-                        'right_native_20k':      f'_right_{data_type}_20k.vtk',
-                        'right_native_30k':      f'_right_{data_type}_30k.vtk',
+                        'right_native_original': '_right_{}.vtk'.format(data_type),
+                        'right_native_50':       '_right_{}_reducedby50percent.vtk'.format(data_type),
+                        'right_native_90':       '_right_{}_reducedby90percent.vtk'.format(data_type),
+                        'right_native_5k': '_right_{}_05k.vtk'.format(data_type),
+                        'right_native_10k':      '_right_{}_10k.vtk'.format(data_type),
+                        'right_native_20k':      '_right_{}_20k.vtk'.format(data_type),
+                        'right_native_30k':      '_right_{}_30k.vtk'.format(data_type),
 
-                        'merged_native_original': f'_merged_{data_type}.vtk',
-                        'merged_native_50':       f'_merged_{data_type}_reducedby50percent.vtk',
-                        'merged_native_90':       f'_merged_{data_type}_reducedby90percent.vtk',
-                        'merged_native_5k': f'_merged_{data_type}_05k.vtk',
-                        'merged_native_10k':      f'_merged_{data_type}_10k.vtk',
-                        'merged_native_20k':      f'_merged_{data_type}_20k.vtk',
-                        'merged_native_30k':      f'_merged_{data_type}_30k.vtk',
+                        'merged_native_original': '_merged_{}.vtk'.format(data_type),
+                        'merged_native_50':       '_merged_{}_reducedby50percent.vtk'.format(data_type),
+                        'merged_native_90':       '_merged_{}_reducedby90percent.vtk'.format(data_type),
+                        'merged_native_5k': '_merged_{}_05k.vtk'.format(data_type),
+                        'merged_native_10k':      '_merged_{}_10k.vtk'.format(data_type),
+                        'merged_native_20k':      '_merged_{}_20k.vtk'.format(data_type),
+                        'merged_native_30k':      '_merged_{}_30k.vtk'.format(data_type),
 
-                        'left_aligned_original': f'_hemi-L_{data_type}.vtk',
-                        'left_aligned_50':       f'_hemi-L_{data_type}_reduce50.vtk',
-                        'left_aligned_90':       f'_hemi-L_{data_type}_reduce90.vtk',
+                        'left_aligned_original': '_hemi-L_{}.vtk'.format(data_type),
+                        'left_aligned_50':       '_hemi-L_{}_reduce50.vtk'.format(data_type),
+                        'left_aligned_90':       '_hemi-L_{}_reduce90.vtk'.format(data_type),
 
-                        'right_aligned_original': f'_hemi-R_{data_type}.vtk',
-                        'right_aligned_50':       f'_hemi-R_{data_type}_reduce50.vtk',
-                        'right_aligned_90':       f'_hemi-R_{data_type}_reduce90.vtk'}
+                        'right_aligned_original': '_hemi-R_{}.vtk'.format(data_type),
+                        'right_aligned_50':       '_hemi-R_{}_reduce50.vtk'.format(data_type),
+                        'right_aligned_90':       '_hemi-R_{}_reduce90.vtk'.format(data_type)}
 
 
     if hemisphere == 'both':
@@ -186,7 +185,7 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
     if data_nativeness == 'native':
 
         data_folder = root + data_nativeness_paths[data_nativeness] + hemispheres[hemisphere] + data_compression_paths[data_compression] + data_type_paths[data_type] + 'vtk'
-        files_ending = hemisphere_paths[f'{_hemisphere}_{data_nativeness}_{data_compression}']
+        files_ending = hemisphere_paths['{}_{}_{}'.format(_hemisphere, data_nativeness, data_compression)]
 
         return data_folder, files_ending
 
@@ -195,15 +194,15 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
 
         if data_compression == 'original':
             data_folder = root + data_nativeness_paths[data_nativeness] \
-                          + data_compression_paths[f'{data_compression}_{data_nativeness}'] \
+                          + data_compression_paths['{}_{}'.format(data_compression, data_nativeness)] \
                           + 'vtk/' + data_type_paths[data_type][:-1]
-            files_ending = hemisphere_paths[hemisphere + f'_{data_nativeness}_{data_compression}']
+            files_ending = hemisphere_paths[hemisphere + '_{}_{}'.format(data_nativeness, data_compression)]
 
         else:
             data_folder = root + data_nativeness_paths[data_nativeness] \
                           + data_compression_paths[data_compression] \
                           + 'vtk/' + data_type_paths[data_type][:-1]
-            files_ending = hemisphere_paths[hemisphere + f'_{data_nativeness}_{data_compression}']
+            files_ending = hemisphere_paths[hemisphere + '_{}_{}'.format(data_nativeness, data_compression)]
 
         return data_folder, files_ending
 
@@ -229,7 +228,8 @@ def data(data_folder, files_ending, data_type, target_class, task, REPROCESS, lo
     '''
 
     path = osp.join(
-        osp.dirname(osp.realpath(__file__)), '..', 'data/' + 'segmentation' + f'/{data_compression}_{data_nativeness}_{hemisphere}/{data_type}')
+        osp.dirname(osp.realpath(__file__)), '..', 'data/' + 'segmentation' +
+                    '/{}_{}_{}/{}'.format(data_compression, data_nativeness, hemisphere, data_type))
 
     # Transformations
     transform = T.Compose([

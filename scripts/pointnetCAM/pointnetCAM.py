@@ -1,10 +1,14 @@
+import os.path as osp
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
+import sys
+sys.path.append(PATH_TO_ROOT)
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import grad
 import gen_contrib_heatmap as gch
-from models.pointnet.src.utils import get_id, save_to_log, get_comment, get_data_path, data
+from models.pointnet.src.utils import get_comment, get_data_path, data
 from models.pointnet.src.models.pointnet2_segmentation import Net
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'pointnet') + '/'
 
