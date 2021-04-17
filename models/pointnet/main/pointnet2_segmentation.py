@@ -44,6 +44,8 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         print("After model forward inside train()")
         print("out shape")
         print(out.shape)
+        print("data.x shape")
+        print(data.x.shape)
         print("data.y shape")
         print(data.y.shape)
         loss = F.nll_loss(out, data.y)

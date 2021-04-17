@@ -3,6 +3,8 @@ PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..')
 import sys
 sys.path.append(PATH_TO_ROOT)
 import numpy as np
+import copy
+import pickle
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,34 +22,57 @@ storeResults = False  # Should the results of the algorithm be stored to files o
 #Currently applied to only Classificn and Segmentn tasks, not regressn
 class AdversarialPointCloud():
 
-    def __init__(self, desired_class_label, num_classes):
+    def __init__(self, desired_class_label, num_classes, device):
         self.desired_class_label = desired_class_label
         self.num_classes = num_classes
+        self.device = device
 
     def getGradient(self, poolingMode, class_activation_vector, feature_vec):
         # Compute gradient of the class prediction vector w.r.t. the feature vector. Use class_activation_vector[classIndex] to set which class shall be probed.
-        maxgradients = grad(outputs=class_activation_vector, inputs=feature_vec)[0]
-
-        maxgradients = maxgradients.squeeze(dim=0).squeeze(dim=2)
+        maxgradients = grad(outputs=class_activation_vector, inputs=feature_vec,
+                            grad_outputs=torch.ones_like(class_activation_vector), allow_unused=True)[0]
+        # print("feature_vec shape")
+        # print(feature_vec.shape)
+        # print("maxgradients")
+        # print(maxgradients)
+        # print("maxgradients shape")
+        # print(maxgradients.shape)
+        #maxgradients = maxgradients.squeeze(dim=0).squeeze(dim=2)
 
         # Average pooling of the weights over all batches
         if poolingMode == "avgpooling":
             maxgradients = torch.mean(maxgradients, dim=1)  # Average pooling
         elif poolingMode == "maxpooling":
-            maxgradients = torch.max(maxgradients, dim=1)  # Max pooling
+            maxgradients = torch.max(maxgradients, dim=1).values  # Max pooling
         #             maxgradients = tf.squeeze(tf.map_fn(lambda x: x[100:101], maxgradients)) # Stride pooling
         # Multiply with original pre maxpool feature vector to get weights
-        feature_vector = feature_vec.squeeze(dim=0).squeeze(dim=2) # Remove empty dimensions of the feature vector so we get [batch_size,1024]
+        #feature_vector = feature_vec.squeeze(dim=0).squeeze(dim=2) # Remove empty dimensions of the feature vector so we get [batch_size,1024]
 
         #multiply = tf.constant(feature_vector[1].get_shape().as_list())  # Feature vector matrix
-        multiply = list(feature_vector[1].size())
+        multiply = list(feature_vec[1].size())
+        # print("list(feature_vec[1].size())")
+        # print(multiply)
+        # multiply = list(feature_vec.size())
+        # print("list(feature_vec.size())")
+        # print(multiply)
 
         # multMatrix = tf.reshape(tf.tile(maxgradients, multiply), [multiply[0], maxgradients.get_shape().as_list()[
         #     0]])  # Reshape [batch_size,] to [1024, batch_size] by copying the row n times
-        tiledMaxGradsTensor = torch.from_numpy(np.tile(maxgradients, multiply))
+        # print("maxgradients.dtype")
+        # print(maxgradients.dtype)
+        # print("maxgradients")
+        # print(maxgradients)
+        # print("multiply.dtype")
+        # print(multiply.dtype)
+        # print("multiply")
+        # print(multiply)
+        tiled_max_gradients = np.tile(maxgradients.cpu().numpy(), np.asarray(multiply))
+
+        tiledMaxGradsTensor = torch.from_numpy(tiled_max_gradients)
         multMatrix = tiledMaxGradsTensor.reshape(multiply[0], list(maxgradients.size())[0])
 
-        maxgradients = torch.matmul(feature_vector, multMatrix)  # Multiply [batch_size, 1024] x [1024, batch_size]
+        #maxgradients = torch.matmul(feature_vector, multMatrix)  # Multiply [batch_size, 1024] x [1024, batch_size]
+        maxgradients = torch.matmul(feature_vec.to(self.device), multMatrix.to(self.device))
 
         # maxgradients = tf.diag_part(
         #     maxgradients)  # Due to Matmul the interesting values are on the diagonal part of the matrix.
@@ -65,7 +90,7 @@ class AdversarialPointCloud():
         # start_time = time.time()
         # cpr.startProfiling()
 
-        pcTempResult = pointclouds_pl.copy()
+        #pcTempResult = pointclouds_pl.copy()
         delCount = []
         vipPcPointsArr = []
         weightArray = []
@@ -96,7 +121,7 @@ class AdversarialPointCloud():
         total_correct = 0
         total_seen = 0
         loss_sum = 0
-        pcEvalTest = copy.deepcopy(pcTempResult)
+        #pcEvalTest = copy.deepcopy(pcTempResult)
 
         #My code
         model.load_state_dict(torch.load(PATH))
@@ -104,57 +129,100 @@ class AdversarialPointCloud():
 
         correct_nodes = total_nodes = 0
         total_loss = []
+        #with torch.no_grad():
+        for batch_idx, data in enumerate(train_loader):
+            # print("batch_idx")
+            # print(batch_idx)
+            if batch_idx == 25:
+                break
+            # torch.cuda.empty_cache()
+            # 1. Get predictions and loss
+            data = data.to(device)
 
-        with torch.no_grad():
+            # with torch.no_grad():
+            out, feature_vector = model(data)
 
-            for batch_idx, data in enumerate(test_loader):
-                # 1. Get predictions and loss
-                data = data.to(device)
-                out, feature_vector = model(data)
+            #
+            # print("feature_vector shape")
+            # print(feature_vector.shape)
+            #
+            # print("data.x shape")
+            # print(data.x.shape)
+            # print("data.y shape")
+            # print(data.y.shape)
 
-                pred = out.max(dim=1)[1]
-                class_activation_vector = torch.multiply(pred, F.one_hot(data.y, self.num_classes))
+            pred = out.max(dim=1)[1]
 
-                maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
+            one_hot = F.one_hot(torch.tensor(data.y).long(), -1)
 
-                loss = F.nll_loss(out, data.y)
-                total_loss.append(loss)
+            # print("data.x shape")
+            # print(data.x.shape)
+            # print("data.y shape")
+            # print(data.y.shape)
+            # print("pred")
+            # print(pred)
+            # print("pred shape")
+            # print(pred.shape)
+            # print("out.shape")
+            # print(out.shape)
+            # print("one_hot")
+            # print(one_hot)
+            # print("one_hot shape")
+            # print(one_hot.shape)
 
-                correct_nodes += pred.eq(data.y).sum().item()
-                total_nodes += data.num_nodes
+            #class_activation_vector = torch.multiply(pred, one_hot)
 
-                # Store data now if desired
-                if storeResults:
-                    curRemainingPoints = maxNumPoints - sum(delCount)
-                    self.storeAmountOfPointsRemoved(curRemainingPoints)
-                    self.storeAccuracyPerPointsRemoved(accuracy)
+            class_activation_vector = torch.multiply(out, one_hot)
+            # class_activation_vector.requires_grad = True
+            # feature_vector.requires_grad = True
+            # class_activation_vector.retain_grad()
+            # feature_vector.retain_grad()
 
-                # Perform visual stuff here
-                if thresholdMode == "+average" or thresholdMode == "+median" or thresholdMode == "+midrange":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_above_threshold(maxgradients, data,
-                                                                                         thresholdMode)
-                if thresholdMode == "-average" or thresholdMode == "-median" or thresholdMode == "-midrange":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_below_threshold(maxgradients, data,
-                                                                                         thresholdMode)
-                if thresholdMode == "nonzero":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_all_nonzeros(maxgradients, data)
-                if thresholdMode == "zero":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_all_zeros(maxgradients, data)
-                if thresholdMode == "+random" or thresholdMode == "-random":
-                    resultPCloudThresh, vipPointsArr = gch.delete_random_points(maxgradients, data,
-                                                                                numDeletePoints[i])
-                    Count = numDeletePoints[i]
-                print("REMOVING %s POINTS." % Count)
+            maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
 
-                print("vipPointsArr")
-                print(vipPointsArr)
+            loss = F.nll_loss(out, data.y)
+            total_loss.append(loss)
 
-                delCount.append(Count)
-                vipPcPointsArr.extend(vipPointsArr[0])
-                weightArray.extend(vipPointsArr[1])
-                print("weightArray after extending")
-                print(weightArray)
-                pcTempResult = copy.deepcopy(resultPCloudThresh)
+            correct_nodes += pred.eq(data.y).sum().item()
+            total_nodes += data.num_nodes
+
+            # Store data now if desired
+            if storeResults:
+                curRemainingPoints = maxNumPoints - sum(delCount)
+                self.storeAmountOfPointsRemoved(curRemainingPoints)
+                self.storeAccuracyPerPointsRemoved(accuracy)
+
+            # Perform visual stuff here
+            if thresholdMode == "+average" or thresholdMode == "+median" or thresholdMode == "+midrange":
+                resultPCloudThresh, vipPointsArr, Count = gch.delete_above_threshold(maxgradients, data,
+                                                                                     thresholdMode)
+            if thresholdMode == "-average" or thresholdMode == "-median" or thresholdMode == "-midrange":
+                resultPCloudThresh, vipPointsArr, Count = gch.delete_below_threshold(maxgradients, data,
+                                                                                     thresholdMode)
+            if thresholdMode == "nonzero":
+                resultPCloudThresh, vipPointsArr, Count = gch.delete_all_nonzeros(maxgradients, data)
+            if thresholdMode == "zero":
+                resultPCloudThresh, vipPointsArr, Count = gch.delete_all_zeros(maxgradients, data)
+            if thresholdMode == "+random" or thresholdMode == "-random":
+                resultPCloudThresh, vipPointsArr = gch.delete_random_points(maxgradients, data,
+                                                                            numDeletePoints[i])
+                Count = numDeletePoints[i]
+            print("REMOVING %s POINTS." % Count)
+
+            # print("vipPointsArr")
+            # print(vipPointsArr)
+
+            delCount.append(Count)
+            # print("vipPointsArr[0] shape")
+            # print(vipPointsArr[0].shape)
+            vipPcPointsArr.extend(vipPointsArr[0])
+            # print("vipPcPointsArr shape after extending")
+            # print(vipPcPointsArr.shape)
+            weightArray.extend(vipPointsArr[1])
+            # print("weightArray after extending")
+            # print(weightArray)
+            pcTempResult = copy.deepcopy(resultPCloudThresh)
+
 
         #Original code
 
@@ -198,11 +266,17 @@ class AdversarialPointCloud():
         print("TOTAL REMAINING POINTS: ", maxNumPoints - totalRemoved)
         #         gch.draw_pointcloud(pcTempResult) #-- Residual point cloud
         #         gch.draw_NewHeatcloud(vipPcPointsArr, weightArray) #-- Important points only
-        vipPcPointsArr.extend(pcTempResult[0])
-        print("vipPcPointsArr")
-        print(vipPcPointsArr)
-        print("weightArray")
-        print(weightArray)
+
+        # print("pcTempResult before calling draw_NewHeatcloud()")
+        # print(pcTempResult)
+
+        #vipPcPointsArr.extend(pcTempResult[0])
+
+        # print("vipPcPointsArr shape")
+        # print(vipPcPointsArr.shape)
+        # Should be [[3], [3], ...]
+        # print("weightArray")
+        # print(weightArray)
         gch.draw_NewHeatcloud(vipPcPointsArr, weightArray)  # --All points combined
         return delCount
 
@@ -273,8 +347,10 @@ if __name__ == "__main__":
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = None
 
+    REPROCESS = False
+
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "5k"
     data_type = 'white'
     hemisphere = 'both'
 
@@ -294,7 +370,8 @@ if __name__ == "__main__":
 
     # 1. Model Parameters
     ################################################
-    batch_size = 16
+    lr = 0.001
+    batch_size = 2
     target_class = ""
     task = 'segmentation'
     ################################################
@@ -346,8 +423,8 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = Net(num_labels, num_local_features, num_global_features=None).to(device)
 
-    PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/last_model.pt'.format(experiment_name)
+    PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/best_acc_model.pt'.format(experiment_name)
 
-    adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels)
+    adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
     adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
