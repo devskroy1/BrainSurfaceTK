@@ -27,12 +27,22 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     for data in train_loader:
         data = data.to(device)
         pred = model(data)
+        print("pred is contiguous")
+        print(pred.is_contiguous())
+        #pred = pred.contiguous()
         # print("pred shape")
         # print(pred.shape)
         # print("data.y shape")
         # print(data.y.shape)
         perd_label = pred.max(1)[1]
         loss = F.nll_loss(pred, data.y[:, 0].long())
+        print("loss is contiguous")
+        print(loss.is_contiguous())
+        loss = loss.suggest_memory_format()
+        #loss = loss.contiguous()
+        # if not loss.is_contiguous():
+        #     print("Loss is not cont")
+        #     loss = loss.contiguous()
         loss.backward()
         optimizer.step()
         correct += perd_label.eq(data.y[:, 0].long()).sum().item()

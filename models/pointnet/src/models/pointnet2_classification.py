@@ -216,8 +216,10 @@ class Net(torch.nn.Module):
         # print("new_point.shape after cat")
         # print(new_point.shape)
 
-        new_nonlocal_point = PointNonLocalCell(feature=feature, new_point=torch.unsqueeze(new_feature, dim=1),
-                                               mlp=[max(32, num_channel // 2), nl_channel],
+        nl_channel = self.mlp[-1]
+        #TODO: Figure out how to initialise num_channel
+        new_nonlocal_point = PointNonLocalCell(feature=features, new_point=torch.unsqueeze(new_feature, dim=1),
+                                               mlp=[max(32, num_local_features // 2), nl_channel],
                                                is_training=True, bn_decay=None, weight_decay=None, bn=True)
 
         '''Skip Connection'''

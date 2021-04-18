@@ -413,9 +413,15 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
         (batch_size, npoint, nsample, channel)
     """
     #with tf.variable_scope(scope) as sc:
+    # print("Inside PointNonLocalCell()")
+    # print("new_point shape")
+    # print(new_point.shape)
+
     bottleneck_channel = mlp[0]
     [batch_size, npoint, nsample, channel] = list(new_point.size())
     ndataset = feature.size(1)
+    # print("ndataset")
+    # print(ndataset)
     feature = torch.unsqueeze(feature, dim=2) #(batch_size, ndataset, 1, channel)
     # transformed_feature = tf_util.conv2d(feature, bottleneck_channel * 2, [1,1],
     #                                         padding='VALID', stride=[1,1],
@@ -426,6 +432,8 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
                                  padding=0, stride=[1, 1], bn=bn, is_training=is_training,
                                  bn_decay=bn_decay, weight_decay=weight_decay, activation_fn=None)
 
+    # print("transformed_feature shape after conv2d")
+    # print(transformed_feature.shape)
     # transformed_new_point = nn.conv2d(new_point, bottleneck_channel, [1,1],
     #                                         padding='VALID', stride=[1,1],
     #                                         bn=bn, is_training=is_training,
@@ -435,18 +443,31 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
                                    padding=0, stride=[1,1], bn=bn, is_training=is_training,
                                    bn_decay=bn_decay, weight_decay = weight_decay, activation_fn=None)
 
-    transformed_new_point = torch.reshape(transformed_new_point, [batch_size, npoint*nsample, bottleneck_channel])
+    # print("transformed_new_point shape after conv2d")
+    # print(transformed_new_point.shape)
+
+    transformed_new_point = transformed_new_point.reshape(batch_size, npoint*nsample, bottleneck_channel)
     transformed_feature1 = torch.squeeze(transformed_feature[:,:,:,:bottleneck_channel], dim=2) #(batch_size, ndataset, bottleneck_channel)
     transformed_feature2 = torch.squeeze(transformed_feature[:,:,:,bottleneck_channel:], dim=2) #(batch_size, ndataset, bottleneck_channel)
+
+    # print("transformed_new_point shape")
+    # print(transformed_new_point.shape)
+    # print("transformed_feature1 shape")
+    # print(transformed_feature1.shape)
+    #
+    # print("npoint")
+    # print(npoint)
+    # print("nsample")
+    # print(nsample)
     if mode == 'dot':
-        attention_map = torch.matmul(transformed_new_point, transformed_feature1) #(batch_size, npoint*nsample, ndataset)
+        attention_map = torch.matmul(transformed_new_point, transformed_feature1.transpose(1, 2)) #(batch_size, npoint*nsample, ndataset)
         if scaled:
-            bottleneck_channel = bottleneck_channel.type(torch.FloatTensor)
-            attention_map = attention_map / torch.sqrt(bottleneck_channel)
+            bottleneck_channel = float(bottleneck_channel)
+            attention_map = attention_map / torch.sqrt(torch.tensor(bottleneck_channel))
 
     elif mode == 'concat':
         tile_transformed_feature1 = np.tile(torch.unsqueeze(transformed_feature1, dim=1).cpu().numpy(), (1,npoint*nsample,1,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
-        tile_transformed_new_point = np.tile(torch.reshape(transformed_new_point, (batch_size, npoint*nsample, 1, bottleneck_channel)).cpu().numpy(), (1,1,ndataset,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
+        tile_transformed_new_point = np.tile(transformed_new_point.reshape(batch_size, npoint*nsample, 1, bottleneck_channel).cpu().numpy(), (1,1,ndataset,1)) # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
         merged_feature = torch.cat([torch.from_numpy(tile_transformed_feature1), torch.from_numpy(tile_transformed_new_point)], dim=-1)
 
         # tile_transformed_feature1 = torch.repeat(torch.unsqueeze(transformed_feature1, dim=1), (1, npoint * nsample, 1, 1))  # (batch_size,npoint*nsample, ndataset, bottleneck_channel)
@@ -463,7 +484,7 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
                                   padding=0, stride=[1,1], bn=bn, is_training=is_training,
                                   bn_decay=bn_decay, weight_decay = weight_decay)
 
-        attention_map = torch.reshape(attention_map, (batch_size, npoint*nsample, ndataset))
+        attention_map = attention_map.reshape(batch_size, npoint*nsample, ndataset)
     softmax = nn.Softmax(dim=-1)
     attention_map = softmax(attention_map)
     new_nonlocal_point = torch.matmul(attention_map, transformed_feature2) #(batch_size, npoint*nsample, bottleneck_channel)
@@ -472,7 +493,7 @@ def PointNonLocalCell(feature,new_point,mlp,is_training, bn_decay, weight_decay,
     #                                         bn=bn, is_training=is_training,
     #                                         scope='conv_back_project', bn_decay=bn_decay, weight_decay = weight_decay)
 
-    new_nonlocal_point = conv2d(torch.reshape(new_nonlocal_point,[batch_size,npoint, nsample, bottleneck_channel]),
+    new_nonlocal_point = conv2d(new_nonlocal_point.reshape(batch_size,npoint, nsample, int(bottleneck_channel)),
                                 mlp[-1], kernel_size=[1, 1], padding=0, stride=[1,1],
                                 bn=bn, is_training=is_training, bn_decay=bn_decay, weight_decay = weight_decay)
 
