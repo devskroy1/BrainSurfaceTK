@@ -27,13 +27,13 @@ if __name__ == '__main__':
 
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = ['sex', 'age']
+    global_features = ['birth_age', 'weight']
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
