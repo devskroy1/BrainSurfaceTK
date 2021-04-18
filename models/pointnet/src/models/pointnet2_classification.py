@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping, AdaptiveSampling, weight_net_hidden
+from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping, AdaptiveSampling, weight_net_hidden, PointNonLocalCell
 from models.pointnet.src.models.pytorch_utils import conv1d, conv2d
 
 class SAModule(torch.nn.Module):
@@ -212,8 +212,14 @@ class Net(torch.nn.Module):
         #grouped_xyz -= torch.repeat(expanded_new_xyz, (1, 1, 32, 1))  # translation normalization
 
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
+
         # print("new_point.shape after cat")
         # print(new_point.shape)
+
+        new_nonlocal_point = PointNonLocalCell(feature=feature, new_point=torch.unsqueeze(new_feature, dim=1),
+                                               mlp=[max(32, num_channel // 2), nl_channel],
+                                               is_training=True, bn_decay=None, weight_decay=None, bn=True)
+
         '''Skip Connection'''
         skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
         # print("skip spatial max shape")
@@ -223,6 +229,17 @@ class Net(torch.nn.Module):
                               bn=True, is_training=True)
         # print("skip_spatial shape")
         # print(skip_spatial.shape)
+
+        '''Point Local Cell'''
+        for i, num_out_channel in enumerate(self.mlp):
+            if i != len(self.mlp) - 1:
+                # new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
+                #                             padding='VALID', stride=[1,1],
+                #                             bn=bn, is_training=is_training,
+                #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
+
+                new_point = conv2d(new_point, num_out_channel, kernel_size=[1, 1],
+                                   padding=0, stride=[1, 1], bn=True, is_training=True)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
         # print("weight shape from weight_net_hidden()")
@@ -249,6 +266,13 @@ class Net(torch.nn.Module):
         # print(new_xyz.shape)
         # print("data.batch")
         # print(data.batch)
+
+        new_point = new_point + new_nonlocal_point
+
+        '''Feature Fusion'''
+        new_point = conv1d(new_point, self.mlp[-1], kernel_size=1,
+                       padding=0, stride=1, bn=True, is_training=True)
+
         #POINTNET CLASSIFICN NETWORK
 
         #sa0_out = (data.x, data.pos, data.batch)
