@@ -70,15 +70,15 @@ if __name__ == "__main__":
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=8)
     test_dl = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate, num_workers=8)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3, 256, 40, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f"Model is on: {'cuda' if torch.cuda.is_available() else 'cpu'}")
     print(model)
@@ -101,7 +101,11 @@ if __name__ == "__main__":
             bg_node_features = bg.ndata["features"].to(device)
             batch_labels = bg.ndata["segmentation"].to(device)  # TEMP FIX WITH FLOAT HERE
 
-            prediction = model(bg, bg_node_features)
+            prediction = model(graph=bg, features=bg_node_features, is_training=True)
+            print("prediction shape")
+            print(prediction.shape)
+            print("batch_labels shape")
+            print(batch_labels.shape)
             loss = loss_function(prediction, batch_labels)
             loss.backward()
             optimizer.step()
@@ -127,7 +131,7 @@ if __name__ == "__main__":
                 # get segmentation labels
                 batch_labels = bg.ndata["segmentation"].to(device)
 
-                prediction = model(bg, bg_node_features)
+                prediction, cam = model(graph=bg, features=bg_node_features, is_training=False)
                 loss = loss_function(prediction, batch_labels)
 
                 test_epoch_loss += loss.item()
