@@ -16,8 +16,8 @@ class BasicGCNRegressor(nn.Module):
 
     def forward(self, graph, features, is_training):
         # Perform graph convolution and activation function.
-        print("graph")
-        print(graph)
+        # print("graph")
+        # print(graph)
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
 
@@ -33,7 +33,28 @@ class BasicGCNRegressor(nn.Module):
         seg_output = self.predict_layer(hg)
 
         if is_training:
-            return seg_output
+            #TODO: Remove this
+            linear_weights = self.predict_layer.weight
+            # print("linear_weights shape")
+            # print(linear_weights.shape)
+            n_classes = linear_weights.size(0)
+            hidden_dim = linear_weights.size(1)
+            hidden_first_dim = hidden.size(0)
+            class_activn_map = torch.zeros(size=(n_classes, hidden_first_dim), device=self.device)
+
+            for h in range(hidden_dim):
+                weight = linear_weights[:, h]
+                # weight = weight.to(self.device)
+                # print("weight shape")
+                # print(weight.shape)
+                conv_feature_map = hidden[:, h]
+                # conv_feature_map = conv_feature_map.to(self.device)
+                # print("conv_feature_map shape")
+                # print(conv_feature_map.shape)
+                class_activn_map += torch.matmul(weight.unsqueeze(1), conv_feature_map.unsqueeze(0))
+
+            return seg_output, class_activn_map
+            #return seg_output
 
         else:
             linear_weights = self.predict_layer.weight

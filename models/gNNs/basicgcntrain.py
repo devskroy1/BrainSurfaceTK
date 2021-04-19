@@ -19,6 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from models.gNNs.data_utils import BrainNetworkDataset
 from models.gNNs.networks import BasicGCNRegressor
+from models.gNNs.gcnCamVtk import add_node_saliency_scores_to_vtk
 
 
 def collate(samples):
@@ -136,17 +137,17 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     train_epoch_error = 0.
     train_epoch_worst_diff = 0.
     train_total_size = 0
-    for iter, (_, bg, batch_labels) in enumerate(train_dl):
+
+    for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
+
         optimizer.zero_grad()
 
         bg = bg.to(device)
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
+
         prediction = model(graph=bg, features=bg_node_features, is_training=True)
-        print("prediction shape")
-        print(prediction.shape)
-        print("batch_labels shape")
-        print(batch_labels.shape)
+
         loss = loss_function(prediction, batch_labels)
         loss.backward()
         optimizer.step()
@@ -181,15 +182,31 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
         batch_preds = list()
         batch_targets = list()
         batch_diffs = list()
+        batch_size = args.batch_size
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
             # bg stands for batch graph
             bg = bg.to(device)
             # get node feature
+            # graphs = dgl.unbatch(bg)
+            # first_graph = graphs[0]
+
             bg_node_features = bg.ndata["features"].to(device)
+            total_num_nodes = bg_node_features.size(0)
+            num_nodes_per_graph = total_num_nodes // batch_size
+
             batch_labels = batch_labels.to(device)
 
             predictions, cam = model(graph=bg, features=bg_node_features, is_training=False)
-            #TODO: Store cam node saliency scores as attributes in VTK file, visualise in Paraview
+
+            i = 0
+            for subject in subjects:
+                saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
+                # print("saliency scores shape")
+                # print(saliency_scores.shape)
+                add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+                                                subject=subject[0])
+                i += 1
+
             loss = loss_function(predictions, batch_labels)
 
             diff = diff_func(denorm_target_f(predictions, ds),
