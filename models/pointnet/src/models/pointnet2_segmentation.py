@@ -268,9 +268,9 @@ class Net(torch.nn.Module):
         x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
         x = self.bn_start(x)  # shape (B, d, N, 1)
         decimation_ratio = 1
-        permutation = torch.randperm(N)
-        coords = coords[:, permutation, :]
-        x = x[:, :, permutation, :]
+        # permutation = torch.randperm(N)
+        # coords = coords[:, permutation, :]
+        # x = x[:, :, permutation, :]
         coords = coords[:, :N // decimation_ratio, :]
 
         knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64)
