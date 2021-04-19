@@ -13,9 +13,9 @@ from vtk.numpy_interface import dataset_adapter as dsa
 def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     saliency_scores_numpy = saliency_scores.detach().cpu().numpy()
     original_vtk_file_name = vtk_root + "/" + subject + ".vtk"
-    print("Inside add_node_saliency_scores_to_vtk()")
-    print("original_vtk_file_name")
-    print(original_vtk_file_name)
+    # print("Inside add_node_saliency_scores_to_vtk()")
+    # print("original_vtk_file_name")
+    # print(original_vtk_file_name)
     reader = vtk.vtkPolyDataReader()
     reader.SetFileName(original_vtk_file_name)
     reader.Update()
