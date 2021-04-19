@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40, device)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             bg_node_features = bg.ndata["features"].to(device)
             batch_labels = bg.ndata["segmentation"].to(device)  # TEMP FIX WITH FLOAT HERE
 
-            prediction = model(graph=bg, features=bg_node_features, is_training=True)
+            prediction = model(graph=bg, features=bg_node_features)
             print("prediction shape")
             print(prediction.shape)
             print("batch_labels shape")
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 # get segmentation labels
                 batch_labels = bg.ndata["segmentation"].to(device)
 
-                prediction, cam = model(graph=bg, features=bg_node_features, is_training=False)
+                prediction = model(graph=bg, features=bg_node_features)
                 loss = loss_function(prediction, batch_labels)
 
                 test_epoch_loss += loss.item()
