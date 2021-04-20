@@ -13,6 +13,8 @@ from vtk.numpy_interface import dataset_adapter as dsa
 
 def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     saliency_scores_numpy = saliency_scores.detach().cpu().numpy()
+    print("saliency_scores_numpy shape")
+    print(saliency_scores_numpy.shape)
     original_vtk_file_name = vtk_root + "/" + subject + ".vtk"
     # print("Inside add_node_saliency_scores_to_vtk()")
     # print("original_vtk_file_name")
@@ -28,10 +30,10 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
 
     mesh_new = dsa.WrapDataObject(mesh)
     # print("About to call numpy_to_vtk()")
-    vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy)
+    vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy, 1)
     vtk_saliency_scores.SetName('saliency score')
     # print("About to call SetAttribute()")
-    mesh_new.GetPointData().SetAttribute(vtk_saliency_scores, 2)
+    mesh_new.GetPointData().SetAttribute(vtk_saliency_scores, 0)
     # print("After calling SetAttribute()")
     #mesh.PointData.append(saliency_scores_numpy, "saliency score")
     writer = vtk.vtkPolyDataWriter()
