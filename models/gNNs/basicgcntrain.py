@@ -171,7 +171,7 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     return train_epoch_loss, train_epoch_error, train_epoch_worst_diff
 
 
-def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
+def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, val):
     with torch.no_grad():
         model.eval()
         epoch_loss = 0
@@ -193,7 +193,6 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
             # get node feature
             graphs = dgl.unbatch(bg)
             first_graph = graphs[0]
-
             bg_node_features = bg.ndata["features"].to(device)
             #total_num_nodes = bg_node_features.size(0)
 
@@ -211,12 +210,13 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
                 # print("i")
                 # print(i)
             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
-            saliency_scores = cam[:, :num_nodes_first_graph]
-            # print("saliency scores shape")
-            # print(saliency_scores.shape)
-            #Append saliency scores to VTK only for the first subject in the batch
-            # print("Before calling add_node_saliency_scores_to_vtk()")
-            add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+            if (epoch == args.max_epochs - 1) and not val:
+                saliency_scores = cam[:, :num_nodes_first_graph]
+                # print("saliency scores shape")
+                # print(saliency_scores.shape)
+                #Append saliency scores to VTK only for the first subject in the batch
+                # print("Before calling add_node_saliency_scores_to_vtk()")
+                add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
                                             subject=subjects[0][0])
             # print("After calling add_node_saliency_scores_to_vtk()")
              #   i += 1
@@ -351,12 +351,12 @@ if __name__ == "__main__":
         val_epoch_loss, val_epoch_error, val_epoch_max_diff, val_csv_material = evaluate(model, val_dl, val_ds,
                                                                                          loss_function,
                                                                                          diff_func, denorm_target_f,
-                                                                                         device)
+                                                                                         device, True)
         # Test
         test_epoch_loss, test_epoch_error, test_epoch_max_diff, test_csv_material = evaluate(model, test_dl, test_ds,
                                                                                              loss_function,
                                                                                              diff_func, denorm_target_f,
-                                                                                             device)
+                                                                                             device, False)
 
         # Record to TensorBoard
         update_writer(writer, train_epoch_loss, val_epoch_loss, test_epoch_loss, train_epoch_error, val_epoch_error,
