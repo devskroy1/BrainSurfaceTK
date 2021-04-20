@@ -138,7 +138,7 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     train_epoch_worst_diff = 0.
     train_total_size = 0
 
-    for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
+    for iter, (_, bg, batch_labels) in enumerate(train_dl):
 
         optimizer.zero_grad()
 
@@ -182,30 +182,44 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
         batch_preds = list()
         batch_targets = list()
         batch_diffs = list()
-        batch_size = args.batch_size
+        # batch_size = args.batch_size
+        # print("About to enter evaluate for loop")
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
+            # print("About to evaluate on new batch of subject graphs")
+            # print("iter")
+            # print(iter)
             # bg stands for batch graph
             bg = bg.to(device)
             # get node feature
-            # graphs = dgl.unbatch(bg)
-            # first_graph = graphs[0]
+            graphs = dgl.unbatch(bg)
+            first_graph = graphs[0]
 
             bg_node_features = bg.ndata["features"].to(device)
-            total_num_nodes = bg_node_features.size(0)
-            num_nodes_per_graph = total_num_nodes // batch_size
+            #total_num_nodes = bg_node_features.size(0)
+
+            first_graph_node_features = first_graph.ndata["features"].to(device)
+            num_nodes_first_graph = first_graph_node_features.size(0)
+
+            #num_nodes_per_graph = total_num_nodes // batch_size
 
             batch_labels = batch_labels.to(device)
 
             predictions, cam = model(graph=bg, features=bg_node_features, is_training=False)
 
-            i = 0
-            for subject in subjects:
-                saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
-                # print("saliency scores shape")
-                # print(saliency_scores.shape)
-                add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
-                                                subject=subject[0])
-                i += 1
+            #i = 0
+            #for subject in subjects:
+                # print("i")
+                # print(i)
+            #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
+            saliency_scores = cam[:, :num_nodes_first_graph]
+            # print("saliency scores shape")
+            # print(saliency_scores.shape)
+            #Append saliency scores to VTK only for the first subject in the batch
+            # print("Before calling add_node_saliency_scores_to_vtk()")
+            add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+                                            subject=subjects[0][0])
+            # print("After calling add_node_saliency_scores_to_vtk()")
+             #   i += 1
 
             loss = loss_function(predictions, batch_labels)
 
@@ -225,7 +239,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
             batch_diffs.append(diff.cpu())
 
             total_size += len(batch_labels)
-
+        # print("After exiting for loop iterating over subject batches")
         epoch_loss /= (iter + 1)
         epoch_error /= total_size
 

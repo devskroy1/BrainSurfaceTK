@@ -2,7 +2,7 @@ import dgl
 import torch
 import torch.nn as nn
 from dgl.nn.pytorch import GraphConv
-
+from torch_geometric.nn import global_mean_pool
 from models.gNNs.layers import GNNLayer
 
 
@@ -18,12 +18,43 @@ class BasicGCNRegressor(nn.Module):
         # Perform graph convolution and activation function.
         # print("graph")
         # print(graph)
+        # print("Inside GCNRegressor forward()")
+        # total_num_nodes = features.size(0)
+        # print("total_num_nodes")
+        # print(total_num_nodes)
+        # num_nodes_per_graph = total_num_nodes // self.batch_size
+
+        # print("num_nodes_per_graph")
+        # print(num_nodes_per_graph)
+
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
 
+        # print("conv2 hidden shape")
+        # print(hidden.shape)
+        # batch_cat_tensor = torch.zeros(num_nodes_per_graph, dtype=torch.int64, device=self.device)
+        # for b in range(1, self.batch_size):
+        #     batch_tensor = torch.ones(num_nodes_per_graph, dtype=torch.int64, device=self.device) * b
+        #     # batch_tensor = batch_tensor.new_full((, npoint), b)
+        #     # print("batch_tensor shape")
+        #     # print(batch_tensor.shape)
+        #     # Expected to be 512
+        #     batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
+        #
+        # num_nodes_multiple = batch_cat_tensor.size(0)
+        # remainder_batch_tensor = torch.ones(total_num_nodes - num_nodes_multiple, dtype=torch.int64, device=self.device) * (self.batch_size - 1)
+        # batch_cat_tensor = torch.cat([batch_cat_tensor, remainder_batch_tensor], dim=0)
+
+        # print("batch_cat_tensor shape")
+        # print(batch_cat_tensor.shape)
         #Global Average Pooling on output of final conv layer
+        #gap_output = global_mean_pool(hidden, batch_cat_tensor, self.batch_size)
+        #gap_output = global_mean_pool(hidden)
+
         gap_output = torch.mean(hidden.view(hidden.size(0), hidden.size(1), -1), dim=2)
 
+        # print("gap_output shape")
+        # print(gap_output.shape)
         with graph.local_scope():
             #graph.ndata['tmp'] = hidden
             graph.ndata['tmp'] = gap_output
