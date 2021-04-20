@@ -183,11 +183,11 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
         batch_targets = list()
         batch_diffs = list()
         # batch_size = args.batch_size
-        # print("About to enter evaluate for loop")
+        print("About to enter evaluate for loop")
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
-            # print("About to evaluate on new batch of subject graphs")
-            # print("iter")
-            # print(iter)
+            print("About to evaluate on new batch of subject graphs")
+            print("iter")
+            print(iter)
             # bg stands for batch graph
             bg = bg.to(device)
             # get node feature
@@ -217,14 +217,15 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                 # print("saliency scores shape")
                 # print(saliency_scores.shape)
                 #Append saliency scores to VTK only for the first subject in the batch
-                # print("Before calling add_node_saliency_scores_to_vtk()")
+                print("Before calling add_node_saliency_scores_to_vtk()")
                 add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
                                             subject=subjects[0][0])
+                print("After calling add_node_saliency_scores_to_vtk()")
             # print("After calling add_node_saliency_scores_to_vtk()")
              #   i += 1
 
             loss = loss_function(predictions, batch_labels)
-
+            print("After calling loss function")
             diff = diff_func(denorm_target_f(predictions, ds),
                              denorm_target_f(batch_labels, ds))
             epoch_error += diff.sum().item()

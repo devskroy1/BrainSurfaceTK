@@ -21,20 +21,27 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     reader.SetFileName(original_vtk_file_name)
     reader.Update()
     mesh = reader.GetOutput()
+    print("Called reader.GetOutput()")
     #Type of mesh: vtkPolyData
     #point_data = mesh.GetPointData()
     #Type of point_data: vtkPointData
 
     mesh_new = dsa.WrapDataObject(mesh)
-
-    mesh_new.PointData.SetAttribute(saliency_scores_numpy, 0)
+    print("About to call numpy_to_vtk()")
+    vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy, 1)
+    vtk_saliency_scores.SetName('saliency score')
+    print("About to call SetAttribute()")
+    mesh_new.PointData.SetAttribute(vtk_saliency_scores, 0)
+    print("After calling SetAttribute()")
     #mesh.PointData.append(saliency_scores_numpy, "saliency score")
     writer = vtk.vtkPolyDataWriter()
+    print("After initialising vtkPolyDataWriter")
     appended_vtk_file_name = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/gcnRegressionSaliencyScores/" + subject + "_saliency_scores.vtk"
     writer.SetFileName(appended_vtk_file_name)
     writer.SetInputData(mesh_new.VTKObject)
+    print("After calling writer.SetInputData()")
     writer.Write()
-
+    print("After calling writer.Write()")
     # mesh_new = dsa.WrapDataObject(mesh)
     #
     # mesh_new.GetPointData().append(saliency_scores_numpy, "saliency score")
@@ -57,10 +64,6 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     # writer.SetInputData(point_data_new.VTKObject)
     #
     # writer.Write()
-
-
-
-
 
 
     # mesh_new = dsa.WrapDataObject(mesh)
