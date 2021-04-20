@@ -31,7 +31,7 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy, 1)
     vtk_saliency_scores.SetName('saliency score')
     print("About to call SetAttribute()")
-    mesh_new.PointData.SetAttribute(vtk_saliency_scores, 0)
+    mesh_new.GetPointData().SetAttribute(vtk_saliency_scores, 0)
     print("After calling SetAttribute()")
     #mesh.PointData.append(saliency_scores_numpy, "saliency score")
     writer = vtk.vtkPolyDataWriter()
