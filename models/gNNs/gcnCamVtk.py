@@ -28,7 +28,7 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
 
     mesh_new = dsa.WrapDataObject(mesh)
     print("About to call numpy_to_vtk()")
-    vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy, 1)
+    vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy)
     vtk_saliency_scores.SetName('saliency score')
     print("About to call SetAttribute()")
     mesh_new.GetPointData().SetAttribute(vtk_saliency_scores, 0)
