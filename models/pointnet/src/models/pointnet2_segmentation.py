@@ -273,8 +273,8 @@ class Net(torch.nn.Module):
         # x = x[:, :, permutation, :]
         coords = coords[:, :N // decimation_ratio, :]
 
-        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64)
-        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32)
+        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
         for b in range(B):
             knn_coords = coords[b, :, :]
             knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
@@ -306,9 +306,9 @@ class Net(torch.nn.Module):
         coords = coords.reshape(B*N, 3)
         x = x.reshape(B*N, d_out)
 
-        batch_cat_tensor = torch.zeros(N, dtype=torch.int64)
+        batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
         for b in range(1, B):
-            batch_tensor = torch.ones(N, dtype=torch.int64) * b
+            batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
             # batch_tensor = batch_tensor.new_full((, npoint), b)
             # print("batch_tensor shape")
             # print(batch_tensor.shape)
@@ -321,9 +321,12 @@ class Net(torch.nn.Module):
         # print(coords.shape)
         # print("batch_cat_tensor shape")
         # print(batch_cat_tensor.shape)
-        sa0_out = (x.to(self.device), coords.to(self.device), batch_cat_tensor.to(self.device))
 
-        sa1_out_x, sa1_out_pos, sa1_out_batch = self.sa1_module(*sa0_out)
+        #sa0_out = (x.to(self.device), coords.to(self.device), batch_cat_tensor.to(self.device))
+        sa0_out = (x, coords, batch_cat_tensor)
+
+        #sa1_out_x, sa1_out_pos, sa1_out_batch = self.sa1_module(*sa0_out)
+        sa1_out = self.sa1_module(*sa0_out)
 
         # print("sa1_out_x shape")
         # print(sa1_out_x.shape)
@@ -336,8 +339,8 @@ class Net(torch.nn.Module):
         num_features = sa1_out_x.size(1)
         sa1_out_x = sa1_out_x.reshape(B, num_features, N).unsqueeze(-1)
         sa1_out_pos = sa1_out_pos.reshape(B, N, 3)
-        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64)
-        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32)
+        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
         for b in range(B):
             knn_coords = sa1_out_pos[b, :, :]
             knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
@@ -385,19 +388,21 @@ class Net(torch.nn.Module):
         coords = sa1_out_pos.reshape(B*N, 3)
         x = x.reshape(B*N, d_out)
 
-        batch_cat_tensor = torch.zeros(N, dtype=torch.int64)
+        batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
         for b in range(1, B):
-            batch_tensor = torch.ones(N, dtype=torch.int64) * b
+            batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
             # batch_tensor = batch_tensor.new_full((, npoint), b)
             # print("batch_tensor shape")
             # print(batch_tensor.shape)
             # Expected to be 512
             batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
 
-        sa1_out = (x.to(self.device), coords.to(self.device), batch_cat_tensor.to(self.device))
+        #Randla-net
+        #sa1_out = (x, coords, batch_cat_tensor)
 
         #sa2_out_x, sa2_out_pos, sa2_out_batch = self.sa2_module(*sa1_out)
 
+        #Vanilla Pointnet++
         sa2_out = self.sa2_module(*sa1_out)
         #sa2_out_x, sa2_out_pos, sa2_out_batch = sa2_out
 
