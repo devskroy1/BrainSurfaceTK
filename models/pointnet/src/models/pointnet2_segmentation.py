@@ -335,72 +335,73 @@ class Net(torch.nn.Module):
         # print("sa1_out_batch shape")
         # print(sa1_out_batch.shape)
 
-        N = sa1_out_x.size(0) // B
-        num_features = sa1_out_x.size(1)
-        sa1_out_x = sa1_out_x.reshape(B, num_features, N).unsqueeze(-1)
-        sa1_out_pos = sa1_out_pos.reshape(B, N, 3)
-        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
-        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
-        for b in range(B):
-            knn_coords = sa1_out_pos[b, :, :]
-            knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
-            # print("knn_output_idx shape")
-            # print(knn_output_idx.shape)
-            # print("knn_output_dist shape")
-            # print(knn_output_dist.shape)
-
-            knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
-            knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
-            # knn_coords = coords[b, :, :].reshape(num_points, 3)
-
-        knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
-
-        x = self.lse2(sa1_out_pos, sa1_out_x, knn_out_batch)
-        # print("x shape after self.lse2()")
-        # print(x.shape)
-        x = self.pool2(x)
-        # print("x shape after pool2")
-        # print(x.shape)
-
-        # print("x shape before mlp2")
-        # print(x.shape)
-        # print("features shape")
-        # print(features.shape)
-        # mlp2 = self.mlp2(x)
-        # shortcut = self.shortcut(features)
+        #Randla-net code
+        # N = sa1_out_x.size(0) // B
+        # num_features = sa1_out_x.size(1)
+        # sa1_out_x = sa1_out_x.reshape(B, num_features, N).unsqueeze(-1)
+        # sa1_out_pos = sa1_out_pos.reshape(B, N, 3)
+        # knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+        # knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
+        # for b in range(B):
+        #     knn_coords = sa1_out_pos[b, :, :]
+        #     knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
+        #     # print("knn_output_idx shape")
+        #     # print(knn_output_idx.shape)
+        #     # print("knn_output_dist shape")
+        #     # print(knn_output_dist.shape)
         #
-        # npoint = shortcut.size(2)
-        # nchannels = shortcut.size(1)
-        # print("npoint")
-        # print(npoint)
-        # #Should be 5001
-        # print("mlp2 shape")
-        # print(mlp2.shape)
-        # print("shortcut shape")
-        # print(shortcut.shape)
-        # mlp2 = mlp2.expand(B, nchannels, npoint, 1)
-        # x = nn.LeakyReLU(mlp2 + shortcut)
+        #     knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
+        #     knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
+        #     # knn_coords = coords[b, :, :].reshape(num_points, 3)
         #
-        # print("x shape after addition of mlp2 and shortcut connection")
-        # print(x.shape)
+        # knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
+        #
+        # x = self.lse2(sa1_out_pos, sa1_out_x, knn_out_batch)
+        # # print("x shape after self.lse2()")
+        # # print(x.shape)
+        # x = self.pool2(x)
+        # # print("x shape after pool2")
+        # # print(x.shape)
+        #
+        # # print("x shape before mlp2")
+        # # print(x.shape)
+        # # print("features shape")
+        # # print(features.shape)
+        # # mlp2 = self.mlp2(x)
+        # # shortcut = self.shortcut(features)
+        # #
+        # # npoint = shortcut.size(2)
+        # # nchannels = shortcut.size(1)
+        # # print("npoint")
+        # # print(npoint)
+        # # #Should be 5001
+        # # print("mlp2 shape")
+        # # print(mlp2.shape)
+        # # print("shortcut shape")
+        # # print(shortcut.shape)
+        # # mlp2 = mlp2.expand(B, nchannels, npoint, 1)
+        # # x = nn.LeakyReLU(mlp2 + shortcut)
+        # #
+        # # print("x shape after addition of mlp2 and shortcut connection")
+        # # print(x.shape)
+        #
+        # d_out = x.size(1)
+        # coords = sa1_out_pos.reshape(B*N, 3)
+        # x = x.reshape(B*N, d_out)
+        #
+        # batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
+        # for b in range(1, B):
+        #     batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
+        #     # batch_tensor = batch_tensor.new_full((, npoint), b)
+        #     # print("batch_tensor shape")
+        #     # print(batch_tensor.shape)
+        #     # Expected to be 512
+        #     batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
 
-        d_out = x.size(1)
-        coords = sa1_out_pos.reshape(B*N, 3)
-        x = x.reshape(B*N, d_out)
-
-        batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
-        for b in range(1, B):
-            batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
-            # batch_tensor = batch_tensor.new_full((, npoint), b)
-            # print("batch_tensor shape")
-            # print(batch_tensor.shape)
-            # Expected to be 512
-            batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
-
-        #Randla-net
         #sa1_out = (x, coords, batch_cat_tensor)
 
         #sa2_out_x, sa2_out_pos, sa2_out_batch = self.sa2_module(*sa1_out)
+        #End of Randla-net code
 
         #Vanilla Pointnet++
         sa2_out = self.sa2_module(*sa1_out)
