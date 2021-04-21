@@ -49,7 +49,6 @@ class Net(torch.nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.decimation = decimation
         self.num_neighbours = num_neighbours
-        
         super(Net, self).__init__()
 
         self.num_global_features = num_global_features
