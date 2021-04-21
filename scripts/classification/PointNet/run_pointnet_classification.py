@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # data_type = 'pial'
     # hemisphere = 'both'
 
-    comment = 'pointASNL AS'
+    comment = 'pointASNL_AS'
     # additional_comment = ''
 
     #################################################
