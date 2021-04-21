@@ -114,7 +114,10 @@ class Net(torch.nn.Module):
 
         #New code for point asnl and pointnet++
         self.sa1_module = SAModule(0.5, 0.2, MLP([128 + num_local_features, 128, 128, 160]))
+
         self.sa1a_module = SAModule(0.5, 0.2, MLP([160 + 3, 160, 160, 192]))
+
+        #self.sa2_module = SAModule(0.25, 0.4, MLP([160 + 3, 192, 192, 256]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([192 + 3, 192, 192, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
@@ -216,50 +219,51 @@ class Net(torch.nn.Module):
         # print("new_point.shape after cat")
         # print(new_point.shape)
 
-        nl_channel = self.mlp[-1]
-        #TODO: Figure out how to initialise num_channel
-        new_nonlocal_point = PointNonLocalCell(feature=features, new_point=torch.unsqueeze(new_feature, dim=1),
-                                               mlp=[max(32, num_local_features // 2), nl_channel],
-                                               is_training=True, bn_decay=None, weight_decay=None, bn=True)
+        # nl_channel = self.mlp[-1]
+        # #TODO: Figure out how to initialise num_channel
+        # new_nonlocal_point = PointNonLocalCell(feature=features, new_point=torch.unsqueeze(new_feature, dim=1),
+        #                                        mlp=[max(32, num_local_features // 2), nl_channel],
+        #                                        is_training=True, bn_decay=None, weight_decay=None, bn=True)
 
-        '''Skip Connection'''
-        skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
-        # print("skip spatial max shape")
-        # print(skip_spatial_max.shape)
-
-        skip_spatial = conv1d(skip_spatial_max, self.mlp[-1], kernel_size=1, padding=0, stride=1,
-                              bn=True, is_training=True)
+        # '''Skip Connection'''
+        # skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
+        # # print("skip spatial max shape")
+        # # print(skip_spatial_max.shape)
+        #
+        # skip_spatial = conv1d(skip_spatial_max, self.mlp[-1], kernel_size=1, padding=0, stride=1,
+        #                       bn=True, is_training=True)
         # print("skip_spatial shape")
         # print(skip_spatial.shape)
 
         '''Point Local Cell'''
-        for i, num_out_channel in enumerate(self.mlp):
-            if i != len(self.mlp) - 1:
-                # new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
-                #                             padding='VALID', stride=[1,1],
-                #                             bn=bn, is_training=is_training,
-                #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
+        # for i, num_out_channel in enumerate(self.mlp):
+        #     if i != len(self.mlp) - 1:
+        #         # new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
+        #         #                             padding='VALID', stride=[1,1],
+        #         #                             bn=bn, is_training=is_training,
+        #         #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
+        #
+        #         new_point = conv2d(new_point, num_out_channel, kernel_size=[1, 1],
+        #                            padding=0, stride=[1, 1], bn=True, is_training=True)
 
-                new_point = conv2d(new_point, num_out_channel, kernel_size=[1, 1],
-                                   padding=0, stride=[1, 1], bn=True, is_training=True)
+        # weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
+        # # print("weight shape from weight_net_hidden()")
+        # # print(weight.shape)
+        # new_point = new_point.transpose(2, 3)
+        # # print("new_point.shape after transpose")
+        # # print(new_point.shape)
+        # new_point = torch.matmul(new_point, weight)
+        # # print("new_point.shape after matmul with weight")
+        # # print(new_point.shape)
+        # new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
+        #                    padding=0, stride=[1, 1], bn=True, is_training=True)
+        # # print("new_point.shape after conv2d")
+        # # print(new_point.shape)
+        # new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
+        # # print("new_point.shape after squeeze")
+        # # print(new_point.shape)
+        # new_point = new_point + skip_spatial
 
-        weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
-        # print("weight shape from weight_net_hidden()")
-        # print(weight.shape)
-        new_point = new_point.transpose(2, 3)
-        # print("new_point.shape after transpose")
-        # print(new_point.shape)
-        new_point = torch.matmul(new_point, weight)
-        # print("new_point.shape after matmul with weight")
-        # print(new_point.shape)
-        new_point = conv2d(new_point, self.mlp[-1], kernel_size=[1, new_point.size(2)],
-                           padding=0, stride=[1, 1], bn=True, is_training=True)
-        # print("new_point.shape after conv2d")
-        # print(new_point.shape)
-        new_point = new_point.squeeze(2)  # (batch_size, npoints, mlp2[-1])
-        # print("new_point.shape after squeeze")
-        # print(new_point.shape)
-        new_point = new_point + skip_spatial
         # print("new_point.shape after addition of skip_spatial")
         # print(new_point.shape)
         # print("new_point shape")
@@ -269,11 +273,11 @@ class Net(torch.nn.Module):
         # print("data.batch")
         # print(data.batch)
 
-        new_point = new_point + new_nonlocal_point
+        # new_point = new_point + new_nonlocal_point
 
-        '''Feature Fusion'''
-        new_point = conv1d(new_point, self.mlp[-1], kernel_size=1,
-                       padding=0, stride=1, bn=True, is_training=True)
+        # '''Feature Fusion'''
+        # new_point = conv1d(new_point, self.mlp[-1], kernel_size=1,
+        #                padding=0, stride=1, bn=True, is_training=True)
 
         #POINTNET CLASSIFICN NETWORK
 
@@ -291,6 +295,11 @@ class Net(torch.nn.Module):
         new_point = new_point.to(self.device)
 
         new_point_third_dim = new_point.size(2)
+
+        print("new_xyz shape")
+        print(new_xyz.shape)
+        print("new_point shape")
+        print(new_point.shape)
         new_xyz_reshape = new_xyz.reshape(batch_size * npoint, 3)
         new_point_reshape = new_point.reshape(batch_size * npoint, new_point_third_dim)
 
@@ -332,6 +341,7 @@ class Net(torch.nn.Module):
         # print(sa1_out_x.shape)
 
         sa1a_out = self.sa1a_module(*sa1_out)
+
         # sa1a_out_x, sa1a_out_pos, sa1a_out_batch = sa1a_out
         # print("sa1a_out_x shape")
         # print(sa1a_out_x.shape)
