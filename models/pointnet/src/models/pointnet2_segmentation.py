@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
-from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
 from torch_geometric.nn import knn, knn_interpolate
 from ..models.pointnet_randla_net import SharedMLP, LocalSpatialEncoding, AttentivePooling, LocalFeatureAggregation
@@ -285,9 +284,9 @@ class Net(torch.nn.Module):
         x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
         x = self.bn_start(x)  # shape (B, d, N, 1)
         decimation_ratio = 1
-        permutation = torch.randperm(N)
-        coords = coords[:, permutation, :]
-        x = x[:, :, permutation, :]
+        # permutation = torch.randperm(N)
+        # coords = coords[:, permutation, :]
+        # x = x[:, :, permutation, :]
         coords = coords[:, :N // decimation_ratio, :]
 
         knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
