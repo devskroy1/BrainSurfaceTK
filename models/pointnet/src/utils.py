@@ -114,7 +114,6 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
 
     root = '/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/'
 
-
     data_nativeness_paths = {'native': 'surface_native_04152020/',
                              'aligned': 'surface_fsavg32k/'}
 

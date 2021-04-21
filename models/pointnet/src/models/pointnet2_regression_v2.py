@@ -60,6 +60,10 @@ class Net(torch.nn.Module):
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)
+        sa2_x, sa2_pos, sa2_batch = sa2_out
+
+        feature_vector = sa2_x
+
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
 
@@ -70,4 +74,4 @@ class Net(torch.nn.Module):
         x = F.relu(self.lin2(x))
         x = self.lin3(x)
 
-        return x.view(-1)
+        return x.view(-1), feature_vector

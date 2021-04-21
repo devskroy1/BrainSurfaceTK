@@ -11,7 +11,9 @@ import torch.nn.functional as F
 from torch.autograd import grad
 import gen_contrib_heatmap as gch
 from models.pointnet.src.utils import get_comment, get_data_path, data
-from models.pointnet.src.models.pointnet2_segmentation import Net
+
+from models.pointnet.src.models.pointnet2_regression_v2 import Net
+
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'pointnet') + '/'
 
 desiredLabel = 1  # The index of the class label the object should be tested against. It matches with the line numbers of the shapes.txt files e.g. line 1 = airplane etc.
@@ -19,7 +21,7 @@ numTestRuns = 500  # Amount of tests for the current test label object.
 maxNumPoints = 2048  # How many points should be considered? [256/512/1024/2048] [default: 1024]
 storeResults = False  # Should the results of the algorithm be stored to files or not.
 
-#Currently applied to only Classificn and Segmentn tasks, not regressn
+#Currently applied to regressn task
 class AdversarialPointCloud():
 
     def __init__(self, desired_class_label, num_classes, device):
@@ -349,10 +351,11 @@ if __name__ == "__main__":
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = None
 
+    recording = True
     REPROCESS = False
 
     data_nativeness = 'native'
-    data_compression = "5k"
+    data_compression = "10k"
     data_type = 'white'
     hemisphere = 'both'
 
@@ -365,7 +368,7 @@ if __name__ == "__main__":
 
     #experiment_name = f'{data_nativeness}_{data_type}_{data_compression}_{hemisphere}_{additional_comment}'
 
-    experiment_name = 'native_white_10k_both_'
+    #experiment_name = 'native_white_10k_both_'
     #################################################
     ############ EXPERIMENT DESCRIPTION #############
     #################################################
@@ -374,8 +377,12 @@ if __name__ == "__main__":
     ################################################
     lr = 0.001
     batch_size = 2
-    target_class = ""
-    task = 'segmentation'
+    gamma = 0.9875
+    scheduler_step_size = 2
+    target_class = 'scan_age'
+    task = 'regression'
+    numb_epochs = 200
+    number_of_points = 10000
     ################################################
 
 
@@ -423,9 +430,11 @@ if __name__ == "__main__":
     print('Unique labels found: {}'.format(num_labels))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(num_labels, num_local_features, num_global_features=None).to(device)
+    model = Net(num_local_features, num_global_features=None).to(device)
 
-    PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/best_acc_model.pt'.format(experiment_name)
+    #PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/best_acc_model.pt'.format(experiment_name)
+
+    PATH = PATH_TO_ROOT + 'pointnetModels/regression/model_best.pt'
 
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
