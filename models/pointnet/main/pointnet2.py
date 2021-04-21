@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pointnet.src.models.pointnet2_regression import Net
+from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.src.utils import get_data_path, data
 
 
@@ -25,7 +25,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     for data in train_loader:
         data = data.to(device)
         optimizer.zero_grad()
-        pred = model(data)
+        pred, feature_vector = model(data)
         loss = F.mse_loss(pred, data.y[:, 0].float())
         loss.backward()
         optimizer.step()
@@ -57,7 +57,7 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
 
                 data = data.to(device)
                 with torch.no_grad():
-                    pred = model(data)
+                    pred, feature_vector = model(data)
                     for i in range(len(pred)):
                         print(str(pred[i].item()).center(20, ' '),
                               str(data.y[:, 0][i].item()).center(20, ' '),
@@ -89,7 +89,7 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
         for idx, data in enumerate(loader):
             data = data.to(device)
             with torch.no_grad():
-                pred = model(data)
+                pred, feature_vector = model(data)
 
                 for i in range(len(pred)):
                     print(str(pred[i].item()).center(20, ' '),
