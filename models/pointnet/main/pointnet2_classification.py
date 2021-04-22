@@ -28,14 +28,14 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         data = data.to(device)
         pred, final_feature_vector = model(data)
         perd_label = pred.max(1)[1]
-        print("pred shape")
-        print(pred.shape)
-        print("data.y shape")
-        print(data.y.shape)
-        loss = F.nll_loss(pred, data.y)
+        # print("pred shape")
+        # print(pred.shape)
+        # print("data.y shape")
+        # print(data.y.shape)
+        loss = F.nll_loss(pred, data.y[:, 0].long())
         loss.backward()
         optimizer.step()
-        correct += perd_label.eq(data.y).sum().item()
+        correct += perd_label.eq(data.y[:, 0].long()).sum().item()
         loss_train += loss.item()
     acc = correct / len(train_loader.dataset)
 
@@ -78,7 +78,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
                                                 str(pred[i].item()), str(data.y[:, 0][i].item()),
                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
-                correct += pred.eq(data.y).sum().item()
+                correct += pred.eq(data.y[:, 0].long()).sum().item()
 
             acc = correct / len(loader.dataset)
 
@@ -98,14 +98,15 @@ def test_classification(model, loader, indices, device, recording, results_folde
         for idx, data in enumerate(loader):
             data = data.to(device)
             with torch.no_grad():
-                pred = model(data).max(1)[1]
+                pred, final_feature_vector = model(data)
+                pred = pred.max(1)[1]
 
                 for i in range(len(pred)):
                     print(str(pred[i].item()).center(20, ' '),
                           str(data.y[:, 0][i].item()).center(20, ' '),
                           indices[idx * len(pred) + i])
 
-            correct += pred.eq(data.y).sum().item()
+            correct += pred.eq(data.y[:, 0].long()).sum().item()
 
         acc = correct / len(loader.dataset)
 

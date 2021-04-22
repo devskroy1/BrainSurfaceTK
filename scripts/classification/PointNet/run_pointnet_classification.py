@@ -33,7 +33,7 @@ if __name__ == '__main__':
     ########### EXPERIMENT DESCRIPTION ##############
     #################################################
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # data_type = 'pial'
     # hemisphere = 'both'
 
-    comment = 'comment'
+    comment = 'pointcloud_grad_cam'
     # additional_comment = ''
 
     #################################################
@@ -60,7 +60,8 @@ if __name__ == '__main__':
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
-    numb_epochs = 200
+    # numb_epochs = 200
+    numb_epochs = 25
     number_of_points = 10000
 
     ################################################
