@@ -33,7 +33,11 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     # print("About to call numpy_to_vtk()")
 
     vtk_saliency_scores = numpy_support.numpy_to_vtk(saliency_scores_numpy, 1)
+    
+    vtkarr = vtk.vtkArray()
 
+    
+    
     # vtk_saliency_scores.SetName('saliency score')
     # print("About to call SetAttribute()")
 
