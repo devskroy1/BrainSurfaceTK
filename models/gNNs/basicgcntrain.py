@@ -212,7 +212,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
 
             #if (epoch == args.max_epochs - 1) and not val:
-            if (epoch == 0) and not val:
+            if (epoch == args.max_epochs - 1) and not val:
                 saliency_scores = cam[:, :num_nodes_first_graph]
                 # print("saliency scores shape")
                 # print(saliency_scores.shape)
