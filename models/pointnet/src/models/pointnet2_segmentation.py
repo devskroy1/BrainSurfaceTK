@@ -287,45 +287,50 @@ class Net(torch.nn.Module):
         # permutation = torch.randperm(N)
         # coords = coords[:, permutation, :]
         # x = x[:, :, permutation, :]
-        coords = coords[:, :N // decimation_ratio, :]
+        num_lfa_units = 3
+        for i in range(num_lfa_units):
+            coords = coords[:, :N // decimation_ratio, :]
 
-        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
-        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
-        for b in range(B):
-            knn_coords = coords[b, :, :]
-            knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
-            # print("knn_output_idx shape")
-            # print(knn_output_idx.shape)
-            # print("knn_output_dist shape")
-            # print(knn_output_dist.shape)
+            knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+            knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
+            for b in range(B):
+                knn_coords = coords[b, :, :]
+                knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
+                # print("knn_output_idx shape")
+                # print(knn_output_idx.shape)
+                # print("knn_output_dist shape")
+                # print(knn_output_dist.shape)
 
-            knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
-            knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
-            # knn_coords = coords[b, :, :].reshape(num_points, 3)
+                knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
+                knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
+                # knn_coords = coords[b, :, :].reshape(num_points, 3)
 
-        knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
+            knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
 
-        features = x
+            features = x
 
-        # print("features shape before self.mlp1()")
-        # print(features.shape)
+            # print("features shape before self.mlp1()")
+            # print(features.shape)
 
-        x = self.mlp1(features)
+            x = self.mlp1(features)
 
-        # print("x shape after self.mlp1()")
-        # print(x.shape)
+            # print("x shape after self.mlp1()")
+            # print(x.shape)
 
-        x = self.lse1(coords, x, knn_out_batch)
-        x = self.pool1(x)
+            x = self.lse1(coords, x, knn_out_batch)
+            x = self.pool1(x)
 
-        x = self.lse2(coords, x, knn_out_batch)
-        x = self.pool2(x)
+            x = self.lse2(coords, x, knn_out_batch)
+            x = self.pool2(x)
 
-        x = self.lrelu(self.mlp2(x) + self.shortcut(features))
+            x = self.lrelu(self.mlp2(x) + self.shortcut(features))
+            decimation_ratio *= d
+            x = x[:, :, :N // decimation_ratio, :]
 
         d_out = x.size(1)
         coords = coords.reshape(B*N, 3)
         x = x.reshape(B*N, d_out)
+
 
         batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
         for b in range(1, B):
