@@ -33,7 +33,7 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "5k"
     data_type = 'white'
     hemisphere = 'both'
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # data_type = 'white'
     # hemisphere = 'left'
 
-    additional_comment = ''
+    additional_comment = 'Baseline PointNet++ segmentn to compare with Randla-net segmentn'
 
     experiment_name = f'{data_nativeness}_{data_type}_{data_compression}_{hemisphere}_{additional_comment}'
 
