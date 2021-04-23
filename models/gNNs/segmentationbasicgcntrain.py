@@ -14,6 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from models.gNNs.data_utils import BrainNetworkDataset
 from models.gNNs.networks import BasicGCNSegmentation
+from models.gNNs.poolingNetworks import PooledGCNSegmentation
 
 
 def collate(samples):
@@ -73,12 +74,13 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    # model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = PooledGCNSegmentation(3, 256, 40, batch_size, device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f"Model is on: {'cuda' if torch.cuda.is_available() else 'cpu'}")
     print(model)
