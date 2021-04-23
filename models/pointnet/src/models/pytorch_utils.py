@@ -276,6 +276,7 @@ def conv2d(inputs,
         else:
             batch_norm = nn.BatchNorm2d(num_features, momentum=1 - bn_decay).to(device).eval()
     outputs = batch_norm(outputs)
+    outputs = outputs.contiguous()
 
   if activation_fn is not None:
     # relu = nn.ReLU()

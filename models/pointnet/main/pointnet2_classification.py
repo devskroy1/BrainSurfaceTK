@@ -26,6 +26,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
 
     for data in train_loader:
         data = data.to(device)
+        # with torch.autograd.detect_anomaly():
         pred = model(data)
         # print("pred is contiguous")
         # print(pred.is_contiguous())
