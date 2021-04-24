@@ -235,9 +235,9 @@ class BrainNetworkDataset(Dataset):
         """
         features = [mesh.points]
 
-        print("Inside get_node_features()")
-        print("mesh.array_names")
-        print(mesh.array_names)
+        # print("Inside get_node_features()")
+        # print("mesh.array_names")
+        # print(mesh.array_names)
         if not self.featureless:
             for name in mesh.array_names:
                 if name in self.features:
@@ -440,7 +440,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
