@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
-from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping, AdaptiveSampling, weight_net_hidden
+from models.pointnet.src.models.pointasnl_util import PointASNLSetAbstraction, sampling, grouping, AdaptiveSampling, weight_net_hidden, PointNonLocalCell
 from models.pointnet.src.models.pytorch_utils import conv1d, conv2d
 
 class SAModule(torch.nn.Module):
@@ -50,6 +50,7 @@ class Net(torch.nn.Module):
         self.mlp = mlp
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+        #Original Pointnet regression
         # 3+num_local_features IS 3 FOR COORDINATES, num_local_features FOR FEATURES PER POINT.
         # self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 32, 32, 64]))
         # self.sa2_module = SAModule(0.25, 0.4, MLP([64 + 3, 64, 64, 128]))
@@ -59,6 +60,7 @@ class Net(torch.nn.Module):
         # self.lin2 = Lin(256, 128)
         # self.lin3 = Lin(128, 1)
 
+        #Pointasnl regression
         self.sa1_module = SAModule(0.5, 0.2, MLP([128 + num_local_features, 128, 128, 160]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([160 + 3, 160, 160, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 256, 512]))
@@ -71,6 +73,44 @@ class Net(torch.nn.Module):
         # self.lin2 = Lin(512, 256)
         # self.lin3 = Lin(256, 128)
         # self.lin4 = Lin(128, 1)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
+
+    # def forward(self, data):
+    #
+    #     N = data.x.size(0)
+    #     permutation = torch.randperm(N)
+    #     x_perm = data.x[permutation, :]
+    #     coords_perm = data.pos[permutation, :]
+    #     batch_perm = data.batch[permutation]
+    #
+    #     print("data.x shape")
+    #     print(data.x.shape)
+    #     print("data.pos shape")
+    #     print(data.pos.shape)
+    #     print("data.batch shape")
+    #     print(data.batch.shape)
+    #
+    #     print("x_perm shape")
+    #     print(x_perm.shape)
+    #     print("coords_perm shape")
+    #     print(coords_perm.shape)
+    #     print("batch_perm shape")
+    #     print(batch_perm.shape)
+    #
+    #     # sa0_out = (data.x, data.pos, data.batch)
+    #     sa0_out = (x_perm, coords_perm, batch_perm)
+    #     sa1_out = self.sa1_module(*sa0_out)
+    #     sa2_out = self.sa2_module(*sa1_out)
+    #     sa3_out = self.sa3_module(*sa2_out)
+    #     x, pos, batch = sa3_out
+    #
+    #     if self.num_global_features > 0:
+    #         x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
+    #
+    #     x = F.relu(self.lin1(x))
+    #     x = F.relu(self.lin2(x))
+    #     x = self.lin3(x)
+    #
+    #     return x.view(-1)
 
     def forward(self, data):
 
@@ -138,6 +178,13 @@ class Net(torch.nn.Module):
         new_point = torch.cat([grouped_xyz, new_point], dim=-1)
         # print("new_point.shape after cat")
         # print(new_point.shape)
+
+        nl_channel = self.mlp[-1]
+        # TODO: Figure out how to initialise num_channel
+        new_nonlocal_point = PointNonLocalCell(feature=features, new_point=torch.unsqueeze(new_feature, dim=1),
+                                               mlp=[max(32, num_local_features // 2), nl_channel],
+                                               is_training=True, bn_decay=None, weight_decay=None, bn=True)
+
         '''Skip Connection'''
         skip_spatial_max, skip_spatial_idxs = torch.max(new_point, dim=2)
         # print("skip spatial max shape")
@@ -147,6 +194,17 @@ class Net(torch.nn.Module):
                               bn=True, is_training=True)
         # print("skip_spatial shape")
         # print(skip_spatial.shape)
+
+        '''Point Local Cell'''
+        for i, num_out_channel in enumerate(self.mlp):
+            if i != len(self.mlp) - 1:
+                # new_point = tf_util.conv2d(new_point, num_out_channel, [1,1],
+                #                             padding='VALID', stride=[1,1],
+                #                             bn=bn, is_training=is_training,
+                #                             scope='conv%d'%(i), bn_decay=bn_decay, weight_decay = weight_decay)
+
+                new_point = conv2d(new_point, num_out_channel, kernel_size=[1, 1],
+                                   padding=0, stride=[1, 1], bn=True, is_training=True)
 
         weight = weight_net_hidden(grouped_xyz, [32], is_training=True)
         # print("weight shape from weight_net_hidden()")
@@ -173,6 +231,13 @@ class Net(torch.nn.Module):
         # print(new_xyz.shape)
         # print("data.batch")
         # print(data.batch)
+
+        new_point = new_point + new_nonlocal_point
+
+        '''Feature Fusion'''
+        new_point = conv1d(new_point, self.mlp[-1], kernel_size=1,
+                           padding=0, stride=1, bn=True, is_training=True)
+
         # POINTNET CLASSIFICN NETWORK
 
         # sa0_out = (data.x, data.pos, data.batch)
