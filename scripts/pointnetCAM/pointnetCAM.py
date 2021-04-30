@@ -32,8 +32,14 @@ class AdversarialPointCloud():
 
     def getGradient(self, poolingMode, class_activation_vector, feature_vec):
         # Compute gradient of the class prediction vector w.r.t. the feature vector. Use class_activation_vector[classIndex] to set which class shall be probed.
+
         maxgradients = grad(outputs=class_activation_vector, inputs=feature_vec,
                             grad_outputs=torch.ones_like(class_activation_vector), allow_unused=True)[0]
+        # maxgradients = grad(outputs=class_activation_vector, inputs=feature_vec,
+        #                     grad_outputs=torch.ones_like(class_activation_vector), allow_unused=True)[0]
+
+        # print("maxgradients")
+        # print(maxgradients)
         # print("feature_vec shape")
         # print(feature_vec.shape)
         # print("maxgradients")
@@ -134,18 +140,33 @@ class AdversarialPointCloud():
         #total_loss = []
         #with torch.no_grad():
         for batch_idx, data in enumerate(test_loader):
-            # print("batch_idx")
-            # print(batch_idx)
+            print("batch_idx")
+            print(batch_idx)
 
-            # if batch_idx == 25:
+            # if batch_idx == 2:
             #     break
 
-            # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
             # 1. Get predictions and loss
             data = data.to(device)
 
             # with torch.no_grad():
             out, feature_vector = model(data)
+            # with torch.set_grad_enabled(True):
+            one_hot = F.one_hot(data.y[:, 0].float().clone().detach().requires_grad_(True).long(), -1)
+            #one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
+
+            class_activation_vector = torch.mul(out, one_hot)
+            # feature_vector.requires_grad = True
+            # class_activation_vector.requires_grad = True
+            # print("feature_vector.requires_grad")
+            # print(feature_vector.requires_grad)
+            # print("class_activation_vector.requires_grad")
+            # print(class_activation_vector.requires_grad)
+            # class_activation_vector.retain_grad()
+            # feature_vector.retain_grad()
+            maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
+
 
             # #
             # print("feature_vector shape")
@@ -158,7 +179,7 @@ class AdversarialPointCloud():
 
             pred = out.max(dim=0)[1]
 
-            one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
+            # one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
 
             # print("data.x shape")
             # print(data.x.shape)
@@ -177,7 +198,8 @@ class AdversarialPointCloud():
 
             #class_activation_vector = torch.multiply(pred, one_hot)
 
-            class_activation_vector = torch.mul(out, one_hot)
+            # class_activation_vector = torch.mul(out, one_hot)
+
             # print("class_activation_vector shape")
             # print(class_activation_vector.shape)
             # class_activation_vector.requires_grad = True
@@ -185,7 +207,7 @@ class AdversarialPointCloud():
             # class_activation_vector.retain_grad()
             # feature_vector.retain_grad()
 
-            maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
+            # maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
 
             # print("maxgradients shape")
             # print(maxgradients.shape)
@@ -450,8 +472,9 @@ if __name__ == "__main__":
 
     #PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/best_acc_model.pt'.format(experiment_name)
 
-    PATH = PATH_TO_ROOT + '/pointnetModels/classification/model_best.pt'
+    # PATH = PATH_TO_ROOT + '/pointnetModels/classification/model_best.pt'
 
+    PATH = PATH_TO_ROOT + '/runs/classification/pointcloud_grad_cam/models/model_best.pt'
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
     adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")

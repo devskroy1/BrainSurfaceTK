@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 import random
 import copy
+import pyvista as pv
+import open3d as o3d
 from open3d import geometry, visualization, utility
 
 def _return_workArr(inputArr):
@@ -282,7 +284,15 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray):
     # print(npInputPCArray.shape)
     pcd.points = utility.Vector3dVector(npInputPCArray)
     pcd.colors = utility.Vector3dVector(pColors)
-    visualization.draw_geometries([pcd])
+
+    heat_cloud_ply_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.ply"
+    
+    o3d.io.write_point_cloud(heat_cloud_ply_filename, pcd)
+    mesh = pv.read(heat_cloud_ply_filename)
+    heat_cloud_vtk_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.vtk"
+    mesh.save(heat_cloud_vtk_filename)
+
+    #visualization.draw_geometries([pcd])
 
 
 def draw_pointcloud(inputPointCloudArr):
