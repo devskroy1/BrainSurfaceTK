@@ -5,7 +5,12 @@ from dgl.nn.pytorch import GraphConv
 from torch_geometric.nn import global_mean_pool
 from models.gNNs.layers import GNNLayer
 
-
+#Add more convolutional layers, and linear layers. Play with hyperparams, like LR. Watch both training and val accuracy.
+#Watch for overfitting on training data
+# Play with num layers, hidden dims (size of feature maps), fc layers.
+# How deep is network, and how big it is (num feature maps)
+#Compare first few epochs. Narrow search from first few epochs. Plot losses, see which curves converge faster.
+#Start with big LRs, e.g. 0.1, then reduce LR. Be systematic
 class BasicGCNRegressor(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNRegressor, self).__init__()
