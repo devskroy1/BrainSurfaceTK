@@ -130,7 +130,7 @@ def delete_random_points(inputheatMap, inputArr, numPoints):
 
 
 def delete_above_threshold(inputheatMap, inputArr, mode):
-    print("Inside delete_above_threshold()")
+    # print("Inside delete_above_threshold()")
     # print("inputheatMap shape")
     # print(inputheatMap.shape)
     # print("inputArr")
@@ -144,8 +144,8 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
     threshold = None
     count = 0
 
-    print("inputheatMap")
-    print(inputheatMap)
+    # print("inputheatMap")
+    # print(inputheatMap)
 
     if mode == "+average":
         threshold = get_average(inputheatMap)
@@ -154,8 +154,8 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
     elif mode == "+midrange":
         threshold = get_midrange(inputheatMap)
 
-    print("theshold")
-    print(threshold)
+    # print("theshold")
+    # print(threshold)
     # print("locArr")
     # print(locArr)
     for index, eachItem in enumerate(inputheatMap):
@@ -167,10 +167,12 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
             # print("eachItem > thresh")
             candArr.append(index)
             # pointArr.append(locArr[0][index])
+            # print("locArr.pos[index]")
+            # print(locArr.pos[index])
             # print("locArr.pos[index] shape")
             # print(locArr.pos[index].shape)
             pointArr.append(locArr.pos[index])
-            weightArr.append(eachItem)
+            weightArr.append(eachItem.item())
             count += 1
     # print("locArr before np.delete")
     # print(locArr)

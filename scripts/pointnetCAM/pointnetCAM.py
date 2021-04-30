@@ -139,9 +139,19 @@ class AdversarialPointCloud():
         # correct_nodes = total_nodes = 0
         #total_loss = []
         #with torch.no_grad():
-        for batch_idx, data in enumerate(test_loader):
-            print("batch_idx")
-            print(batch_idx)
+        # print("len(test_loader)")
+        # print(len(test_loader))
+        # for batch_idx, data in enumerate(test_loader):
+        for data in test_loader:
+            # print("batch_idx")
+            # print(batch_idx)
+
+            one_hot = None
+            class_activation_vector = None
+            feature_vector = None
+            out = None
+            maxgradients = None
+            pred = None
 
             # if batch_idx == 2:
             #     break
@@ -157,6 +167,8 @@ class AdversarialPointCloud():
             #one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
 
             class_activation_vector = torch.mul(out, one_hot)
+
+
             # feature_vector.requires_grad = True
             # class_activation_vector.requires_grad = True
             # print("feature_vector.requires_grad")
