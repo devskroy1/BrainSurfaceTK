@@ -12,7 +12,8 @@ from torch.autograd import grad
 import gen_contrib_heatmap as gch
 from models.pointnet.src.utils import get_comment, get_data_path, data
 
-from models.pointnet.src.models.pointnet2_regression_v2 import Net
+#from models.pointnet.src.models.pointnet2_regression_v2 import Net
+from models.pointnet.src.models.pointnet2_classification import Net
 
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'pointnet') + '/'
 
@@ -21,7 +22,7 @@ numTestRuns = 500  # Amount of tests for the current test label object.
 maxNumPoints = 2048  # How many points should be considered? [256/512/1024/2048] [default: 1024]
 storeResults = False  # Should the results of the algorithm be stored to files or not.
 
-#Currently applied to regressn task
+#Currently applied to classification task
 class AdversarialPointCloud():
 
     def __init__(self, desired_class_label, num_classes, device):
@@ -126,18 +127,18 @@ class AdversarialPointCloud():
         #pcEvalTest = copy.deepcopy(pcTempResult)
 
         #My code
-        model.load_state_dict(torch.load(PATH))
+        model.load_state_dict(torch.load(PATH, map_location=device))
         model.eval()
 
-        correct_nodes = total_nodes = 0
-        total_loss = []
+        # correct_nodes = total_nodes = 0
+        #total_loss = []
         #with torch.no_grad():
         for batch_idx, data in enumerate(test_loader):
             # print("batch_idx")
             # print(batch_idx)
 
-            if batch_idx == 25:
-                break
+            # if batch_idx == 25:
+            #     break
 
             # torch.cuda.empty_cache()
             # 1. Get predictions and loss
@@ -146,18 +147,18 @@ class AdversarialPointCloud():
             # with torch.no_grad():
             out, feature_vector = model(data)
 
-            #
+            # #
             # print("feature_vector shape")
             # print(feature_vector.shape)
-            #
+            # #
             # print("data.x shape")
             # print(data.x.shape)
             # print("data.y shape")
             # print(data.y.shape)
 
-            pred = out.max(dim=1)[1]
+            pred = out.max(dim=0)[1]
 
-            one_hot = F.one_hot(torch.tensor(data.y).long(), -1)
+            one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
 
             # print("data.x shape")
             # print(data.x.shape)
@@ -176,7 +177,9 @@ class AdversarialPointCloud():
 
             #class_activation_vector = torch.multiply(pred, one_hot)
 
-            class_activation_vector = torch.multiply(out, one_hot)
+            class_activation_vector = torch.mul(out, one_hot)
+            # print("class_activation_vector shape")
+            # print(class_activation_vector.shape)
             # class_activation_vector.requires_grad = True
             # feature_vector.requires_grad = True
             # class_activation_vector.retain_grad()
@@ -184,12 +187,15 @@ class AdversarialPointCloud():
 
             maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
 
-            loss = F.nll_loss(out, data.y)
-            total_loss.append(loss)
+            # print("maxgradients shape")
+            # print(maxgradients.shape)
+            #loss = F.nll_loss(out, data.y[:, 0].long())
+            #total_loss.append(loss)
 
-            correct_nodes += pred.eq(data.y).sum().item()
-            total_nodes += data.num_nodes
+            correct_nodes = pred.eq(data.y[:, 0].long()).sum().item()
+            total_nodes = data.num_nodes
 
+            accuracy = correct_nodes / total_nodes
             # Store data now if desired
             if storeResults:
                 curRemainingPoints = maxNumPoints - sum(delCount)
@@ -349,10 +355,10 @@ class AdversarialPointCloud():
 if __name__ == "__main__":
 
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = None
+    global_features = []
 
     recording = True
-    REPROCESS = False
+    REPROCESS = True
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -375,12 +381,21 @@ if __name__ == "__main__":
 
     # 1. Model Parameters
     ################################################
+    # lr = 0.001
+    # batch_size = 2
+    # gamma = 0.9875
+    # scheduler_step_size = 2
+    # target_class = 'scan_age'
+    # task = 'regression'
+    # numb_epochs = 200
+    # number_of_points = 10000
+
     lr = 0.001
     batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
-    target_class = 'scan_age'
-    task = 'regression'
+    target_class = 'gender'
+    task = 'classification'
     numb_epochs = 200
     number_of_points = 10000
     ################################################
@@ -429,12 +444,13 @@ if __name__ == "__main__":
         num_local_features = 0
     print('Unique labels found: {}'.format(num_labels))
 
+    num_global_features = len(global_features)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(num_local_features, num_global_features=None).to(device)
+    model = Net(num_local_features, num_global_features=num_global_features).to(device)
 
     #PATH = PATH_TO_POINTNET + 'experiment_data/new/{}-99/best_acc_model.pt'.format(experiment_name)
 
-    PATH = PATH_TO_ROOT + 'pointnetModels/regression/model_best.pt'
+    PATH = PATH_TO_ROOT + '/pointnetModels/classification/model_best.pt'
 
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
