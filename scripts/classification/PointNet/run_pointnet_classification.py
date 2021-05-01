@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = ['birth_age', 'weight']
+    global_features = ['weight']
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############

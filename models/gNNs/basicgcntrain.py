@@ -282,7 +282,9 @@ if __name__ == "__main__":
 
     train_dl, val_dl, test_dl, train_ds, val_ds, test_ds = get_dataloaders(args)
 
+    # print("Just before SummaryWriter()")
     writer = SummaryWriter(comment=f"-{args.experiment_name}")
+    # print("Just after SummaryWriter()")
 
     # Create model
     print("Creating Model")
