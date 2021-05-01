@@ -17,8 +17,10 @@ class BasicGCNRegressor(nn.Module):
         self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
+        # print("Inside BasicGCNRegressor forward()")
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
+        # print("After self.conv1")
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv2(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
