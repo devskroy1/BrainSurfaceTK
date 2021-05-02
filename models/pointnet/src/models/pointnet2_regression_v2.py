@@ -158,8 +158,8 @@ class Net(torch.nn.Module):
         # print(idx.shape)
 
         # TODO: Need to update is_training depending on whether you're training model or evaluating model
-        new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
-                                                is_training=True, bn=True, bn_decay=None, weight_decay=None)
+        # new_xyz, new_feature = AdaptiveSampling(group_xyz=grouped_xyz, group_feature=new_point, num_neighbor=12,
+        #                                         is_training=True, bn=True, bn_decay=None, weight_decay=None)
 
         # print("After exiting from AdaptiveSampling")
         # print("new_xyz shape")
