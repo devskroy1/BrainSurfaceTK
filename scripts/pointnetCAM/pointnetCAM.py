@@ -167,8 +167,14 @@ class AdversarialPointCloud():
             #one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
             print("one_hot shape")
             print(one_hot.shape)
+            print("one_hot")
+            print(one_hot)
             print("out shape")
             print(out.shape)
+            print("data.y shape")
+            print(data.y.shape)
+            print("data.y[:, 0] shape")
+            print(data.y[:, 0].shape)
             class_activation_vector = torch.mul(out, one_hot)
 
 
