@@ -90,8 +90,15 @@ class BasicGCNRegressor(nn.Module):
                 # print("conv_feature_map shape")
                 # print(conv_feature_map.shape)
                 class_activn_map += torch.matmul(weight.unsqueeze(1), conv_feature_map.unsqueeze(0))
-
-            return seg_output, class_activn_map
+            # print("class_activn_map shape")
+            # print(class_activn_map.shape)
+            graph.ndata['saliency_score'] = class_activn_map[0]
+            # print("graph.ndata['saliency_score']")
+            # print(graph.ndata['saliency_score'])
+            # print("graph")
+            # print(graph)
+            # print("Just before returning from forward()")
+            return graph, seg_output
 
 class BasicGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes):
