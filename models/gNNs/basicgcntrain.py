@@ -186,8 +186,9 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
         # print("About to enter evaluate for loop")
         # print("len test data loader")
         # print(len(dl))
-        sum_topk_indices = torch.zeros(1000, device=device)
-        sum_saliency_scores = torch.zeros(1000, device=device)
+        k = 1000
+        sum_topk_indices = torch.zeros(k, device=device)
+        sum_saliency_scores = torch.zeros(k, device=device)
         num_subjects = 0
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
             # print("subjects")
@@ -206,7 +207,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             bg_node_features = bg.ndata["features"].to(device)
 
             #total_num_nodes = bg_node_features.size(0)
-            if (epoch == 0) and not val:
+            # if (epoch == 0) and not val:
+            if (epoch == args.max_epochs - 1) and not val:
                 first_graph_node_features = first_graph.ndata["features"].to(device)
                 num_nodes_first_graph = first_graph_node_features.size(0)
 
@@ -245,16 +247,15 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                 # print(i)
             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
 
-            # if (epoch == args.max_epochs - 1) and not val:
-
-            if (epoch == 0) and not val:
+            # if (epoch == 0) and not val:
+            if (epoch == args.max_epochs - 1) and not val:
                 for g in range(len(graphs)):
                     graph = graphs[g]
                     bg_node_features = graph.ndata["features"].to(device)
                     graph, preds = model(graph=graph, features=bg_node_features, is_training=False)
 
                     num_subjects += 1
-                    top_nodes_indices = dgl.topk_nodes(graph, 'saliency_score', 1000)
+                    top_nodes_indices = dgl.topk_nodes(graph, 'saliency_score', k)
                     # print("top_nodes_indices")
                     # print(top_nodes_indices)
                     # print("top_nodes_indices shape")
@@ -302,7 +303,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             batch_diffs.append(diff.cpu())
 
             total_size += len(batch_labels)
-        if (epoch == 0) and not val:
+        # if (epoch == 0) and not val:
+        if (epoch == args.max_epochs - 1) and not val:
 
             # print("sum_topk_indices")
             # print(sum_topk_indices)
@@ -321,7 +323,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             # print(num_nodes_first_graph)
 
             saliency_scores = torch.zeros(num_nodes_first_graph, device=device)
-            for i in range(1000):
+            for i in range(k):
                 pop_saliency_index = pop_saliency_indices[i]
                 saliency_scores[pop_saliency_index] = pop_saliency_scores[i]
 
