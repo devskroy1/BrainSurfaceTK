@@ -12,8 +12,8 @@ from torch.autograd import grad
 import gen_contrib_heatmap as gch
 from models.pointnet.src.utils import get_comment, get_data_path, data
 
-#from models.pointnet.src.models.pointnet2_regression_v2 import Net
-from models.pointnet.src.models.pointnet2_classification import Net
+from models.pointnet.src.models.pointnet2_regression_v2 import Net
+# from models.pointnet.src.models.pointnet2_classification import Net
 
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'pointnet') + '/'
 
@@ -22,7 +22,8 @@ numTestRuns = 500  # Amount of tests for the current test label object.
 maxNumPoints = 2048  # How many points should be considered? [256/512/1024/2048] [default: 1024]
 storeResults = False  # Should the results of the algorithm be stored to files or not.
 
-#Currently applied to classification task
+#Currently applied to regression task
+
 class AdversarialPointCloud():
 
     def __init__(self, desired_class_label, num_classes, device):
@@ -415,23 +416,23 @@ if __name__ == "__main__":
 
     # 1. Model Parameters
     ################################################
-    # lr = 0.001
-    # batch_size = 2
-    # gamma = 0.9875
-    # scheduler_step_size = 2
-    # target_class = 'scan_age'
-    # task = 'regression'
-    # numb_epochs = 200
-    # number_of_points = 10000
-
     lr = 0.001
     batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
-    target_class = 'gender'
-    task = 'classification'
+    target_class = 'scan_age'
+    task = 'regression'
     numb_epochs = 200
     number_of_points = 10000
+
+    # lr = 0.001
+    # batch_size = 2
+    # gamma = 0.9875
+    # scheduler_step_size = 2
+    # target_class = 'gender'
+    # task = 'classification'
+    # numb_epochs = 200
+    # number_of_points = 10000
     ################################################
 
 
@@ -486,7 +487,8 @@ if __name__ == "__main__":
 
     # PATH = PATH_TO_ROOT + '/pointnetModels/classification/model_best.pt'
 
-    PATH = PATH_TO_ROOT + '/runs/classification/pointcloud_grad_cam/models/model_best.pt'
+    # PATH = PATH_TO_ROOT + '/runs/classification/pointcloud_grad_cam/models/model_best.pt'
+    PATH = PATH_TO_ROOT + '/runs/regression/Pointcloud_Grad_Cam/models/model_best.pt'
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
     adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
