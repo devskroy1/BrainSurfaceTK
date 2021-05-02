@@ -146,7 +146,6 @@ class AdversarialPointCloud():
         for data in test_loader:
             # print("batch_idx")
             # print(batch_idx)
-
             one_hot = None
             class_activation_vector = None
             feature_vector = None
@@ -166,7 +165,10 @@ class AdversarialPointCloud():
             # with torch.set_grad_enabled(True):
             one_hot = F.one_hot(data.y[:, 0].float().clone().detach().requires_grad_(True).long(), -1)
             #one_hot = F.one_hot(torch.tensor(data.y[:, 0].long()).long(), -1)
-
+            print("one_hot shape")
+            print(one_hot.shape)
+            print("out shape")
+            print(out.shape)
             class_activation_vector = torch.mul(out, one_hot)
 
 
