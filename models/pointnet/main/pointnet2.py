@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pointnet.src.models.pointnet2_regression import Net
+from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.src.utils import get_data_path, data
 
 
@@ -26,52 +26,52 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         data = data.to(device)
         optimizer.zero_grad()
 
-        # Shape: B
-        batch_tensor = torch.tensor(data.batch)
-        # Shape: N x 3
-        pos_tensor = torch.tensor(data.pos)
-        # Shape: N x d_in
-        x_tensor = torch.tensor(data.x)
-        # Shape: B
-        y_tensor = torch.tensor(data.y)
-
-        # print("Inside pointnet2_segmentn train()")
-        # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
-        # sometimes it is 10002, sometimes 10003.
-        # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
-        # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
-        # print("batch_tensor shape")
-        # print(batch_tensor.shape)
-        # print("pos_tensor.shape")
-        # print(pos_tensor.shape)
-        # print("x_tensor shape")
-        # print(x_tensor.shape)
-        # print("y_tensor shape")
-        # print(y_tensor.shape)
-
-        num_points = pos_tensor.size(0)
-        d_in = x_tensor.size(1)
-        batch_size = torch.max(batch_tensor).item() + 1
-
-        # print("batch size")
-        # print(batch_size)
-
-        quot = num_points // batch_size
-        num_points_multiple = quot * batch_size
-
-        pos_tensor_slice = pos_tensor[:num_points_multiple, :]
-        x_tensor_slice = x_tensor[:num_points_multiple, :]
-        batch_tensor_slice = batch_tensor[:num_points_multiple]
-        y_tensor_slice = y_tensor[:num_points_multiple]
-
-        pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
-        x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
-
-        # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
-        # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
-
-        pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-        pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
+        # # Shape: B
+        # batch_tensor = torch.tensor(data.batch)
+        # # Shape: N x 3
+        # pos_tensor = torch.tensor(data.pos)
+        # # Shape: N x d_in
+        # x_tensor = torch.tensor(data.x)
+        # # Shape: B
+        # y_tensor = torch.tensor(data.y)
+        #
+        # # print("Inside pointnet2_segmentn train()")
+        # # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
+        # # sometimes it is 10002, sometimes 10003.
+        # # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
+        # # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
+        # # print("batch_tensor shape")
+        # # print(batch_tensor.shape)
+        # # print("pos_tensor.shape")
+        # # print(pos_tensor.shape)
+        # # print("x_tensor shape")
+        # # print(x_tensor.shape)
+        # # print("y_tensor shape")
+        # # print(y_tensor.shape)
+        #
+        # num_points = pos_tensor.size(0)
+        # d_in = x_tensor.size(1)
+        # batch_size = torch.max(batch_tensor).item() + 1
+        #
+        # # print("batch size")
+        # # print(batch_size)
+        #
+        # quot = num_points // batch_size
+        # num_points_multiple = quot * batch_size
+        #
+        # pos_tensor_slice = pos_tensor[:num_points_multiple, :]
+        # x_tensor_slice = x_tensor[:num_points_multiple, :]
+        # batch_tensor_slice = batch_tensor[:num_points_multiple]
+        # y_tensor_slice = y_tensor[:num_points_multiple]
+        #
+        # pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
+        # x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
+        #
+        # # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
+        # # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
+        #
+        # pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
+        # pos_feature_data_float = torch.tensor(pos_feature_data, dtype=torch.float32)
 
         #pred = model(pos_feature_data_float)
         # print("Inside train()")
@@ -86,14 +86,14 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
 
         pred = model(data)
         #loss = F.mse_loss(pred, y_tensor_slice[:, 0].float())
-
-        print("Inside train()")
-        print("pred")
-        print(pred)
-        print("pred shape")
-        print(pred.shape)
-        print("data.y[:, 0].float() shape")
-        print(data.y[:, 0].float().shape)
+        #
+        # print("Inside train()")
+        # print("pred")
+        # print(pred)
+        # print("pred shape")
+        # print(pred.shape)
+        # print("data.y[:, 0].float() shape")
+        # print(data.y[:, 0].float().shape)
 
         loss = F.mse_loss(pred, data.y[:, 0].float())
 
@@ -129,79 +129,79 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                 with torch.no_grad():
 
                     # Shape: B
-                    batch_tensor = torch.tensor(data.batch)
-                    # Shape: N x 3
-                    pos_tensor = torch.tensor(data.pos)
-                    # Shape: N x d_in
-                    x_tensor = torch.tensor(data.x)
-                    # Shape: B
-                    y_tensor = torch.tensor(data.y)
-
-                    # print("Inside pointnet2_segmentn train()")
-                    # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
-                    # sometimes it is 10002, sometimes 10003.
-                    # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
-                    # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
-                    # print("batch_tensor shape")
-                    # print(batch_tensor.shape)
-                    # print("pos_tensor.shape")
-                    # print(pos_tensor.shape)
-                    # print("x_tensor shape")
-                    # print(x_tensor.shape)
-                    # print("y_tensor shape")
-                    # print(y_tensor.shape)
-
-                    num_points = pos_tensor.size(0)
-                    d_in = x_tensor.size(1)
-                    batch_size = torch.max(batch_tensor).item() + 1
-
-                    # print("batch size")
-                    # print(batch_size)
-
-                    quot = num_points // batch_size
-                    num_points_multiple = quot * batch_size
-
-                    pos_tensor_slice = pos_tensor[:num_points_multiple, :]
-                    x_tensor_slice = x_tensor[:num_points_multiple, :]
-                    batch_tensor_slice = batch_tensor[:num_points_multiple]
-                    y_tensor_slice = y_tensor[:num_points_multiple]
-
-                    pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
-                    x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
-
-                    # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
-                    # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
-
-                    pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-
-                    pred = model(pos_feature_data)
-                    print("Inside test_regression()")
-                    print("pred shape")
-                    print(pred.shape)
-                    print("len(pred)")
-                    print(len(pred))
-                    #pred = model(data)
+                    # batch_tensor = torch.tensor(data.batch)
+                    # # Shape: N x 3
+                    # pos_tensor = torch.tensor(data.pos)
+                    # # Shape: N x d_in
+                    # x_tensor = torch.tensor(data.x)
+                    # # Shape: B
+                    # y_tensor = torch.tensor(data.y)
+                    #
+                    # # print("Inside pointnet2_segmentn train()")
+                    # # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
+                    # # sometimes it is 10002, sometimes 10003.
+                    # # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
+                    # # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
+                    # # print("batch_tensor shape")
+                    # # print(batch_tensor.shape)
+                    # # print("pos_tensor.shape")
+                    # # print(pos_tensor.shape)
+                    # # print("x_tensor shape")
+                    # # print(x_tensor.shape)
+                    # # print("y_tensor shape")
+                    # # print(y_tensor.shape)
+                    #
+                    # num_points = pos_tensor.size(0)
+                    # d_in = x_tensor.size(1)
+                    # batch_size = torch.max(batch_tensor).item() + 1
+                    #
+                    # # print("batch size")
+                    # # print(batch_size)
+                    #
+                    # quot = num_points // batch_size
+                    # num_points_multiple = quot * batch_size
+                    #
+                    # pos_tensor_slice = pos_tensor[:num_points_multiple, :]
+                    # x_tensor_slice = x_tensor[:num_points_multiple, :]
+                    # batch_tensor_slice = batch_tensor[:num_points_multiple]
+                    # y_tensor_slice = y_tensor[:num_points_multiple]
+                    #
+                    # pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
+                    # x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
+                    #
+                    # # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
+                    # # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
+                    #
+                    # pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
+                    #
+                    # pred = model(pos_feature_data)
+                    # print("Inside test_regression()")
+                    # print("pred shape")
+                    # print(pred.shape)
+                    # print("len(pred)")
+                    # print(len(pred))
+                    pred = model(data)
                     for i in range(len(pred)):
-                        # print(str(pred[i].item()).center(20, ' '),
-                        #       str(data.y[:, 0][i].item()).center(20, ' '),
-                        #       indices[idx * len(pred) + i])
-                        #
-                        # result_writer.writerow([indices[idx * len(pred) + i][:11], indices[idx * len(pred) + i][12:],
-                        #                         str(pred[i].item()), str(data.y[:, 0][i].item()),
-                        #                         str(abs(pred[i].item() - data.y[:, 0][i].item()))])
-
                         print(str(pred[i].item()).center(20, ' '),
-                              str(y_tensor_slice[:, 0][i].item()).center(20, ' '),
+                              str(data.y[:, 0][i].item()).center(20, ' '),
                               indices[idx * len(pred) + i])
 
                         result_writer.writerow([indices[idx * len(pred) + i][:11], indices[idx * len(pred) + i][12:],
-                                                str(pred[i].item()), str(y_tensor_slice[:, 0][i].item()),
-                                                str(abs(pred[i].item() - y_tensor_slice[:, 0][i].item()))])
+                                                str(pred[i].item()), str(data.y[:, 0][i].item()),
+                                                str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
-                    loss_test_mse = F.mse_loss(pred, y_tensor_slice[:, 0])
-                    loss_test_l1 = F.l1_loss(pred, y_tensor_slice[:, 0])
-                    # loss_test_mse = F.mse_loss(pred, data.y[:, 0])
-                    # loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                        # print(str(pred[i].item()).center(20, ' '),
+                        #       str(y_tensor_slice[:, 0][i].item()).center(20, ' '),
+                        #       indices[idx * len(pred) + i])
+                        #
+                        # result_writer.writerow([indices[idx * len(pred) + i][:11], indices[idx * len(pred) + i][12:],
+                        #                         str(pred[i].item()), str(y_tensor_slice[:, 0][i].item()),
+                        #                         str(abs(pred[i].item() - y_tensor_slice[:, 0][i].item()))])
+
+                    # loss_test_mse = F.mse_loss(pred, y_tensor_slice[:, 0])
+                    # loss_test_l1 = F.l1_loss(pred, y_tensor_slice[:, 0])
+                    loss_test_mse = F.mse_loss(pred, data.y[:, 0])
+                    loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
 
                     mse += loss_test_mse.item()
                     l1 += loss_test_l1.item()
@@ -224,69 +224,69 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
             data = data.to(device)
             with torch.no_grad():
 
-                # Shape: B
-                batch_tensor = torch.tensor(data.batch)
-                # Shape: N x 3
-                pos_tensor = torch.tensor(data.pos)
-                # Shape: N x d_in
-                x_tensor = torch.tensor(data.x)
-                # Shape: B
-                y_tensor = torch.tensor(data.y)
+                # # Shape: B
+                # batch_tensor = torch.tensor(data.batch)
+                # # Shape: N x 3
+                # pos_tensor = torch.tensor(data.pos)
+                # # Shape: N x d_in
+                # x_tensor = torch.tensor(data.x)
+                # # Shape: B
+                # y_tensor = torch.tensor(data.y)
+                #
+                # # print("Inside pointnet2_segmentn train()")
+                # # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
+                # # sometimes it is 10002, sometimes 10003.
+                # # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
+                # # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
+                # # print("batch_tensor shape")
+                # # print(batch_tensor.shape)
+                # # print("pos_tensor.shape")
+                # # print(pos_tensor.shape)
+                # # print("x_tensor shape")
+                # # print(x_tensor.shape)
+                # # print("y_tensor shape")
+                # # print(y_tensor.shape)
+                #
+                # num_points = pos_tensor.size(0)
+                # d_in = x_tensor.size(1)
+                # batch_size = torch.max(batch_tensor).item() + 1
+                #
+                # # print("batch size")
+                # # print(batch_size)
+                #
+                # quot = num_points // batch_size
+                # num_points_multiple = quot * batch_size
+                #
+                # pos_tensor_slice = pos_tensor[:num_points_multiple, :]
+                # x_tensor_slice = x_tensor[:num_points_multiple, :]
+                # batch_tensor_slice = batch_tensor[:num_points_multiple]
+                # y_tensor_slice = y_tensor[:num_points_multiple]
+                #
+                # pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
+                # x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
+                #
+                # # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
+                # # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
+                #
+                # pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
+                #
+                # pred = model(pos_feature_data)
 
-                # print("Inside pointnet2_segmentn train()")
-                # Sometimes have inconsistencies in num_points, with same batch size. With batch size 2,
-                # sometimes it is 10002, sometimes 10003.
-                # When 10003, it leads to error: "RuntimeError: shape '[2, 5001, 3]' is invalid for input of size 30009"
-                # Have resolved this by slicing closest multiple of batch size to current num points elements from tensors
-                # print("batch_tensor shape")
-                # print(batch_tensor.shape)
-                # print("pos_tensor.shape")
-                # print(pos_tensor.shape)
-                # print("x_tensor shape")
-                # print(x_tensor.shape)
-                # print("y_tensor shape")
-                # print(y_tensor.shape)
-
-                num_points = pos_tensor.size(0)
-                d_in = x_tensor.size(1)
-                batch_size = torch.max(batch_tensor).item() + 1
-
-                # print("batch size")
-                # print(batch_size)
-
-                quot = num_points // batch_size
-                num_points_multiple = quot * batch_size
-
-                pos_tensor_slice = pos_tensor[:num_points_multiple, :]
-                x_tensor_slice = x_tensor[:num_points_multiple, :]
-                batch_tensor_slice = batch_tensor[:num_points_multiple]
-                y_tensor_slice = y_tensor[:num_points_multiple]
-
-                pos_tensor = pos_tensor_slice.reshape(batch_size, quot, 3)
-                x_tensor = x_tensor_slice.reshape(batch_size, quot, d_in)
-
-                # pos_tensor = pos_tensor.reshape(batch_size, num_points // batch_size, 3)
-                # x_tensor = x_tensor.reshape(batch_size, num_points // batch_size, d_in)
-
-                pos_feature_data = torch.cat([pos_tensor, x_tensor], dim=2)
-
-                pred = model(pos_feature_data)
-
-                #pred = model(data)
+                pred = model(data)
 
                 for i in range(len(pred)):
-                    # print(str(pred[i].item()).center(20, ' '),
-                    #       str(data.y[:, 0][i].item()).center(20, ' '),
-                    #       indices[idx * len(pred) + i])
-
                     print(str(pred[i].item()).center(20, ' '),
-                          str(y_tensor_slice[:, 0][i].item()).center(20, ' '),
+                          str(data.y[:, 0][i].item()).center(20, ' '),
                           indices[idx * len(pred) + i])
 
-                loss_test_mse = F.mse_loss(pred, y_tensor_slice[:, 0])
-                loss_test_l1 = F.l1_loss(pred, y_tensor_slice[:, 0])
-                # loss_test_mse = F.mse_loss(pred, data.y[:, 0])
-                # loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                    # print(str(pred[i].item()).center(20, ' '),
+                    #       str(y_tensor_slice[:, 0][i].item()).center(20, ' '),
+                    #       indices[idx * len(pred) + i])
+
+                # loss_test_mse = F.mse_loss(pred, y_tensor_slice[:, 0])
+                # loss_test_l1 = F.l1_loss(pred, y_tensor_slice[:, 0])
+                loss_test_mse = F.mse_loss(pred, data.y[:, 0])
+                loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
                 mse += loss_test_mse.item()
                 l1 += loss_test_l1.item()
 

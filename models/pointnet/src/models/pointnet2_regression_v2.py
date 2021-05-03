@@ -57,31 +57,69 @@ class Net(torch.nn.Module):
         self.lin3 = Lin(128, 1)
 
     def forward(self, data):
-        sa0_out = (data.x, data.pos, data.batch)
-        print("data.x shape")
-        print(data.x.shape)
-        print("data.pos shape")
-        print(data.pos.shape)
+        # sa0_out = (data.x, data.pos, data.batch)
+        # print("data.x shape")
+        # print(data.x.shape)
+        # print("data.pos shape")
+        # print(data.pos.shape)
+        decimation_ratio = 1
+        d = 4
+        N = data.x.size(0)
+        permutation = torch.randperm(N)
+        permuted_features = data.x[permutation, :]
+        permuted_coords = data.pos[permutation, :]
+        permuted_batch = data.batch[permutation]
+        sa0_out = (permuted_features, permuted_coords, permuted_batch)
 
         sa1_out = self.sa1_module(*sa0_out)
-        sa1x_out, sa1pos_out, sa1batch_out = self.sa1_module(*sa0_out)
-        print("sa1x_out shape")
-        print(sa1x_out.shape)
+        sa1x_out, sa1pos_out, sa1batch_out = sa1_out
+        # print("sa1x_out shape")
+        # print(sa1x_out.shape)
+        # print("sa1pos_out shape")
+        # print(sa1pos_out.shape)
+
+        decimation_ratio *= d
+        downsampled_sa1x_out = sa1x_out[:N//decimation_ratio, :]
+        downsampled_sa1pos_out = sa1pos_out[:N // decimation_ratio, :]
+        downsampled_sa1batch_out = sa1batch_out[:N // decimation_ratio]
+
+        # print("downsampled_sa1x_out shape")
+        # print(downsampled_sa1x_out.shape)
+        # print("downsampled_sa1pos_out shape")
+        # print(downsampled_sa1pos_out.shape)
+        # print("downsampled_sa1batch_out shape")
+        # print(downsampled_sa1batch_out.shape)
+
+        sa1_out = (downsampled_sa1x_out, downsampled_sa1pos_out, downsampled_sa1batch_out)
+
         sa2_out = self.sa2_module(*sa1_out)
+        sa2x_out, sa2pos_out, sa2batch_out = sa2_out
+
+        decimation_ratio *= d
+        downsampled_sa2x_out = sa2x_out[:N // decimation_ratio, :]
+        downsampled_sa2pos_out = sa2pos_out[:N // decimation_ratio, :]
+        downsampled_sa2batch_out = sa2batch_out[:N // decimation_ratio]
+
+        sa2_out = (downsampled_sa2x_out, downsampled_sa2pos_out, downsampled_sa2batch_out)
+
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
-        print("sa3_out x shape")
-        print(x.shape)
-        if self.num_global_features > 0:
-            x = torch.cat((x, data.y[:, 1:self.num_global_features+1].view(-1, self.num_global_features)), 1)
 
-        x = F.relu(self.lin1(x))
-        print("x shape after lin1")
-        print(x.shape)
+        decimation_ratio *= d
+        downsampled_sa3x_out = x[:N // decimation_ratio, :]
+
+        # print("sa3_out x shape")
+        # print(x.shape)
+        if self.num_global_features > 0:
+            downsampled_sa3x_out = torch.cat((downsampled_sa3x_out, data.y[:, 1:self.num_global_features+1].view(-1, self.num_global_features)), 1)
+
+        x = F.relu(self.lin1(downsampled_sa3x_out))
+        # print("x shape after lin1")
+        # print(x.shape)
         x = F.relu(self.lin2(x))
-        print("x shape after lin2")
-        print(x.shape)
+        # print("x shape after lin2")
+        # print(x.shape)
         x = self.lin3(x)
-        print("x shape after lin3")
-        print(x.shape)
+        # print("x shape after lin3")
+        # print(x.shape)
         return x.view(-1)
