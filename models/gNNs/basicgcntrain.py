@@ -282,7 +282,7 @@ if __name__ == "__main__":
 
     train_dl, val_dl, test_dl, train_ds, val_ds, test_ds = get_dataloaders(args)
 
-    writer = SummaryWriter(comment=f"-{args.experiment_name}")
+    writer = SummaryWriter(log_dir=args.experiment_folder, comment=f"-{args.experiment_name}")
 
     # Create model
     print("Creating Model")
@@ -327,8 +327,8 @@ if __name__ == "__main__":
                       test_epoch_error, train_epoch_max_diff, val_epoch_max_diff, test_epoch_max_diff, epoch)
 
         # Record material to be converted to csv later
-        record_csv_material(val_log_fp + ".npy", val_csv_material)
-        record_csv_material(test_log_fp + ".npy", test_csv_material)
+        # record_csv_material(val_log_fp + ".npy", val_csv_material)
+        # record_csv_material(test_log_fp + ".npy", test_csv_material)
 
         # Save model
         update_best_model(model, val_epoch_loss, best_val_loss, args)
