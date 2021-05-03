@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pointnet.src.models.pointnet2_regression import Net
+from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.src.utils import get_data_path, data
 
 
