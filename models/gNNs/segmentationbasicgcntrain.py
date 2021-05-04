@@ -57,7 +57,7 @@ if __name__ == "__main__":
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 64
+    batch_size = 2
     train_test_split = (0.8, 0.1, 0.1)
 
     print("Batch size: ")
