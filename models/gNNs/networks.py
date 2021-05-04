@@ -1,6 +1,7 @@
 import dgl
 import torch.nn as nn
 import torch.nn.functional as F
+import scipy.spatial
 from torch_geometric.nn import knn_graph
 from dgl.nn.pytorch import GraphConv
 
@@ -57,9 +58,9 @@ class BasicGCNSegmentation(nn.Module):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
-        out = knn_graph(hidden, 20)
-        print("out shape")
-        print(out.shape)
+        edge_index = self.knn(hidden, hidden, 20)
+        print("edge_index shape")
+        print(edge_index.shape)
         hidden = self.conv2(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv3(graph, hidden)
@@ -67,6 +68,49 @@ class BasicGCNSegmentation(nn.Module):
         hidden = self.conv4(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         return self.conv5(graph, hidden)
+
+    def knn(self, x, y, k, batch_x=None, batch_y=None):
+        if batch_x is None:
+            batch_x = x.new_zeros(x.size(0), dtype=torch.long)
+
+        if batch_y is None:
+            batch_y = y.new_zeros(y.size(0), dtype=torch.long)
+
+        x = x.view(-1, 1) if x.dim() == 1 else x
+        y = y.view(-1, 1) if y.dim() == 1 else y
+
+        assert x.dim() == 2 and batch_x.dim() == 1
+        assert y.dim() == 2 and batch_y.dim() == 1
+        assert x.size(1) == y.size(1)
+        assert x.size(0) == batch_x.size(0)
+        assert y.size(0) == batch_y.size(0)
+
+        # Rescale x and y.
+        min_xy = min(x.min().item(), y.min().item())
+        x, y = x - min_xy, y - min_xy
+
+        max_xy = max(x.max().item(), y.max().item())
+        x, y, = x / max_xy, y / max_xy
+
+        # Concat batch/features to ensure no cross-links between examples exist.
+        x = torch.cat([x, 2 * x.size(1) * batch_x.view(-1, 1).to(x.dtype)], dim=-1)
+        y = torch.cat([y, 2 * y.size(1) * batch_y.view(-1, 1).to(y.dtype)], dim=-1)
+
+        # print("Before calling scipy.spatial.cKDTree()")
+        tree = scipy.spatial.cKDTree(x.detach().cpu().numpy(), balanced_tree=False)
+        # print("After calling scipy.spatial.cKDTree()")
+        # print("Before calling tree.query")
+        dist, col = tree.query(
+            y.detach().cpu(), k=k, distance_upper_bound=x.size(1))
+        # print("After calling tree.query")
+
+        dist = torch.from_numpy(dist).to(x.dtype)
+        col = torch.from_numpy(col).to(torch.long)
+        row = torch.arange(col.size(0), dtype=torch.long).view(-1, 1).repeat(1, k)
+        mask = ~torch.isinf(dist).view(-1)
+        row, col = row.view(-1)[mask], col.view(-1)[mask]
+
+        return torch.stack([row, col], dim=0)
 
 class GNNModel(nn.Module):
     def __init__(self, input_node_dim, input_edge_dim, hidden_dim1, hidden_dim2, out_dim):
