@@ -2,7 +2,7 @@ import dgl
 import torch
 import torch.nn as nn
 import scipy.spatial
-from torch_geometric.nn import EdgeConv, knn_graph, DynamicEdgeConv
+from torch_geometric.nn import EdgeConv, knn, knn_graph, DynamicEdgeConv
 from dgl.nn.pytorch import GraphConv
 
 from models.gNNs.layers import GNNLayer
@@ -48,9 +48,15 @@ class EdgeConvGCNSegmentation(nn.Module):
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
+        #EdgeConv
         edgeConv1 = list(self.edge_convs.children())[0]
         edgeConv2 = list(self.edge_convs.children())[1]
         # edgeConv3 = list(self.edge_convs.children())[2]
+
+        # DynamicEdgeConv
+        dynEdgeConv1 = list(self.edge_convs.children())[0]
+        dynEdgeConv2 = list(self.edge_convs.children())[1]
+        # dynEdgeConv3 = list(self.edge_convs.children())[2]
         hidden = self.conv1(graph, features)
         # print("in_dim")
         # print(3)
@@ -62,15 +68,31 @@ class EdgeConvGCNSegmentation(nn.Module):
         # print(edgeConv1)
         # print("edgeConv2")
         # print(edgeConv2)
+
+        #EdgeConv
+        # print("Before calling knn() 1")
         edge_index = self.knn(hidden, hidden, 20)
+        # print("After calling knn1")
         hidden = edgeConv1(hidden.to(self.device), edge_index.to(self.device))
+
+        #DynEdgeConv
+        # hidden = dynEdgeConv1(hidden.to(self.device))
+
         # print("hidden shape after edgeConv1")
         # print(hidden.shape)
         hidden = self.conv2(graph, hidden)
         # print("hidden shape after conv2")
         # print(hidden.shape)
+
+        # # EdgeConv
+        # print("Before calling knn() 2")
         edge_index = self.knn(hidden, hidden, 20)
+        # print("After calling knn() 2")
         hidden = edgeConv2(hidden.to(self.device), edge_index.to(self.device))
+
+        # DynEdgeConv
+        # hidden = dynEdgeConv2(hidden.to(self.device))
+
         # print("hidden shape after edgeConv2")
         # print(hidden.shape)
         hidden = self.conv3(graph, hidden)
@@ -92,6 +114,7 @@ class EdgeConvGCNSegmentation(nn.Module):
             # mlp_dims = dims
             #mlp_dims = [256, 256, 256]
             layers.append(EdgeConv(nn=MLP(dims), aggr='max'))
+            # layers.append(DynamicEdgeConv(nn=MLP(dims), k=20, aggr='max'))
         return nn.Sequential(*layers)
 
     # def knn(self, x, k):
@@ -144,7 +167,7 @@ class EdgeConvGCNSegmentation(nn.Module):
         # print("After calling scipy.spatial.cKDTree()")
         # print("Before calling tree.query")
         dist, col = tree.query(
-            y.detach().cpu(), k=k, distance_upper_bound=x.size(1))
+            y.detach().cpu(), k=k, distance_upper_bound=x.size(1), n_jobs=-1)
         # print("After calling tree.query")
 
         dist = torch.from_numpy(dist).to(x.dtype)
