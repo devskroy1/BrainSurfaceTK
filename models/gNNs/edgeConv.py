@@ -35,18 +35,22 @@ class MLP(nn.Module):
 class EdgeConvGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(EdgeConvGCNSegmentation, self).__init__()
-        self.edge_conv_dims = [[128, 128, 128], [256, 256, 256], [64, 64]]
+        self.edge_conv_dims = [[64, 64, 64], [128, 128, 128], [128, 128]]
         self.edge_convs = self.make_edge_conv_layers_()
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim*2, hidden_dim*2, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim*4, hidden_dim*2, activation=nn.ReLU())
+        # For 2 EdgeConv layers
         self.conv4 = GraphConv(hidden_dim * 2, n_classes, activation=None)
+        # For 3 EdgeConv layers
+        # self.conv4 = GraphConv(hidden_dim * 4, n_classes, activation=None)
         self.device = device
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         edgeConv1 = list(self.edge_convs.children())[0]
         edgeConv2 = list(self.edge_convs.children())[1]
+        # edgeConv3 = list(self.edge_convs.children())[2]
         hidden = self.conv1(graph, features)
         # print("in_dim")
         # print(3)
@@ -70,6 +74,8 @@ class EdgeConvGCNSegmentation(nn.Module):
         # print("hidden shape after edgeConv2")
         # print(hidden.shape)
         hidden = self.conv3(graph, hidden)
+        # edge_index = self.knn(hidden, hidden, 20)
+        # hidden = edgeConv3(hidden.to(self.device), edge_index.to(self.device))
         hidden = self.conv4(graph, hidden)
 
         return hidden

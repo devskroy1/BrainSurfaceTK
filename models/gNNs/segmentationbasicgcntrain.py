@@ -52,7 +52,7 @@ if __name__ == "__main__":
     meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
-    lr = 8e-4
+    lr = 0.001
     T_max = 10
     eta_min = 1e-6
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = EdgeConvGCNSegmentation(3, 64, 40, device)  # 3 features, 40 outputs (segmentation)
+    model = EdgeConvGCNSegmentation(3, 32, 40, device)  # 3 features, 40 outputs (segmentation)
     #model = DGCNNSegmentation(3, 256, 40, batch_size, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     best_loss = math.inf
 
     print("Starting")
-    for epoch in range(1000):
+    for epoch in range(300):
 
         # Train
         model.train()
