@@ -56,7 +56,7 @@ if __name__ == "__main__":
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 64
+    batch_size = 2
     train_test_split = (0.8, 0.1, 0.1)
 
     print("Batch size: ")
@@ -71,15 +71,15 @@ if __name__ == "__main__":
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=8)
     test_dl = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate, num_workers=8)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(3, 256, 40, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f"Model is on: {'cuda' if torch.cuda.is_available() else 'cpu'}")
     print(model)

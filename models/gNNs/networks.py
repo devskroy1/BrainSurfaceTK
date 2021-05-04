@@ -1,9 +1,11 @@
 import dgl
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import scipy.spatial
-from torch_geometric.nn import knn_graph
+from torch_geometric.nn import knn_graph, SAGPooling
 from dgl.nn.pytorch import GraphConv
+from dgl.subgraph import edge_subgraph
 
 from models.gNNs.layers import GNNLayer
 
@@ -44,7 +46,7 @@ class BasicGCNRegressor(nn.Module):
 
 
 class BasicGCNSegmentation(nn.Module):
-    def __init__(self, in_dim, hidden_dim, n_classes):
+    def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNSegmentation, self).__init__()
         self.dropout = 0.5
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
@@ -52,16 +54,40 @@ class BasicGCNSegmentation(nn.Module):
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv5 = GraphConv(hidden_dim, n_classes, activation=None)
-
+        self.sagPooling1 = SAGPooling(hidden_dim)
+        self.sagPooling2 = SAGPooling(hidden_dim)
+        self.device = device
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         edge_index = self.knn(hidden, hidden, 20)
+        print("hidden shape")
+        print(hidden.shape)
         print("edge_index shape")
         print(edge_index.shape)
-        hidden = self.conv2(graph, hidden)
+        sag_pool_out1 = self.sagPooling1(hidden.to(self.device), edge_index.to(self.device))
+        # print("sag_pool_out1[0] shape")
+        # print(sag_pool_out1[0].shape)
+        # print("graph")
+        # print(graph)
+        sag_pooled_features = sag_pool_out1[0]
+        sag_edge_index = sag_pool_out1[1]
+        print("graph")
+        print(graph)
+        print("sag_pooled_features shape")
+        print(sag_pooled_features.shape)
+        print("sag_edge_index shape before flattening")
+        print(sag_edge_index.shape)
+        sag_edge_index = torch.flatten(sag_edge_index)
+        print("flattened sag_edge_index shape")
+        print(sag_edge_index.shape)
+        graph = edge_subgraph(graph, sag_edge_index, True)
+        print("subgraph1")
+        print(graph)
+        graph = dgl.add_self_loop(graph)
+        hidden = self.conv2(graph, sag_pooled_features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv3(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
@@ -96,13 +122,13 @@ class BasicGCNSegmentation(nn.Module):
         x = torch.cat([x, 2 * x.size(1) * batch_x.view(-1, 1).to(x.dtype)], dim=-1)
         y = torch.cat([y, 2 * y.size(1) * batch_y.view(-1, 1).to(y.dtype)], dim=-1)
 
-        # print("Before calling scipy.spatial.cKDTree()")
+        print("Before calling scipy.spatial.cKDTree()")
         tree = scipy.spatial.cKDTree(x.detach().cpu().numpy(), balanced_tree=False)
-        # print("After calling scipy.spatial.cKDTree()")
-        # print("Before calling tree.query")
+        print("After calling scipy.spatial.cKDTree()")
+        print("Before calling tree.query")
         dist, col = tree.query(
             y.detach().cpu(), k=k, distance_upper_bound=x.size(1))
-        # print("After calling tree.query")
+        print("After calling tree.query")
 
         dist = torch.from_numpy(dist).to(x.dtype)
         col = torch.from_numpy(col).to(torch.long)
