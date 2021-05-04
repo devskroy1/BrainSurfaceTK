@@ -33,7 +33,7 @@ class MLP(nn.Module):
         return self.layer(x)
 
 class EdgeConvGCNSegmentation(nn.Module):
-    def __init__(self, in_dim, hidden_dim, n_classes):
+    def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(EdgeConvGCNSegmentation, self).__init__()
         self.edge_conv_dims = [[128, 128, 128], [256, 256, 256], [64, 64]]
         self.edge_convs = self.make_edge_conv_layers_()
@@ -41,6 +41,7 @@ class EdgeConvGCNSegmentation(nn.Module):
         self.conv2 = GraphConv(hidden_dim*2, hidden_dim*2, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim*4, hidden_dim*2, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim * 2, n_classes, activation=None)
+        self.device = device
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
@@ -51,23 +52,23 @@ class EdgeConvGCNSegmentation(nn.Module):
         # print(3)
         # print("hidden_dim")
         # print(256)
-        print("hidden shape after conv1")
-        print(hidden.shape)
+        # print("hidden shape after conv1")
+        # print(hidden.shape)
         # print("edgeConv1")
         # print(edgeConv1)
         # print("edgeConv2")
         # print(edgeConv2)
-        edge_index = self.knn(hidden, 20)
-        hidden = edgeConv1(hidden, edge_index)
-        print("hidden shape after edgeConv1")
-        print(hidden.shape)
+        edge_index = self.knn(hidden, hidden, 20)
+        hidden = edgeConv1(hidden.to(self.device), edge_index.to(self.device))
+        # print("hidden shape after edgeConv1")
+        # print(hidden.shape)
         hidden = self.conv2(graph, hidden)
-        print("hidden shape after conv2")
-        print(hidden.shape)
-        edge_index = self.knn(hidden, 20)
-        hidden = edgeConv2(hidden, edge_index)
-        print("hidden shape after edgeConv2")
-        print(hidden.shape)
+        # print("hidden shape after conv2")
+        # print(hidden.shape)
+        edge_index = self.knn(hidden, hidden, 20)
+        hidden = edgeConv2(hidden.to(self.device), edge_index.to(self.device))
+        # print("hidden shape after edgeConv2")
+        # print(hidden.shape)
         hidden = self.conv3(graph, hidden)
         hidden = self.conv4(graph, hidden)
 
@@ -87,64 +88,64 @@ class EdgeConvGCNSegmentation(nn.Module):
             layers.append(EdgeConv(nn=MLP(dims), aggr='max'))
         return nn.Sequential(*layers)
 
-    def knn(self, x, k):
-        print("x shape")
-        print(x.shape)
-        inner = -2 * torch.matmul(x.transpose(0, 1), x)
-        #inner shape: 64 x 64
-        xx = torch.sum(x ** 2, dim=0, keepdim=True)
-        #xx shape: 64 x 1
-        print("inner shape")
-        print(inner.shape)
-        print("xx.shape")
-        print(xx.shape)
+    # def knn(self, x, k):
+    #     print("x shape")
+    #     print(x.shape)
+    #     inner = -2 * torch.matmul(x.transpose(0, 1), x)
+    #     #inner shape: 64 x 64
+    #     xx = torch.sum(x ** 2, dim=0, keepdim=True)
+    #     #xx shape: 64 x 1
+    #     print("inner shape")
+    #     print(inner.shape)
+    #     print("xx.shape")
+    #     print(xx.shape)
+    #
+    #     # pairwise_distance = -xx - inner - xx.transpose(0, 1)
+    #     pairwise_distance = -xx - inner
+    #
+    #     idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+    #     return idx
 
-        # pairwise_distance = -xx - inner - xx.transpose(0, 1)
-        pairwise_distance = -xx - inner
+    def knn(self, x, y, k, batch_x=None, batch_y=None):
+        if batch_x is None:
+            batch_x = x.new_zeros(x.size(0), dtype=torch.long)
 
-        idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
-        return idx
+        if batch_y is None:
+            batch_y = y.new_zeros(y.size(0), dtype=torch.long)
 
-    # def knn(self, x, y, k, batch_x=None, batch_y=None):
-    #     if batch_x is None:
-    #         batch_x = x.new_zeros(x.size(0), dtype=torch.long)
-    #
-    #     if batch_y is None:
-    #         batch_y = y.new_zeros(y.size(0), dtype=torch.long)
-    #
-    #     x = x.view(-1, 1) if x.dim() == 1 else x
-    #     y = y.view(-1, 1) if y.dim() == 1 else y
-    #
-    #     assert x.dim() == 2 and batch_x.dim() == 1
-    #     assert y.dim() == 2 and batch_y.dim() == 1
-    #     assert x.size(1) == y.size(1)
-    #     assert x.size(0) == batch_x.size(0)
-    #     assert y.size(0) == batch_y.size(0)
-    #
-    #     # Rescale x and y.
-    #     min_xy = min(x.min().item(), y.min().item())
-    #     x, y = x - min_xy, y - min_xy
-    #
-    #     max_xy = max(x.max().item(), y.max().item())
-    #     x, y, = x / max_xy, y / max_xy
-    #
-    #     # Concat batch/features to ensure no cross-links between examples exist.
-    #     x = torch.cat([x, 2 * x.size(1) * batch_x.view(-1, 1).to(x.dtype)], dim=-1)
-    #     y = torch.cat([y, 2 * y.size(1) * batch_y.view(-1, 1).to(y.dtype)], dim=-1)
-    #
-    #     print("Before calling scipy.spatial.cKDTree()")
-    #     tree = scipy.spatial.cKDTree(x.detach().cpu().numpy())
-    #     print("After calling scipy.spatial.cKDTree()")
-    #     print("Before calling tree.query")
-    #     dist, col = tree.query(
-    #         y.detach().cpu(), k=k, distance_upper_bound=x.size(1))
-    #     print("After calling tree.query")
-    #
-    #     dist = torch.from_numpy(dist).to(x.dtype)
-    #     col = torch.from_numpy(col).to(torch.long)
-    #     row = torch.arange(col.size(0), dtype=torch.long).view(-1, 1).repeat(1, k)
-    #     mask = 1 - torch.isinf(dist).view(-1)
-    #     row, col = row.view(-1)[mask], col.view(-1)[mask]
-    #
-    #     return torch.stack([row, col], dim=0)
+        x = x.view(-1, 1) if x.dim() == 1 else x
+        y = y.view(-1, 1) if y.dim() == 1 else y
+
+        assert x.dim() == 2 and batch_x.dim() == 1
+        assert y.dim() == 2 and batch_y.dim() == 1
+        assert x.size(1) == y.size(1)
+        assert x.size(0) == batch_x.size(0)
+        assert y.size(0) == batch_y.size(0)
+
+        # Rescale x and y.
+        min_xy = min(x.min().item(), y.min().item())
+        x, y = x - min_xy, y - min_xy
+
+        max_xy = max(x.max().item(), y.max().item())
+        x, y, = x / max_xy, y / max_xy
+
+        # Concat batch/features to ensure no cross-links between examples exist.
+        x = torch.cat([x, 2 * x.size(1) * batch_x.view(-1, 1).to(x.dtype)], dim=-1)
+        y = torch.cat([y, 2 * y.size(1) * batch_y.view(-1, 1).to(y.dtype)], dim=-1)
+
+        # print("Before calling scipy.spatial.cKDTree()")
+        tree = scipy.spatial.cKDTree(x.detach().cpu().numpy(), balanced_tree=False)
+        # print("After calling scipy.spatial.cKDTree()")
+        # print("Before calling tree.query")
+        dist, col = tree.query(
+            y.detach().cpu(), k=k, distance_upper_bound=x.size(1))
+        # print("After calling tree.query")
+
+        dist = torch.from_numpy(dist).to(x.dtype)
+        col = torch.from_numpy(col).to(torch.long)
+        row = torch.arange(col.size(0), dtype=torch.long).view(-1, 1).repeat(1, k)
+        mask = ~torch.isinf(dist).view(-1)
+        row, col = row.view(-1)[mask], col.view(-1)[mask]
+
+        return torch.stack([row, col], dim=0)
 
