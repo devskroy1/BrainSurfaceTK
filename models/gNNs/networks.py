@@ -1,6 +1,7 @@
 import dgl
 import torch.nn as nn
 import torch.nn.functional as F
+from torch_geometric.nn import knn_graph
 from dgl.nn.pytorch import GraphConv
 
 from models.gNNs.layers import GNNLayer
@@ -56,6 +57,9 @@ class BasicGCNSegmentation(nn.Module):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
+        out = knn_graph(hidden, 20)
+        print("out shape")
+        print(out.shape)
         hidden = self.conv2(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv3(graph, hidden)
