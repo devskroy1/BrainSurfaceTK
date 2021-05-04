@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 from models.gNNs.data_utils import BrainNetworkDataset
 from models.gNNs.networks import BasicGCNSegmentation
 from models.gNNs.dgcnn import DGCNNSegmentation
-from models.gNNs.edgeConv import DynEdgeConvGCNSegmentation
+from models.gNNs.edgeConv import EdgeConvGCNSegmentation
 
 
 def collate(samples):
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 2
+    batch_size = 64
     train_test_split = (0.8, 0.1, 0.1)
 
     print("Batch size: ")
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = DynEdgeConvGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = EdgeConvGCNSegmentation(3, 64, 40)  # 3 features, 40 outputs (segmentation)
     #model = DGCNNSegmentation(3, 256, 40, batch_size, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
