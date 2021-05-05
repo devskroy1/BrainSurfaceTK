@@ -138,15 +138,52 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     train_epoch_worst_diff = 0.
     train_total_size = 0
 
-    for iter, (_, bg, batch_labels) in enumerate(train_dl):
+    k = 1000
+    sum_topk_indices = torch.zeros(k, device=device)
+    sum_saliency_scores = torch.zeros(k, device=device)
+    num_subjects = 0
+    for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
 
+        torch.cuda.empty_cache()
         optimizer.zero_grad()
 
         bg = bg.to(device)
+        graphs = dgl.unbatch(bg)
+        first_graph = graphs[0]
         bg_node_features = bg.ndata["features"].to(device)
+
+        if (epoch == args.max_epochs - 1):
+            first_graph_node_features = first_graph.ndata["features"].to(device)
+            num_nodes_first_graph = first_graph_node_features.size(0)
+
         batch_labels = batch_labels.to(device)
 
-        prediction = model(graph=bg, features=bg_node_features, is_training=True)
+        graph, prediction = model(graph=bg, features=bg_node_features, is_training=True)
+
+        print("len(graphs)")
+        print(len(graphs))
+        if (epoch == args.max_epochs - 1):
+            for g in range(len(graphs)):
+                graph = graphs[g]
+                bg_node_features = graph.ndata["features"].to(device)
+                graph, preds = model(graph=graph, features=bg_node_features, is_training=False)
+
+                num_subjects += 1
+                top_nodes_indices = dgl.topk_nodes(graph, 'saliency_score', k)
+                # print("top_nodes_indices")
+                # print(top_nodes_indices)
+                # print("top_nodes_indices shape")
+                # print(top_nodes_indices.shape)
+                saliency_scores = graph.ndata['saliency_score']
+                print("saliency_scores train")
+                print(saliency_scores)
+                highest_saliency_scores = torch.index_select(saliency_scores, 0, top_nodes_indices[0])
+                # print("highest_saliency_scores shape")
+                # print(highest_saliency_scores.shape)
+                print("highest_saliency_scores train")
+                print(highest_saliency_scores)
+                sum_topk_indices += top_nodes_indices[0]
+                sum_saliency_scores += highest_saliency_scores
 
         loss = loss_function(prediction, batch_labels)
         loss.backward()
@@ -161,6 +198,33 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
                 train_epoch_worst_diff = worst_diff
         train_epoch_loss += loss.detach().item()
         train_total_size += len(batch_labels)
+
+        break
+    if (epoch == args.max_epochs - 1):
+
+        # print("sum_topk_indices")
+        # print(sum_topk_indices)
+        # print("sum_saliency_scores")
+        # print(sum_saliency_scores)
+
+        pop_saliency_indices = sum_topk_indices // num_subjects
+        pop_saliency_indices = pop_saliency_indices.long()
+        pop_saliency_scores = sum_saliency_scores * (1 / num_subjects)
+
+        # print("pop_saliency_indices")
+        # print(pop_saliency_indices)
+        print("pop_saliency_scores train")
+        print(pop_saliency_scores)
+        # print("num_nodes_first_graph")
+        # print(num_nodes_first_graph)
+
+        saliency_scores = torch.zeros(num_nodes_first_graph, device=device)
+        for i in range(k):
+            pop_saliency_index = pop_saliency_indices[i]
+            saliency_scores[pop_saliency_index] = pop_saliency_scores[i]
+
+        add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores,
+                                        vtk_root=args.load_path, subject=subjects[0][0])
 
     # train_epoch_loss = train_epoch_loss / (iter + 1)
     train_epoch_loss /= (iter + 1)  # Calculate mean sum batch loss over this epoch MSELoss
@@ -191,6 +255,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
         sum_saliency_scores = torch.zeros(k, device=device)
         num_subjects = 0
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
+            torch.cuda.empty_cache()
             # print("subjects")
             # print(subjects)
 
@@ -261,13 +326,13 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                     # print("top_nodes_indices shape")
                     # print(top_nodes_indices.shape)
                     saliency_scores = graph.ndata['saliency_score']
-                    # print("saliency_scores shape")
-                    # print(saliency_scores.shape)
+                    print("saliency_scores evaluate")
+                    print(saliency_scores)
                     highest_saliency_scores = torch.index_select(saliency_scores, 0, top_nodes_indices[0])
                     # print("highest_saliency_scores shape")
                     # print(highest_saliency_scores.shape)
-                    # print("highest_saliency_scores")
-                    # print(highest_saliency_scores)
+                    print("highest_saliency_scores evaluate")
+                    print(highest_saliency_scores)
                     sum_topk_indices += top_nodes_indices[0]
                     sum_saliency_scores += highest_saliency_scores
 
@@ -303,6 +368,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             batch_diffs.append(diff.cpu())
 
             total_size += len(batch_labels)
+            break
+
         # if (epoch == 0) and not val:
         if (epoch == args.max_epochs - 1) and not val:
 
@@ -317,8 +384,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
 
             # print("pop_saliency_indices")
             # print(pop_saliency_indices)
-            # print("pop_saliency_scores")
-            # print(pop_saliency_scores)
+            print("pop_saliency_scores evaluate")
+            print(pop_saliency_scores)
             # print("num_nodes_first_graph")
             # print(num_nodes_first_graph)
 
