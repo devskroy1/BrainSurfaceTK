@@ -69,7 +69,33 @@ class BasicGCNRegressor(nn.Module):
         seg_output = self.predict_layer(hg)
 
         if is_training:
-            return seg_output
+            linear_weights = self.predict_layer.weight
+            # print("linear_weights shape")
+            # print(linear_weights.shape)
+            n_classes = linear_weights.size(0)
+            hidden_dim = linear_weights.size(1)
+            hidden_first_dim = hidden.size(0)
+            class_activn_map = torch.zeros(size=(n_classes, hidden_first_dim), device=self.device)
+
+            for h in range(hidden_dim):
+                weight = linear_weights[:, h]
+                # weight = weight.to(self.device)
+                # print("weight shape")
+                # print(weight.shape)
+                conv_feature_map = hidden[:, h]
+                # conv_feature_map = conv_feature_map.to(self.device)
+                # print("conv_feature_map shape")
+                # print(conv_feature_map.shape)
+                class_activn_map += torch.matmul(weight.unsqueeze(1), conv_feature_map.unsqueeze(0))
+            # print("class_activn_map shape")
+            # print(class_activn_map.shape)
+            graph.ndata['saliency_score'] = class_activn_map[0]
+            # print("graph.ndata['saliency_score']")
+            # print(graph.ndata['saliency_score'])
+            # print("graph")
+            # print(graph)
+            # print("Just before returning from forward()")
+            return graph, seg_output
 
         else:
             linear_weights = self.predict_layer.weight
