@@ -141,6 +141,8 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
     pointArr = []
     weightArr = []
     candArr = []
+    allPointArr = []
+    allWeightArr = []
     threshold = None
     count = 0
 
@@ -163,6 +165,8 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
         # print(index)
         # print("eachItem")
         # print(eachItem)
+        allPointArr.append(locArr.pos[index])
+        allWeightArr.append(eachItem.item())
         if eachItem > threshold:
             # print("eachItem > thresh")
             candArr.append(index)
@@ -174,6 +178,7 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
             pointArr.append(locArr.pos[index])
             weightArr.append(eachItem.item())
             count += 1
+
     # print("locArr before np.delete")
     # print(locArr)
     locArr = np.delete(locArr.pos.detach().cpu().numpy(), candArr, axis=0)
@@ -182,7 +187,9 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
     # print("Just before returning from delete_above_threshold()")
     # print("pointArr")
     # print(pointArr)
-    return locArr, [pointArr, weightArr], count
+
+    #locArr, pointArr, weightArr and count are for dropped points
+    return locArr, [pointArr, weightArr], count, candArr, allPointArr, allWeightArr
 
 
 def delete_below_threshold(inputheatMap, inputArr, mode):
@@ -260,13 +267,17 @@ def draw_heatcloud(inpCloud, hitCheckArr, mode):
     visualization.draw_geometries([pcd])
 
 
-def draw_NewHeatcloud(inputPCArray, inputWeightArray):
+def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPointsArr, allWeightArr, totNumPoints, device):
     #     inputWeightArray = truncate_to_threshold( np.array(inputWeightArray), "+midrange" )
-    pColors = np.zeros((len(inputPCArray), 3), dtype=float)
-    maxColVal = max(inputWeightArray)
-    for index in range(len(inputPCArray)):
+    # pColors = np.zeros((len(inputPCArray), 3), dtype=float)
+    pColors = np.zeros((len(allPointsArr), 3), dtype=float)
+    # maxColVal = max(inputWeightArray)
+    maxColVal = max(allWeightArr)
+    # for index in range(len(inputPCArray)):
+    for index in range(len(allPointsArr)):
         try:
-            curVal = inputWeightArray[index]
+            # curVal = inputWeightArray[index]
+            curVal = allWeightArr[index]
             if curVal == 0:
                 pColors[index] = [0, 0, 0]
             else:
@@ -277,20 +288,38 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray):
             #             print( "INVALID VALUE FOR INDEX: ", index )
             pColors[index] = [0, 0, 0]
 
+    # pcd = geometry.PointCloud()
+    # inputPCArray = torch.stack(inputPCArray)
+    # # print("inputPCArray shape")
+    # # print(inputPCArray.shape)
+    # npInputPCArray = inputPCArray.cpu().detach().numpy()
+    # # print("npInputPCArray shape")
+    # # print(npInputPCArray.shape)
+    # pcd.points = utility.Vector3dVector(npInputPCArray)
+    # pcd.colors = utility.Vector3dVector(pColors)
+
     pcd = geometry.PointCloud()
-    inputPCArray = torch.stack(inputPCArray)
+    allPointsArr = torch.stack(allPointsArr)
     # print("inputPCArray shape")
     # print(inputPCArray.shape)
-    npInputPCArray = inputPCArray.cpu().detach().numpy()
+    npAllPointsArr = allPointsArr.cpu().detach().numpy()
     # print("npInputPCArray shape")
     # print(npInputPCArray.shape)
-    pcd.points = utility.Vector3dVector(npInputPCArray)
+    pcd.points = utility.Vector3dVector(npAllPointsArr)
     pcd.colors = utility.Vector3dVector(pColors)
 
     heat_cloud_ply_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.ply"
     
     o3d.io.write_point_cloud(heat_cloud_ply_filename, pcd)
     mesh = pv.read(heat_cloud_ply_filename)
+
+    dropped_points = torch.zeros(totNumPoints, device=device)
+    for i in range(len(dropPointsArray)):
+        drop_index = dropPointsArray[i]
+        dropped_points[drop_index] = 1.0
+
+    dropped_points_numpy = dropped_points.detach().cpu().numpy()
+    mesh.point_arrays['dropped points'] = dropped_points_numpy
     heat_cloud_vtk_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.vtk"
     mesh.save(heat_cloud_vtk_filename)
 

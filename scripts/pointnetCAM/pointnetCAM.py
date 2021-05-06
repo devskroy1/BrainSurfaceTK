@@ -134,7 +134,7 @@ class AdversarialPointCloud():
         #pcEvalTest = copy.deepcopy(pcTempResult)
 
         #My code
-        model.load_state_dict(torch.load(PATH, map_location=device))
+        model.load_state_dict(torch.load(PATH, map_location=self.device))
         model.eval()
 
         # correct_nodes = total_nodes = 0
@@ -158,8 +158,9 @@ class AdversarialPointCloud():
 
             torch.cuda.empty_cache()
             # 1. Get predictions and loss
-            data = data.to(device)
+            data = data.to(self.device)
 
+            totNumPoints = data.pos.size(0)
             # with torch.no_grad():
             out, feature_vector = model(data)
             # with torch.set_grad_enabled(True):
@@ -239,15 +240,16 @@ class AdversarialPointCloud():
             total_nodes = data.num_nodes
 
             accuracy = correct_nodes / total_nodes
-            # Store data now if desired
-            if storeResults:
-                curRemainingPoints = maxNumPoints - sum(delCount)
-                self.storeAmountOfPointsRemoved(curRemainingPoints)
-                self.storeAccuracyPerPointsRemoved(accuracy)
+            # # Store data now if desired
+            # if storeResults:
+            #     # curRemainingPoints = maxNumPoints - sum(delCount)
+            #     curRemainingPoints = totNumPoints - Count
+            #     self.storeAmountOfPointsRemoved(curRemainingPoints)
+            #     self.storeAccuracyPerPointsRemoved(accuracy)
 
             # Perform visual stuff here
             if thresholdMode == "+average" or thresholdMode == "+median" or thresholdMode == "+midrange":
-                resultPCloudThresh, vipPointsArr, Count = gch.delete_above_threshold(maxgradients, data,
+                resultPCloudThresh, vipPointsArr, Count, dropPointsArr, allPointsArr, allWeightArr = gch.delete_above_threshold(maxgradients, data,
                                                                                      thresholdMode)
             if thresholdMode == "-average" or thresholdMode == "-median" or thresholdMode == "-midrange":
                 resultPCloudThresh, vipPointsArr, Count = gch.delete_below_threshold(maxgradients, data,
@@ -266,6 +268,14 @@ class AdversarialPointCloud():
             # print(vipPointsArr)
 
             delCount.append(Count)
+
+            # Store data now if desired
+            if storeResults:
+                # curRemainingPoints = maxNumPoints - sum(delCount)
+                curRemainingPoints = totNumPoints - Count
+                self.storeAmountOfPointsRemoved(curRemainingPoints)
+                self.storeAccuracyPerPointsRemoved(accuracy)
+
             # print("vipPointsArr[0] shape")
             # print(vipPointsArr[0].shape)
             vipPcPointsArr.extend(vipPointsArr[0])
@@ -276,62 +286,62 @@ class AdversarialPointCloud():
             # print(weightArray)
             pcTempResult = copy.deepcopy(resultPCloudThresh)
 
+            #Original code
 
-        #Original code
+            # for _ in range(numTestRuns):
+            #     #pcEvalTest = provider.rotate_point_cloud_XYZ(pcEvalTest)
+            #     # feed_dict2 = {self.pointclouds_pl: pcEvalTest,
+            #     #               self.labels_pl: labels_pl,
+            #     #               self.is_training_pl: self.is_training}
+            #     # eval_prediction, eval_loss, heatGradient = sess.run([ops['pred'], ops['loss'], ops['maxgradients']],
+            #     #                                                     feed_dict=feed_dict2)
+            #     # eval_prediction = np.argmax(eval_prediction, 1)
+            #     # correct = np.sum(eval_prediction == labels_pl)
+            #     # total_correct += correct
+            #     # total_seen += 1
+            #     # loss_sum += eval_loss * BATCH_SIZE
+            #     eval_prediction = np.argmax(self.pred, 1)
+            #     correct = np.sum(eval_prediction == labels)
+            #     total_correct += correct
+            #     total_seen += 1
+            #     loss_sum += self.loss * self.batch_size
+            #
+            # print("GROUND TRUTH: ", self.desired_class_label)
+            # print("PREDICTION: ", eval_prediction)
+            # print("LOSS: ", self.loss)
+            # print("ACCURACY: ", (total_correct / total_seen))
+            # accuracy = total_correct / float(total_seen)
 
-        # for _ in range(numTestRuns):
-        #     #pcEvalTest = provider.rotate_point_cloud_XYZ(pcEvalTest)
-        #     # feed_dict2 = {self.pointclouds_pl: pcEvalTest,
-        #     #               self.labels_pl: labels_pl,
-        #     #               self.is_training_pl: self.is_training}
-        #     # eval_prediction, eval_loss, heatGradient = sess.run([ops['pred'], ops['loss'], ops['maxgradients']],
-        #     #                                                     feed_dict=feed_dict2)
-        #     # eval_prediction = np.argmax(eval_prediction, 1)
-        #     # correct = np.sum(eval_prediction == labels_pl)
-        #     # total_correct += correct
-        #     # total_seen += 1
-        #     # loss_sum += eval_loss * BATCH_SIZE
-        #     eval_prediction = np.argmax(self.pred, 1)
-        #     correct = np.sum(eval_prediction == labels)
-        #     total_correct += correct
-        #     total_seen += 1
-        #     loss_sum += self.loss * self.batch_size
-        #
-        # print("GROUND TRUTH: ", self.desired_class_label)
-        # print("PREDICTION: ", eval_prediction)
-        # print("LOSS: ", self.loss)
-        # print("ACCURACY: ", (total_correct / total_seen))
-        # accuracy = total_correct / float(total_seen)
+            # # Stop iterating when the eval_prediction deviates from ground truth
+            # if self.desired_class_label != eval_prediction and accuracy <= 0.5:
+            #     print("GROUND TRUTH DEVIATED FROM PREDICTION AFTER %s ITERATIONS" % i)
+            #     break
 
-        # # Stop iterating when the eval_prediction deviates from ground truth
-        # if self.desired_class_label != eval_prediction and accuracy <= 0.5:
-        #     print("GROUND TRUTH DEVIATED FROM PREDICTION AFTER %s ITERATIONS" % i)
-        #     break
+            # Stop profiling and show the results
+            # endTime = time.time() - start_time
+            # storeAmountOfUsedTime(endTime)
+            # cpr.stopProfiling(numResults=20)
+            # print("TIME NEEDED FOR ALGORITHM: ", endTime)
 
-        # Stop profiling and show the results
-        # endTime = time.time() - start_time
-        # storeAmountOfUsedTime(endTime)
-        # cpr.stopProfiling(numResults=20)
-        # print("TIME NEEDED FOR ALGORITHM: ", endTime)
+            # totalRemoved = sum(delCount)
+            totalRemoved = Count
+            print("TOTAL REMOVED POINTS: ", totalRemoved)
+            print("TOTAL REMAINING POINTS: ", totNumPoints - totalRemoved)
+            #         gch.draw_pointcloud(pcTempResult) #-- Residual point cloud
+            #         gch.draw_NewHeatcloud(vipPcPointsArr, weightArray) #-- Important points only
 
-        totalRemoved = sum(delCount)
-        print("TOTAL REMOVED POINTS: ", totalRemoved)
-        print("TOTAL REMAINING POINTS: ", maxNumPoints - totalRemoved)
-        #         gch.draw_pointcloud(pcTempResult) #-- Residual point cloud
-        #         gch.draw_NewHeatcloud(vipPcPointsArr, weightArray) #-- Important points only
+            # print("pcTempResult before calling draw_NewHeatcloud()")
+            # print(pcTempResult)
 
-        # print("pcTempResult before calling draw_NewHeatcloud()")
-        # print(pcTempResult)
+            #vipPcPointsArr.extend(pcTempResult[0])
 
-        #vipPcPointsArr.extend(pcTempResult[0])
-
-        # print("vipPcPointsArr shape")
-        # print(vipPcPointsArr.shape)
-        # Should be [[3], [3], ...]
-        # print("weightArray")
-        # print(weightArray)
-        gch.draw_NewHeatcloud(vipPcPointsArr, weightArray)  # --All points combined
-        return delCount
+            # print("vipPcPointsArr shape")
+            # print(vipPcPointsArr.shape)
+            # Should be [[3], [3], ...]
+            # print("weightArray")
+            # print(weightArray)
+            gch.draw_NewHeatcloud(vipPcPointsArr, weightArray, dropPointsArr, allPointsArr, totNumPoints, self.device)  # --All points combined
+            return delCount
 
     def storeTestResults(self, mode, total_correct, total_seen, loss_sum, pred_val):
         '''
