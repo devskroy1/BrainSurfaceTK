@@ -129,7 +129,7 @@ def delete_random_points(inputheatMap, inputArr, numPoints):
     return locArr, [pointArr, weightArr]
 
 
-def delete_above_threshold(inputheatMap, inputArr, mode):
+def delete_above_threshold(inputheatMap, inputArr, totNumPoints, mode):
     # print("Inside delete_above_threshold()")
     # print("inputheatMap shape")
     # print(inputheatMap.shape)
@@ -160,12 +160,15 @@ def delete_above_threshold(inputheatMap, inputArr, mode):
     # print(threshold)
     # print("locArr")
     # print(locArr)
+    for i in range(totNumPoints):
+        allPointArr.append(inputArr.pos[i])
+
     for index, eachItem in enumerate(inputheatMap):
         # print("index")
         # print(index)
         # print("eachItem")
         # print(eachItem)
-        allPointArr.append(locArr.pos[index])
+        # allPointArr.append(locArr.pos[index])
         allWeightArr.append(eachItem.item())
         if eachItem > threshold:
             # print("eachItem > thresh")
@@ -270,6 +273,8 @@ def draw_heatcloud(inpCloud, hitCheckArr, mode):
 def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPointsArr, allWeightArr, totNumPoints, index, device):
     #     inputWeightArray = truncate_to_threshold( np.array(inputWeightArray), "+midrange" )
     # pColors = np.zeros((len(inputPCArray), 3), dtype=float)
+    print("Inside draw_NewHeatcloud()")
+    print(index)
     pColors = np.zeros((len(allPointsArr), 3), dtype=float)
     # maxColVal = max(inputWeightArray)
     maxColVal = max(allWeightArr)
@@ -303,15 +308,25 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPoints
     # print("inputPCArray shape")
     # print(inputPCArray.shape)
     npAllPointsArr = allPointsArr.cpu().detach().numpy()
-    # print("npInputPCArray shape")
-    # print(npInputPCArray.shape)
+    print("npAllPointsArr shape")
+    print(npAllPointsArr.shape)
     pcd.points = utility.Vector3dVector(npAllPointsArr)
-    pcd.colors = utility.Vector3dVector(pColors)
+    # pcd.colors = utility.Vector3dVector(pColors)
+
+    print("pcd.points")
+    print(pcd.points)
+
+    np_array_pcd_points = np.asarray(pcd.points)
+    print("np_array_pcd_points shape")
+    print(np_array_pcd_points.shape)
 
     heat_cloud_ply_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud{index}.ply"
     
     o3d.io.write_point_cloud(heat_cloud_ply_filename, pcd)
     mesh = pv.read(heat_cloud_ply_filename)
+    heat_cloud_vtk_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud{index}.vtk"
+    mesh.save(heat_cloud_vtk_filename)
+    mesh = pv.read(heat_cloud_vtk_filename)
 
     dropped_points = torch.zeros(totNumPoints, device=device)
     for i in range(len(dropPointsArray)):
@@ -319,9 +334,11 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPoints
         dropped_points[drop_index] = 1.0
 
     dropped_points_numpy = dropped_points.detach().cpu().numpy()
+    print("mesh.point_arrays")
+    print(mesh.point_arrays)
     mesh.point_arrays['dropped points'] = dropped_points_numpy
-    heat_cloud_vtk_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud{index}.vtk"
-    mesh.save(heat_cloud_vtk_filename)
+    heat_cloud_vtk_dropped_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnDroppedHeatCloud{index}.vtk"
+    mesh.save(heat_cloud_vtk_dropped_filename)
 
     #visualization.draw_geometries([pcd])
 
