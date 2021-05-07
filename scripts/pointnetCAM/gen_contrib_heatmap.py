@@ -267,7 +267,7 @@ def draw_heatcloud(inpCloud, hitCheckArr, mode):
     visualization.draw_geometries([pcd])
 
 
-def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPointsArr, allWeightArr, totNumPoints, device):
+def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPointsArr, allWeightArr, totNumPoints, index, device):
     #     inputWeightArray = truncate_to_threshold( np.array(inputWeightArray), "+midrange" )
     # pColors = np.zeros((len(inputPCArray), 3), dtype=float)
     pColors = np.zeros((len(allPointsArr), 3), dtype=float)
@@ -308,7 +308,7 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPoints
     pcd.points = utility.Vector3dVector(npAllPointsArr)
     pcd.colors = utility.Vector3dVector(pColors)
 
-    heat_cloud_ply_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.ply"
+    heat_cloud_ply_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud{index}.ply"
     
     o3d.io.write_point_cloud(heat_cloud_ply_filename, pcd)
     mesh = pv.read(heat_cloud_ply_filename)
@@ -320,7 +320,7 @@ def draw_NewHeatcloud(inputPCArray, inputWeightArray, dropPointsArray, allPoints
 
     dropped_points_numpy = dropped_points.detach().cpu().numpy()
     mesh.point_arrays['dropped points'] = dropped_points_numpy
-    heat_cloud_vtk_filename = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud.vtk"
+    heat_cloud_vtk_filename = f"/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointnetHeatClouds/newPointnetClassifcnHeatCloud{index}.vtk"
     mesh.save(heat_cloud_vtk_filename)
 
     #visualization.draw_geometries([pcd])

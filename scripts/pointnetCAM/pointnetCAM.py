@@ -142,6 +142,7 @@ class AdversarialPointCloud():
         #with torch.no_grad():
         # print("len(test_loader)")
         # print(len(test_loader))
+        i = 0
         # for batch_idx, data in enumerate(test_loader):
         for data in test_loader:
             # print("batch_idx")
@@ -340,7 +341,8 @@ class AdversarialPointCloud():
             # Should be [[3], [3], ...]
             # print("weightArray")
             # print(weightArray)
-            gch.draw_NewHeatcloud(vipPcPointsArr, weightArray, dropPointsArr, allPointsArr, totNumPoints, self.device)  # --All points combined
+            gch.draw_NewHeatcloud(vipPcPointsArr, weightArray, dropPointsArr, allPointsArr, totNumPoints, i, self.device)  # --All points combined
+            i += 1
             return delCount
 
     def storeTestResults(self, mode, total_correct, total_seen, loss_sum, pred_val):
