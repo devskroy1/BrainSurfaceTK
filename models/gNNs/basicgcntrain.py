@@ -18,7 +18,8 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from models.gNNs.data_utils import BrainNetworkDataset
-from models.gNNs.networks import BasicGCNRegressor, LearnablePoolingGCNRegressor
+from models.gNNs.networks import BasicGCNRegressor
+from models.gNNs.learnablePooling import LearnablePoolingGCNRegressor
 
 
 def collate(samples):
