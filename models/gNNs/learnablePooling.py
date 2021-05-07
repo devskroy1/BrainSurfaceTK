@@ -19,25 +19,38 @@ class LearnablePoolingGCNRegressor(nn.Module):
         self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
-        # print("Inside BasicGCNRegressor forward()")
+        # print("Inside LearnablePoolingGCNRegressor forward()")
+        # print("graph")
+        # print(graph)
+        # print("features.shape")
+        # print(features.shape)
         # Perform graph convolution and activation function.
         hidden_S1 = self.conv1(graph, features)
+        print("hidden_S1 shape")
+        print(hidden_S1.shape)
         # print("After self.conv1")
         # hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden_Y1 = self.conv2(graph, features)
-
+        print("hidden_Y1 shape")
+        print(hidden_Y1.shape)
         g_pool_Y2 = torch.matmul(torch.transpose(hidden_S1, 0, 1), hidden_Y1)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv3(g_pool_Y2, features)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv4(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv5(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv6(graph, hidden)
-        with graph.local_scope():
-            graph.ndata['tmp'] = hidden
-            # Calculate graph representation by averaging all the node representations.
-            hg = dgl.mean_nodes(graph, 'tmp')
+        print("g_pool_Y2 shape")
+        print(g_pool_Y2.shape)
 
-        return self.predict_layer(hg)
+        # # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # hidden = self.conv3(g_pool_Y2, features)
+        # # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # hidden = self.conv4(graph, hidden)
+        # # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # # hidden = self.conv5(graph, hidden)
+        # # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # # hidden = self.conv6(graph, hidden)
+
+        # with graph.local_scope():
+        #     graph.ndata['tmp'] = hidden
+        #     # Calculate graph representation by averaging all the node representations.
+        #     hg = dgl.mean_nodes(graph, 'tmp')
+
+        # return self.predict_layer(hg)
+
+        return self.predict_layer(g_pool_Y2)
