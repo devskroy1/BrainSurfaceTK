@@ -44,7 +44,7 @@ class BrainNetworkDataset(Dataset):
         self.max_workers = max_workers
 
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 
@@ -79,9 +79,16 @@ class BrainNetworkDataset(Dataset):
         val_indices = None
         test_indices = None
 
+        # print("Inside generate_dataset()")
         if index_split_pickle_fp is None:
+            # print("index_split_pickle_fp is None")
             # Find files in Imperial Folder & Corresponding targets
             files_to_load, targets = self.search_for_files_and_targets(files_path, meta_data_filepath)
+
+            # print("len(files_to_load)")
+            # print(len(files_to_load))
+            # print("len(targets)")
+            # print(len(targets))
             # Split the dataset here
             (train_fps, train_targets), \
             (val_fps, val_targets), \
@@ -113,6 +120,8 @@ class BrainNetworkDataset(Dataset):
         if not os.path.exists(test_save_path):
             os.makedirs(test_save_path)
 
+        # print("len(train_fps)")
+        # print(len(train_fps))
         # Convert each mesh to a graph and save
         if self.max_workers > 0:
             with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
@@ -168,6 +177,14 @@ class BrainNetworkDataset(Dataset):
 
         # Normalise the two datasets separately
         # TODO: save guard for when training_split is 0. or 1. otherwise we'll get an error
+        # print("tr_Results")
+        # print(tr_results)
+        # print("val_results")
+        # print(val_results)
+        # print("test_Results")
+        # print(te_results)
+        # print("train_save_path")
+        # print(train_save_path)
         self.normalise_dataset(train_save_path)
         if len(val_fps) > 0:
             self.normalise_dataset(val_save_path)
@@ -182,6 +199,11 @@ class BrainNetworkDataset(Dataset):
         :param save_path: directory for the processed sample to be saved
         :return: 1 meaning success
         """
+        # print("Inside process_file_target()")
+        # print("file_to_load")
+        # print(file_to_load)
+        # print("save_path")
+        # print(save_path)
         if filename is None:
             fp_save_path = os.path.join(save_path, os.path.basename(file_to_load).replace(".vtk", ".pickle"))
         else:
@@ -218,17 +240,32 @@ class BrainNetworkDataset(Dataset):
         """
         features = [mesh.points]
 
+        # print("Inside get_node_features()")
+        # print("mesh.array_names")
+        # print(mesh.array_names)
         if not self.featureless:
             for name in mesh.array_names:
                 if name in self.features:
                     features.append(mesh.get_array(name=name, preference="point"))
 
         segmentation = list()
+        # print("mesh array names")
+        # print(mesh.array_names)
         if 'segmentation' in mesh.array_names:
             segmentation.append(mesh.get_array(name='segmentation', preference="point"))
 
+        # print("features")
+        # print(features)
+        # print("segmentation")
+        # print(segmentation)
         features = torch.tensor(np.column_stack(features)).float()
-        segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
+        # print("features shape")
+        # print(features.shape)
+        num_nodes = features.size(0)
+        if len(segmentation) > 0:
+            segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
+        else:
+            segmentation = torch.empty(num_nodes, dtype=torch.long)
         return features, segmentation
 
     @staticmethod
@@ -244,7 +281,15 @@ class BrainNetworkDataset(Dataset):
         train_size = round(len(samples) * train_val_test_split[0])
         val_size = round(len(samples) * train_val_test_split[1])
         test_size = round(len(samples) * train_val_test_split[2])
-        if (train_size + val_size + test_size) != len(samples):
+        # print("len(samples)")
+        # print(len(samples))
+        # print("train_size")
+        # print(train_size)
+        # print("val_size")
+        # print(val_size)
+        # print("test_size")
+        # print(test_size)
+        if ((train_size + val_size + test_size) != len(samples)) and ((train_size + val_size + test_size + 1) != len(samples)):
             raise Exception("implementation error")
 
         available_indices = [i for i in range(len(samples))]
@@ -282,7 +327,21 @@ class BrainNetworkDataset(Dataset):
         files_to_load = list()
         for fn in potential_files:
             participant_id, session_id = fn.split("_")[:2]
+            participant_id = participant_id.split("-")[1]
+            session_id = session_id.split("-")[1]
+            # print("df[participant_id]")
+            # print(df['participant_id'])
+            # print("df[session_id]")
+            # print(df['session_id'])
+
+            # print("participant_id")
+            # print(participant_id)
+            # print("session_id")
+            # print(session_id)
+            #records = df.loc[(df['participant_id'] == participant_id) & (df['session_id'] == session_id)]
             records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+            # print("len(records)")
+            # print(len(records))
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
@@ -406,7 +465,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
@@ -417,6 +476,9 @@ class BrainNetworkDataset(Dataset):
         """
         files_to_load = [os.path.join(data_path, file_to_load) for file_to_load in os.listdir(data_path) if
                          file_to_load.endswith(".pickle")]
+        # print("Inside normalise_dataset()")
+        # print("files_to_load")
+        # print(files_to_load)
         # TODO: add safeguard for when split percentage is 0. or 1.
         self.normalise_nodes_(files_to_load)
         self.normalise_edges_(files_to_load)
