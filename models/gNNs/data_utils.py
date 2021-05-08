@@ -79,11 +79,12 @@ class BrainNetworkDataset(Dataset):
         val_indices = None
         test_indices = None
 
-        # print("Inside generate_dataset()")
+        print("Inside generate_dataset()")
         if index_split_pickle_fp is None:
             print("index_split_pickle_fp is None")
             # Find files in Imperial Folder & Corresponding targets
             files_to_load, targets = self.search_for_files_and_targets(files_path, meta_data_filepath)
+
             # print("len(files_to_load)")
             # print(len(files_to_load))
             # print("len(targets)")
@@ -178,6 +179,10 @@ class BrainNetworkDataset(Dataset):
         # TODO: save guard for when training_split is 0. or 1. otherwise we'll get an error
         # print("tr_Results")
         # print(tr_results)
+        # print("val_results")
+        # print(val_results)
+        # print("test_Results")
+        # print(te_results)
         # print("train_save_path")
         # print(train_save_path)
         self.normalise_dataset(train_save_path)
@@ -244,11 +249,20 @@ class BrainNetworkDataset(Dataset):
                     features.append(mesh.get_array(name=name, preference="point"))
 
         segmentation = list()
+        # print("mesh array names")
+        # print(mesh.array_names)
         if 'segmentation' in mesh.array_names:
             segmentation.append(mesh.get_array(name='segmentation', preference="point"))
 
+        # print("features")
+        # print(features)
+        # print("segmentation")
+        # print(segmentation)
         features = torch.tensor(np.column_stack(features)).float()
-        segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
+        if len(segmentation) > 0:
+            segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
+        else:
+            segmentation = torch.empty(1000, dtype=torch.long)
         return features, segmentation
 
     @staticmethod
@@ -264,7 +278,15 @@ class BrainNetworkDataset(Dataset):
         train_size = round(len(samples) * train_val_test_split[0])
         val_size = round(len(samples) * train_val_test_split[1])
         test_size = round(len(samples) * train_val_test_split[2])
-        if (train_size + val_size + test_size) != len(samples):
+        # print("len(samples)")
+        # print(len(samples))
+        # print("train_size")
+        # print(train_size)
+        # print("val_size")
+        # print(val_size)
+        # print("test_size")
+        # print(test_size)
+        if ((train_size + val_size + test_size) != len(samples)) and ((train_size + val_size + test_size + 1) != len(samples)):
             raise Exception("implementation error")
 
         available_indices = [i for i in range(len(samples))]
