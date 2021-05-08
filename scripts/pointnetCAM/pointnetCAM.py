@@ -161,6 +161,9 @@ class AdversarialPointCloud():
             # 1. Get predictions and loss
             data = data.to(self.device)
 
+            print("data.pos shape")
+            print(data.pos.shape)
+
             totNumPoints = data.pos.size(0)
             # with torch.no_grad():
             out, feature_vector = model(data)
@@ -449,7 +452,7 @@ if __name__ == "__main__":
     # number_of_points = 10000
 
     lr = 0.001
-    batch_size = 2
+    batch_size = 1
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
@@ -514,4 +517,5 @@ if __name__ == "__main__":
     # PATH = PATH_TO_ROOT + '/runs/regression/Pointcloud_Grad_Cam/models/model_best.pt'
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
-    adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
+    # adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
+    adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+average")
