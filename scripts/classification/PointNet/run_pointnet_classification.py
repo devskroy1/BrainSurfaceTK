@@ -36,7 +36,7 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "5k"
     data_type = 'white'
     hemisphere = 'both'
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.05
-    batch_size = 2
+    batch_size = 32
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
