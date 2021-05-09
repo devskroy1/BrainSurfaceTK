@@ -244,10 +244,24 @@ class BrainNetworkDataset(Dataset):
         # print("Inside get_node_features()")
         # print("mesh.array_names")
         # print(mesh.array_names)
+
         if not self.featureless:
             for name in mesh.array_names:
-                if name in self.features:
-                    features.append(mesh.get_array(name=name, preference="point"))
+                # print("name")
+                # print(name)
+                if name != "#1":
+                    # print("name")
+                    # print(name)
+                    split_names = name.split("R_")
+                    if len(split_names) == 1:
+                        split_names = name.split("L_")
+                    split_name = split_names[1]
+                    # print("split_name")
+                    # print(split_name)
+                    # print("self.features")
+                    # print(self.features)
+                    if split_name in self.features:
+                        features.append(mesh.get_array(name=name, preference="point"))
 
         segmentation = list()
         # print("mesh array names")

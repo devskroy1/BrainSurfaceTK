@@ -43,24 +43,41 @@ def str_to_bool(x):
     else:
         raise ValueError("Expected True or False for featureless.")
 
+#For native surface vtks
+# def str_to_features(x):
+#     if x.lower() == "all".lower():
+#         return ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi')
+#     elif x.lower() == "some".lower():
+#         return ('corrected_thickness', 'curvature', 'sulcal_depth')
+#     elif x.lower() == "None".lower():
+#         return None
 
+#For aligned surface vtks
 def str_to_features(x):
     if x.lower() == "all".lower():
         return ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi')
     elif x.lower() == "some".lower():
-        return ('corrected_thickness', 'curvature', 'sulcal_depth')
+        return ('corrThickness', 'Curvature', 'Sulc')
     elif x.lower() == "None".lower():
         return None
 
+#For native surface vtks
+# def features_to_str(x):
+#     if x == ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi'):
+#         return "all"
+#     elif x == ('corrected_thickness', 'curvature', 'sulcal_depth'):
+#         return "some"
+#     elif x == None:
+#         return "None"
 
+#For aligned surface vtks
 def features_to_str(x):
     if x == ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi'):
         return "all"
-    elif x == ('corrected_thickness', 'curvature', 'sulcal_depth'):
+    elif x == ('corrThickness', 'Curvature', 'Sulc'):
         return "some"
     elif x == None:
         return "None"
-
 
 def get_args():
     import argparse
@@ -76,7 +93,6 @@ def get_args():
     parser.add_argument("--pickle_split_filepath", help="split file", type=str, default=None)
                         # default="/vol/bitbucket/cnw119/neodeepbrain/models/gNNs/names_06152020_noCrashSubs.pk")
     parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
-    # parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
     parser.add_argument("--dl_max_workers", help="max_workers for dataloader", type=int, default=4)
     parser.add_argument("--save_path", help="where to store the dataset files", type=str, default="../tmp")
 
@@ -392,8 +408,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             # print("About to evaluate on new batch of subject graphs")
             # print("iter")
             # print(iter)
-            print("bg")
-            print(bg)
+            # print("bg")
+            # print(bg)
             # bg stands for batch graph
             bg = bg.to(device)
             # get node feature
@@ -404,8 +420,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             bg_node_features = bg.ndata["features"].to(device)
 
             #total_num_nodes = bg_node_features.size(0)
-            if (epoch == 1) and not val:
-            # if (epoch == args.max_epochs - 1) and not val:
+            #if (epoch == 1) and not val:
+            if (epoch == args.max_epochs - 1) and not val:
                 first_graph_node_features = first_graph.ndata["features"].to(device)
                 num_nodes_first_graph = first_graph_node_features.size(0)
 
@@ -444,8 +460,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                 # print(i)
             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
 
-            if (epoch == 1) and not val:
-            # if (epoch == args.max_epochs - 1) and not val:
+            #if (epoch == 1) and not val:
+            if (epoch == args.max_epochs - 1) and not val:
                 for g in range(len(graphs)):
                     graph = graphs[g]
                     bg_node_features = graph.ndata["features"].to(device)
@@ -502,8 +518,8 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             total_size += len(batch_labels)
             break
 
-        if (epoch == 1) and not val:
-        # if (epoch == args.max_epochs - 1) and not val:
+        #if (epoch == 1) and not val:
+        if (epoch == args.max_epochs - 1) and not val:
 
             # print("sum_topk_indices")
             # print(sum_topk_indices)
@@ -611,7 +627,7 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Create model
     print("Creating Model")
-    model = BasicGCNRegressor(3 + len(args.features), 64, 1, device)  # 5 features in a node, 256 in the hidden, 1 output (age)
+    model = BasicGCNRegressor(3 + len(args.features), 256, 1, device)  # 5 features in a node, 256 in the hidden, 1 output (age)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.T_max, eta_min=args.eta_min)

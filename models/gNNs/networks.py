@@ -21,9 +21,12 @@ class BasicGCNRegressor(nn.Module):
 
     def forward(self, graph, features, is_training):
         # Perform graph convolution and activation function.
+
+        # print("Inside GCNRegressor forward()")
         # print("graph")
         # print(graph)
-        # print("Inside GCNRegressor forward()")
+        # print("Features shape")
+        # print(features.shape)
         # total_num_nodes = features.size(0)
         # print("total_num_nodes")
         # print(total_num_nodes)
@@ -33,6 +36,8 @@ class BasicGCNRegressor(nn.Module):
         # print(num_nodes_per_graph)
 
         hidden = self.conv1(graph, features)
+        # print("hidden shape")
+        # print(hidden.shape)
         hidden = self.conv2(graph, hidden)
 
         # print("conv2 hidden shape")
