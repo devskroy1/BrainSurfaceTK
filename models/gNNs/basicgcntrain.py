@@ -75,7 +75,8 @@ def get_args():
                         # default="/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
     parser.add_argument("--pickle_split_filepath", help="split file", type=str, default=None)
                         # default="/vol/bitbucket/cnw119/neodeepbrain/models/gNNs/names_06152020_noCrashSubs.pk")
-    parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
+    parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=4)
+    # parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
     parser.add_argument("--dl_max_workers", help="max_workers for dataloader", type=int, default=4)
     parser.add_argument("--save_path", help="where to store the dataset files", type=str, default="../tmp")
 
