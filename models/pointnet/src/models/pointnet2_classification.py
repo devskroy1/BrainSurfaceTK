@@ -143,13 +143,18 @@ class Net(torch.nn.Module):
         # print(x.shape)
 
         x = self.lse1(coords, x, knn_out_batch)
-        x = self.pool1(x)
-
-        x = self.lse2(coords, x, knn_out_batch)
-        x = self.pool2(x)
-
-        x = self.lrelu(self.mlp2(x) + self.shortcut(features))
-
+        # x = self.pool1(x)
+        #
+        # x = self.lse2(coords, x, knn_out_batch)
+        # x = self.pool2(x)
+        #
+        # x = self.lrelu(self.mlp2(x) + self.shortcut(features))
+        print("x.shape after lse1")
+        print(x.shape)
+        print("Batch size")
+        print(B)
+        print("num_points")
+        print(N)
         d_out = x.size(1)
         coords = coords.reshape(B*N, 3)
         x = x.reshape(B*N, d_out)
