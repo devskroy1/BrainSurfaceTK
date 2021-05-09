@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # 1. Model Parameters
     ################################################
     lr = 0.01
-    batch_size = 32
+    batch_size = 4
     gamma = 0.9875
     scheduler_step_size = 2
     target_class = 'gender'
