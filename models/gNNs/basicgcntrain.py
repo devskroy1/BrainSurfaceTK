@@ -75,7 +75,7 @@ def get_args():
                         # default="/vol/biomedic2/aa16914/shared/MScAI_brain_surface/data/meta_data.tsv")
     parser.add_argument("--pickle_split_filepath", help="split file", type=str, default=None)
                         # default="/vol/bitbucket/cnw119/neodeepbrain/models/gNNs/names_06152020_noCrashSubs.pk")
-    parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=2)
+    parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
     # parser.add_argument("--ds_max_workers", help="max_workers for building dataset", type=int, default=8)
     parser.add_argument("--dl_max_workers", help="max_workers for dataloader", type=int, default=4)
     parser.add_argument("--save_path", help="where to store the dataset files", type=str, default="../tmp")
@@ -290,6 +290,10 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
 #             # print("About to evaluate on new batch of subject graphs")
 #             # print("iter")
 #             # print(iter)
+#             # print("batch_labels")
+#             # print(batch_labels)
+#             # print("batch_labels shape")
+#             # print(batch_labels.shape)
 #             # bg stands for batch graph
 #             if iter > 5:
 #                 break
@@ -383,10 +387,13 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             torch.cuda.empty_cache()
             # print("Eval subjects")
             # print(subjects)
-
+            # print("batch labels")
+            # print(batch_labels)
             # print("About to evaluate on new batch of subject graphs")
             # print("iter")
             # print(iter)
+            print("bg")
+            print(bg)
             # bg stands for batch graph
             bg = bg.to(device)
             # get node feature

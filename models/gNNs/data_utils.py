@@ -62,6 +62,7 @@ class BrainNetworkDataset(Dataset):
             self.generate_dataset(files_path, meta_data_filepath, save_path, index_split_pickle_fp)
 
         # Now collect all required filepaths containing data which will be fed to the GNN
+
         self.sample_filepaths, self.targets_mu, self.targets_std = self.get_sample_file_paths(save_path, dataset)
 
         print("Initialisation complete")
@@ -79,9 +80,9 @@ class BrainNetworkDataset(Dataset):
         val_indices = None
         test_indices = None
 
-        print("Inside generate_dataset()")
+        # print("Inside generate_dataset()")
         if index_split_pickle_fp is None:
-            print("index_split_pickle_fp is None")
+            # print("index_split_pickle_fp is None")
             # Find files in Imperial Folder & Corresponding targets
             files_to_load, targets = self.search_for_files_and_targets(files_path, meta_data_filepath)
 
@@ -341,6 +342,8 @@ class BrainNetworkDataset(Dataset):
             # print(len(records))
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
+                # print("records.scan_age.values")
+                # print(records.scan_age.values)
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
         return files_to_load, targets
 
@@ -480,6 +483,9 @@ class BrainNetworkDataset(Dataset):
         self.normalise_nodes_(files_to_load)
         self.normalise_edges_(files_to_load)
         targets_mu, targets_std = self.normalise_targets_(files_to_load)
+        # print("Inside normalise_dataset()")
+        # print("targets_Std")
+        # print(targets_std)
         self._save_data_with_pickle(os.path.join(data_path, "mu_std.pickle"), (targets_mu, targets_std))
 
     def normalise_nodes_(self, files_to_load):

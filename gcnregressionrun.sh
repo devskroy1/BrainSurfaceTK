@@ -10,6 +10,7 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_fsavg32k/reduced_50/vtk/white False some --batch_size 64 --save_path ../tmp_save --results ./results
+#python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_fsavg32k/reduced_50/vtk/white False some --batch_size 64 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/merged/reducedto_10k/pial/vtk False some --batch_size 2 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_fsavg32k/reduced_90/vtk/white False some --batch_size 64 --save_path ../tmp_save --results ./results
+python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfaces False some --batch_size 64 --save_path ../tmp_save --results ./results
