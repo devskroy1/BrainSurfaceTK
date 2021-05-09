@@ -262,7 +262,7 @@ class BrainNetworkDataset(Dataset):
         if len(segmentation) > 0:
             segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
         else:
-            segmentation = torch.empty(1000, dtype=torch.long)
+            segmentation = torch.empty(features.shape, dtype=torch.long)
         return features, segmentation
 
     @staticmethod
