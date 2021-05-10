@@ -14,10 +14,20 @@ class SAModule(torch.nn.Module):
         self.conv = PointConv(nn)
 
     def forward(self, x, pos, batch):
+        print("x shape")
+        print(x.shape)
+        print("pos shape")
+        print(pos.shape)
+        print("batch shape")
+        print(batch.shape)
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
+        print("edge_index shape")
+        print(edge_index.shape)
+        print("pos[idx] shape")
+        print(pos[idx].shape)
         x = self.conv(x, (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
@@ -157,7 +167,7 @@ class Net(torch.nn.Module):
         print(N)
         d_out = x.size(1)
         coords = coords.reshape(B*N, 3)
-        x = x.reshape(B*N, d_out)
+        x = x.reshape(B*N*d_out, d_out)
 
         batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
         for b in range(1, B):
