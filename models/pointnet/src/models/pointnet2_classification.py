@@ -79,8 +79,10 @@ class Net(torch.nn.Module):
         # print(sa1_pos.shape)
         # print("sa1_batch.shape")
         # print(sa1_batch.shape)
-        sa1a_out = self.sa1a_module(*sa1_out)
-        sa1a_x, sa1a_pos, sa1a_batch = sa1a_out
+        
+        #sa1a_out = self.sa1a_module(*sa1_out)
+        #sa1a_x, sa1a_pos, sa1a_batch = sa1a_out
+        
         # print("sa1a_x.shape")
         # print(sa1a_x.shape)
         # print("sa1a_pos.shape")
