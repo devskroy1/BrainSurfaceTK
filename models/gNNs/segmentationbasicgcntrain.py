@@ -55,6 +55,7 @@ if __name__ == "__main__":
     lr = 0.001
     T_max = 10
     eta_min = 1e-6
+    local_features = ('corrected_thickness', 'curvature', 'sulcal_depth')
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
     batch_size = 2
@@ -63,10 +64,10 @@ if __name__ == "__main__":
     print("Batch size: ")
     print(batch_size)
     train_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
-                                        dataset="train", train_split_per=train_test_split)
+                                        dataset="train", train_split_per=train_test_split, features=local_features)
 
     test_dataset = BrainNetworkDataset(load_path, meta_data_file_path, save_path=save_path, max_workers=8,
-                                       dataset="test")
+                                       dataset="test", features=local_features)
 
     print("Building dataloaders")
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate, num_workers=8)

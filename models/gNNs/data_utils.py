@@ -44,7 +44,7 @@ class BrainNetworkDataset(Dataset):
         self.max_workers = max_workers
 
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 
@@ -276,12 +276,18 @@ class BrainNetworkDataset(Dataset):
         :param meta_data_file_path:
         :return:
         """
+        # print("meta_data_file_path")
+        # print(meta_data_file_path)
+        # print("load_path")
+        # print(load_path)
         targets = list()
         df = pd.read_csv(meta_data_file_path, sep='\t', header=0)
         potential_files = [f for f in os.listdir(load_path)]
         files_to_load = list()
         for fn in potential_files:
-            participant_id, session_id = fn.split("_")[:2]
+            tmp = fn.replace("sub-", "").replace("ses-", "").split("_")[:2]
+            participant_id = tmp[0]
+            session_id = tmp[1]
             records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
@@ -406,7 +412,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
