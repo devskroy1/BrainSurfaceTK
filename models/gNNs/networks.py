@@ -17,8 +17,8 @@ class BasicGCNRegressor(nn.Module):
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
@@ -32,10 +32,10 @@ class BasicGCNRegressor(nn.Module):
         hidden = self.conv3(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv4(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv5(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv6(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv5(graph, hidden)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv6(graph, hidden)
         with graph.local_scope():
             graph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.

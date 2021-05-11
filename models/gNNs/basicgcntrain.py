@@ -144,10 +144,10 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
         prediction = model(bg, bg_node_features)
-        print("prediction shape")
-        print(prediction.shape)
-        print("batch_labels shape")
-        print(batch_labels.shape)
+        # print("prediction shape")
+        # print(prediction.shape)
+        # print("batch_labels shape")
+        # print(batch_labels.shape)
         loss = loss_function(prediction, batch_labels)
         loss.backward()
         optimizer.step()
@@ -291,8 +291,8 @@ if __name__ == "__main__":
 
     # Create model
     print("Creating Model")
-    # model = BasicGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
-    model = LearnablePoolingGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
+    model = BasicGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
+    #model = LearnablePoolingGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.T_max, eta_min=args.eta_min)
