@@ -233,6 +233,7 @@ class BrainNetworkDataset(Dataset):
 
         return 1
 
+    #For native surfaces
     def get_node_features(self, mesh):
         """
         Extract the point features from the mesh
@@ -241,44 +242,66 @@ class BrainNetworkDataset(Dataset):
         """
         features = [mesh.points]
 
-        # print("Inside get_node_features()")
-        # print("mesh.array_names")
-        # print(mesh.array_names)
-
         if not self.featureless:
             for name in mesh.array_names:
-                # print("name")
-                # print(name)
-                if name != "#1":
-                    # print("name")
-                    # print(name)
-                    split_names = name.split("R_")
-                    if len(split_names) == 1:
-                        split_names = name.split("L_")
-                    split_name = split_names[1]
-                    # print("split_name")
-                    # print(split_name)
-                    # print("self.features")
-                    # print(self.features)
-                    if split_name in self.features:
-                        features.append(mesh.get_array(name=name, preference="point"))
+                if name in self.features:
+                    features.append(mesh.get_array(name=name, preference="point"))
 
         segmentation = list()
-        # print("mesh array names")
-        # print(mesh.array_names)
         if 'segmentation' in mesh.array_names:
             segmentation.append(mesh.get_array(name='segmentation', preference="point"))
 
-        # print("features")
-        # print(features)
-        # print("segmentation")
-        # print(segmentation)
         features = torch.tensor(np.column_stack(features)).float()
-        if len(segmentation) > 0:
-            segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
-        else:
-            segmentation = torch.empty(features.shape, dtype=torch.long)
+        segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
         return features, segmentation
+
+    #For aligned surfaces
+    # def get_node_features(self, mesh):
+    #     """
+    #     Extract the point features from the mesh
+    #     :param mesh: pv.PolyData object
+    #     :return: torch tensor float containing features
+    #     """
+    #     features = [mesh.points]
+    #
+    #     # print("Inside get_node_features()")
+    #     # print("mesh.array_names")
+    #     # print(mesh.array_names)
+    #
+    #     if not self.featureless:
+    #         for name in mesh.array_names:
+    #             # print("name")
+    #             # print(name)
+    #             if name != "#1":
+    #                 # print("name")
+    #                 # print(name)
+    #                 split_names = name.split("R_")
+    #                 if len(split_names) == 1:
+    #                     split_names = name.split("L_")
+    #                 split_name = split_names[1]
+    #                 # print("split_name")
+    #                 # print(split_name)
+    #                 # print("self.features")
+    #                 # print(self.features)
+    #                 if split_name in self.features:
+    #                     features.append(mesh.get_array(name=name, preference="point"))
+    #
+    #     segmentation = list()
+    #     # print("mesh array names")
+    #     # print(mesh.array_names)
+    #     if 'segmentation' in mesh.array_names:
+    #         segmentation.append(mesh.get_array(name='segmentation', preference="point"))
+    #
+    #     # print("features")
+    #     # print(features)
+    #     # print("segmentation")
+    #     # print(segmentation)
+    #     features = torch.tensor(np.column_stack(features)).float()
+    #     if len(segmentation) > 0:
+    #         segmentation = torch.from_numpy(np.column_stack(segmentation)).long()
+    #     else:
+    #         segmentation = torch.empty(features.shape, dtype=torch.long)
+    #     return features, segmentation
 
     @staticmethod
     def split_dataset(samples, targets, train_val_test_split: tuple = (0.75, 0.1, 0.15)):
