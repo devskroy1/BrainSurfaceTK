@@ -15,7 +15,7 @@ uptime
 #python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_fsavg32k/reduced_90/vtk/white False some --batch_size 64 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesWhite False some --batch_size 64 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesPial False some --batch_size 64 --save_path ../tmp_save --results ./results
-python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesWhiteLeft False some --batch_size 64 --save_path ../tmp_save --results ./results
+#python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesWhiteLeft False some --batch_size 64 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesWhiteRight False some --batch_size 64 --save_path ../tmp_save --results ./results
 #python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesPialLeft False some --batch_size 64 --save_path ../tmp_save --results ./results
-#python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesPialRight False some --batch_size 64 --save_path ../tmp_save --results ./results
+python -u models/gNNs/basicgcntrain.py /vol/bitbucket/sr4617/ForkedBrainSurfaceTK/alignedSurfacesPialRight False some --batch_size 64 --save_path ../tmp_save --results ./results
