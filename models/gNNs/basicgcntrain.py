@@ -291,7 +291,7 @@ if __name__ == "__main__":
 
     # Create model
     print("Creating Model")
-    model = BasicGCNRegressor(3 + len(args.features), 512, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
+    model = BasicGCNRegressor(3 + len(args.features), 1024, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
     #model = LearnablePoolingGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
