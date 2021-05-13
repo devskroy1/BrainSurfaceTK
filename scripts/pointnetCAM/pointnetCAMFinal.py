@@ -100,7 +100,7 @@ class AdversarialPointCloud():
         # start_time = time.time()
         # cpr.startProfiling()
 
-        pcTempResult = pointclouds_pl.copy()
+        # pcTempResult = pointclouds_pl.copy()
         delCount = []
         vipPcPointsArr = []
         weightArray = []
@@ -181,9 +181,9 @@ class AdversarialPointCloud():
                     accuracy = correct_nodes / total_nodes
                     accuracies[n] = accuracy
                     #correct = np.sum(eval_prediction == labels_pl)
-                    total_correct += correct
-                    total_seen += 1
-                    loss_sum += loss * batch_size
+                    # total_correct += correct
+                    # total_seen += 1
+                    # loss_sum += loss * batch_size
 
                 accuracy = torch.mean(accuracies)
                 print("GROUND TRUTH: ", data.y[:, 0].long())
