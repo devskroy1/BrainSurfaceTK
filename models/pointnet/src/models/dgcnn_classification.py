@@ -79,8 +79,9 @@ class MLP(nn.Module):
         return self.layer(x)
 
 class DGCNN(nn.Module):
-    def __init__(self):
+    def __init__(self, batch_size):
         super(DGCNN, self).__init__()
+        self.batch_size = batch_size
         self.k = 20
         self.edge_conv_dims = [[64, 64, 64], [64, 64, 64], [128, 128], [256, 256]]
         self.edge_convs = self.make_edge_conv_layers_()
@@ -114,29 +115,43 @@ class DGCNN(nn.Module):
         self.dp2 = nn.Dropout(p=0.5)
         self.linear3 = nn.Linear(256, 2)
 
-    def forward(self, x):
-        batch_size = x.size(0)
-        x = get_graph_feature(x, k=self.k)
+    #def forward(self, x):
+    def forward(self, data):
+        # DynamicEdgeConv
+        dynEdgeConv1 = list(self.edge_convs.children())[0]
+        dynEdgeConv2 = list(self.edge_convs.children())[1]
+        dynEdgeConv3 = list(self.edge_convs.children())[2]
+        dynEdgeConv4 = list(self.edge_convs.children())[3]
+
+        #batch_size = x.size(0)
+        #x = get_graph_feature(x, k=self.k)
+
+        x = dynEdgeConv1(data.x)
         x = self.conv1(x)
-        x1 = x.max(dim=-1, keepdim=False)[0]
+        x1 = dynEdgeConv1(x)
+        #x1 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x1, k=self.k)
-        x = self.conv2(x)
-        x2 = x.max(dim=-1, keepdim=False)[0]
+        #x = get_graph_feature(x1, k=self.k)
 
-        x = get_graph_feature(x2, k=self.k)
-        x = self.conv3(x)
-        x3 = x.max(dim=-1, keepdim=False)[0]
+        x = self.conv2(x1)
+        x2 = dynEdgeConv2(x)
+        #x2 = x.max(dim=-1, keepdim=False)[0]
 
-        x = get_graph_feature(x3, k=self.k)
-        x = self.conv4(x)
-        x4 = x.max(dim=-1, keepdim=False)[0]
+        #x = get_graph_feature(x2, k=self.k)
+        x = self.conv3(x2)
+        x3 = dynEdgeConv3(x)
+        #x3 = x.max(dim=-1, keepdim=False)[0]
+
+        #x = get_graph_feature(x3, k=self.k)
+        x = self.conv4(x3)
+        x4 = dynEdgeConv4(x)
+        #x4 = x.max(dim=-1, keepdim=False)[0]
 
         x = torch.cat((x1, x2, x3, x4), dim=1)
 
         x = self.conv5(x)
-        x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
-        x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
+        x1 = F.adaptive_max_pool1d(x, 1).view(self.batch_size, -1)
+        x2 = F.adaptive_avg_pool1d(x, 1).view(self.batch_size, -1)
         x = torch.cat((x1, x2), 1)
 
         x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
@@ -145,51 +160,6 @@ class DGCNN(nn.Module):
         x = self.dp2(x)
         x = self.linear3(x)
         return x
-
-
-        # # DynamicEdgeConv
-        # dynEdgeConv1 = list(self.edge_convs.children())[0]
-        # dynEdgeConv2 = list(self.edge_convs.children())[1]
-        # dynEdgeConv3 = list(self.edge_convs.children())[2]
-        # dynEdgeConv4 = list(self.edge_convs.children())[3]
-        #
-        # batch_size = x.size(0)
-        # #x = get_graph_feature(x, k=self.k)
-        #
-        # x = dynEdgeConv1(x)
-        # x = self.conv1(x)
-        # x1 = dynEdgeConv1(x)
-        # #x1 = x.max(dim=-1, keepdim=False)[0]
-        #
-        # #x = get_graph_feature(x1, k=self.k)
-        #
-        # x = self.conv2(x1)
-        # x2 = dynEdgeConv2(x)
-        # #x2 = x.max(dim=-1, keepdim=False)[0]
-        #
-        # #x = get_graph_feature(x2, k=self.k)
-        # x = self.conv3(x2)
-        # x3 = dynEdgeConv3(x)
-        # #x3 = x.max(dim=-1, keepdim=False)[0]
-        #
-        # #x = get_graph_feature(x3, k=self.k)
-        # x = self.conv4(x3)
-        # x4 = dynEdgeConv4(x)
-        # #x4 = x.max(dim=-1, keepdim=False)[0]
-        #
-        # x = torch.cat((x1, x2, x3, x4), dim=1)
-        #
-        # x = self.conv5(x)
-        # x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
-        # x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
-        # x = torch.cat((x1, x2), 1)
-        #
-        # x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
-        # x = self.dp1(x)
-        # x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
-        # x = self.dp2(x)
-        # x = self.linear3(x)
-        # return x
 
     def make_edge_conv_layers_(self):
         """Define structure of the EdgeConv Blocks
