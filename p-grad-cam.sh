@@ -10,4 +10,5 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-python3 ./scripts/pointnetCAM/pointnetCAM.py
+python3 ./scripts/pointnetCAM/pointnetCAMFinal.py
+#python3 ./scripts/pointnetCAM/pointnetCAM.py
