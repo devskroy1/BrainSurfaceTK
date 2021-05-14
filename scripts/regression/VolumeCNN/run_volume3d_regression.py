@@ -78,8 +78,9 @@ if __name__ == '__main__':
     USE_GPU = True
     dtype = torch.float32
     num_of_parameters_multiplier = 10
-    num_epochs = 3
-    lr = 0.006882801723742766
+    num_epochs = 200
+    #lr = 0.006882801723742766
+    lr = 0.001
     gamma = 0.97958263796472
     batch_size = 32
     dropout_p = 0.5
