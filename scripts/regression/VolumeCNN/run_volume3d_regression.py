@@ -10,7 +10,6 @@ from models.volume3d.main.train_test import train_test, save_to_log_test
 from torch.utils.tensorboard import SummaryWriter
 from models.volume3d.main.main import create_subject_folder
 
-
 cuda_dev = '0'  # GPU device 0 (can be changed if multiple GPUs are available)
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:" + cuda_dev if use_cuda else "cpu")

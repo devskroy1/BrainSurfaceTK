@@ -16,6 +16,7 @@ from torch.utils.data.dataloader import DataLoader
 
 from ..utils.utils import plot_preds
 from ..utils.models import ImageSegmentationDataset, Part3, resample_image, PrintTensor
+from ..utils.volumeCnnGCN import VolumeCNN_GCNRegressor
 import os.path as osp
 PATH_TO_VOLUME3D = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
@@ -169,7 +170,10 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     val_loader_volcnn = DataLoader(dataset_volumecnn_val, batch_size=batch_size)
 
     # 6. Define a model
-    model = Part3(feats, dropout_p).to(device=device)
+    #model = Part3(feats, dropout_p).to(device=device)
+    in_dim = 6
+    hidden_dim = 256
+    model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim)
 
     # 7. Print parameters
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -188,12 +192,18 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
             # print("batch_data")
             # print(batch_data)
-            print("subjects")
-            print(subjects)
-            batch_labels = batch_labels.to(device=device)
-            batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
-            batch_preds = model(batch_data)
-            loss = loss_function(batch_preds, batch_labels)
+            bg = bg.to(device)
+            bg_node_features = bg.ndata["features"].to(device)
+            batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+            batch_labels_gcn = batch_labels_gcn.to(device)
+            prediction = model(batch_data, bg, bg_node_features)
+            loss = loss_function(prediction, batch_labels_gcn)
+
+            # batch_labels = batch_labels_volcnn.to(device=device)
+            # batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+            # batch_preds = model(batch_data)
+            # loss = loss_function(batch_preds, batch_labels)
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -214,15 +224,29 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             pred_ages = []
             actual_ages = []
             with torch.no_grad():
-                for batch_data, batch_labels in val_loader:
-                    batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
-                    batch_labels = batch_labels.to(device=device)
-                    batch_preds = model(batch_data)
+                #for batch_data, batch_labels in val_loader:
+                for iter, (subjects, bg, batch_labels_gcn) in enumerate(val_dl_gcn):
+                    batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects,
+                                                                                       dataset_volumecnn_val)
 
-                    pred_ages.append([batch_preds[i].item() for i in range(len(batch_preds))])
-                    actual_ages.append([batch_labels[i].item() for i in range(len(batch_labels))])
+                    # batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+                    # batch_labels = batch_labels_volcnn.to(device=device)
+                    # batch_preds = model(batch_data)
+                    #
+                    # pred_ages.append([batch_preds[i].item() for i in range(len(batch_preds))])
+                    # actual_ages.append([batch_labels[i].item() for i in range(len(batch_labels))])
+                    #
+                    # loss = loss_function(batch_preds, batch_labels)
+                    # val_loss.append(loss.item())
 
-                    loss = loss_function(batch_preds, batch_labels)
+                    bg = bg.to(device)
+                    bg_node_features = bg.ndata["features"].to(device)
+                    batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+                    batch_labels_gcn = batch_labels_gcn.to(device)
+                    prediction = model(batch_data, bg, bg_node_features)
+                    pred_ages.append([prediction[i].item() for i in range(len(prediction))])
+                    actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
+                    loss = loss_function(prediction, batch_labels_gcn)
                     val_loss.append(loss.item())
 
                 mean_val_error5 = np.mean(val_loss)
@@ -242,15 +266,31 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     pred_ages = []
     actual_ages = []
     with torch.no_grad():
-        for batch_data, batch_labels in val_loader:
-            batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
-            batch_labels = batch_labels.to(device=device)
-            batch_preds = model(batch_data)
+        #for batch_data, batch_labels in val_loader:
+        for iter, (subjects, bg, batch_labels_gcn) in enumerate(val_dl_gcn):
+            batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_val)
 
-            pred_ages.append([batch_preds[i].item() for i in range(len(batch_preds))])
-            actual_ages.append([batch_labels[i].item() for i in range(len(batch_labels))])
+            # batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+            # batch_labels = batch_labels_volcnn.to(device=device)
+            # # batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
+            # # batch_labels = batch_labels.to(device=device)
+            #
+            # batch_preds = model(batch_data)
+            #
+            # pred_ages.append([batch_preds[i].item() for i in range(len(batch_preds))])
+            # actual_ages.append([batch_labels[i].item() for i in range(len(batch_labels))])
+            #
+            # loss = loss_function(batch_preds, batch_labels)
+            # i_fold_val_scores.append(loss.item())
 
-            loss = loss_function(batch_preds, batch_labels)
+            bg = bg.to(device)
+            bg_node_features = bg.ndata["features"].to(device)
+            batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+            batch_labels_gcn = batch_labels_gcn.to(device)
+            prediction = model(batch_data, bg, bg_node_features)
+            pred_ages.append([prediction[i].item() for i in range(len(prediction))])
+            actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
+            loss = loss_function(prediction, batch_labels_gcn)
             i_fold_val_scores.append(loss.item())
 
     plot_preds(pred_ages, actual_ages, writer, epoch, test=False)

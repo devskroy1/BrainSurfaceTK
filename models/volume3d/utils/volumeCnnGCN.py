@@ -25,13 +25,18 @@ class BasicGCNRegressor(nn.Module):
 
         return self.predict_layer(hg)
 
-class Part3(Module):
+class VolumeCNN_GCNRegressor(Module):
     """
     The main CNN
     """
 
-    def __init__(self, feats, dropout_p):
-        super(Part3, self).__init__()
+    def __init__(self, feats, dropout_p, in_dim, hidden_dim):
+        super(VolumeCNN_GCNRegressor, self).__init__()
+        #GCN Regressor
+        self.graph_conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
+        self.graph_conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+
+        #VolumeCNN
         self.model = Sequential(
             # 50, 60, 60
             Conv3d(1, feats, padding=0, kernel_size=3, stride=1, bias=True),
@@ -75,8 +80,19 @@ class Part3(Module):
             Dropout(p=dropout_p),
             #  1, 3, 3
             Flatten(start_dim=1), # Output: 1
-            Linear(2*2*2*2*feats*(1*3*3), 1),
+            #Linear(2*2*2*2*feats*(1*3*3), 1),
             )
 
-    def forward(self, x):
-        return self.model(x)
+        self.final_lin_layer = Linear(2*2*2*2*feats*(1*3*3), 1)
+
+
+    def forward(self, x, graph, features):
+
+        gcn_first_feat_map = self.graph_conv1(graph, features)
+        gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
+
+        vol_conv_feat_map = self.model(x)
+
+        concat_feat_map = torch.cat((gcn_final_feat_map, vol_conv_feat_map))
+        return self.final_lin_layer(concat_feat_map)
+        #return self.model(x)
