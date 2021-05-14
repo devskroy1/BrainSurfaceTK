@@ -20,17 +20,27 @@ def plot_preds(pred_ages, actual_ages, writer, epoch, test=False):
     :param test: boolean
     :return:
     '''
-
+    # print("Inside plot_preds()")
+    # print("pred_ages")
+    # print(pred_ages)
+    # print("actual_ages")
+    # print(actual_ages)
     mode = 'Validation'
     if test == True:
         mode = 'Test'
 
-    pred_ages = np.array(pred_ages).flatten()
-    actual_ages = np.array(actual_ages).flatten()
+    # pred_ages = np.array(pred_ages).flatten()
+    # actual_ages = np.array(actual_ages).flatten()
 
     pred_array = []
     age_array = []
+    # print("len(pred_ages)")
+    # print(len(pred_ages))
     for i in range(len(pred_ages)):
+        # print("i")
+        # print(i)
+        # print("pred_ages[i]")
+        # print(pred_ages[i])
         for j in range(len(pred_ages[i])):
             pred_array.append(pred_ages[i][j])
             age_array.append(actual_ages[i][j])

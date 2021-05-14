@@ -136,7 +136,9 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     train_epoch_error = 0.
     train_epoch_worst_diff = 0.
     train_total_size = 0
-    for iter, (_, bg, batch_labels) in enumerate(train_dl):
+    for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
+        print(subjects)
+
         optimizer.zero_grad()
 
         bg = bg.to(device)

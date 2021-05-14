@@ -161,7 +161,12 @@ def train_test(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_trai
     for epoch in range(num_epochs):
         model.train()
         epoch_loss = []
-        for batch_data, batch_labels in train_loader:
+        #for batch_data, batch_labels in train_loader:
+        for iter, (subjects, batch_data, batch_labels) in enumerate(train_loader):
+            # print("batch_data")
+            # print(batch_data)
+            print("subjects")
+            print(subjects)
             batch_labels = batch_labels.to(device=device)
             batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
             batch_preds = model(batch_data)
