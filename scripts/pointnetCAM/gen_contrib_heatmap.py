@@ -57,9 +57,9 @@ def get_midrange(inputArr):
 
     # locArr[locArr <= 0] = 0
     # locArr = locArr[locArr.nonzero()]
-    print("Inside get_midrange()")
-    print("locArr")
-    print(locArr)
+    # print("Inside get_midrange()")
+    # print("locArr")
+    # print(locArr)
     locArr = locArr[locArr > 0]
 
     if len(locArr) == 0:
@@ -129,15 +129,15 @@ def delete_random_points(inputheatMap, inputArr, numPoints):
     return locArr, [pointArr, weightArr]
 
 
-def delete_above_threshold(inputheatMap, inputArr, totNumPoints, mode):
-    # print("Inside delete_above_threshold()")
+def delete_above_threshold(inputheatMap, inputArr, mode):
+    print("Inside delete_above_threshold()")
     # print("inputheatMap shape")
     # print(inputheatMap.shape)
     # print("inputArr")
     # print(inputArr)
     locArr = copy.deepcopy(inputArr)
-    # print("locArr")
-    # print(locArr)
+    print("locArr pos")
+    print(locArr.pos)
     pointArr = []
     weightArr = []
     candArr = []
@@ -156,22 +156,23 @@ def delete_above_threshold(inputheatMap, inputArr, totNumPoints, mode):
     elif mode == "+midrange":
         threshold = get_midrange(inputheatMap)
 
-    # print("theshold")
-    # print(threshold)
+    print("theshold")
+    print(threshold)
     # print("locArr")
     # print(locArr)
+    totNumPoints = locArr.pos.size(0)
     for i in range(totNumPoints):
         allPointArr.append(inputArr.pos[i])
 
     for index, eachItem in enumerate(inputheatMap):
         # print("index")
         # print(index)
-        # print("eachItem")
-        # print(eachItem)
+        print("eachItem")
+        print(eachItem)
         # allPointArr.append(locArr.pos[index])
         allWeightArr.append(eachItem.item())
         if eachItem > threshold:
-            # print("eachItem > thresh")
+            print("eachItem > thresh")
             candArr.append(index)
             # pointArr.append(locArr[0][index])
             # print("locArr.pos[index]")
@@ -185,8 +186,8 @@ def delete_above_threshold(inputheatMap, inputArr, totNumPoints, mode):
     # print("locArr before np.delete")
     # print(locArr)
     locArr = np.delete(locArr.pos.detach().cpu().numpy(), candArr, axis=0)
-    # print("locArr after np.delete")
-    # print(locArr)
+    print("locArr after np.delete")
+    print(locArr)
     # print("Just before returning from delete_above_threshold()")
     # print("pointArr")
     # print(pointArr)

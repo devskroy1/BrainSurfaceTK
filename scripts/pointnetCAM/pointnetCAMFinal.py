@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import grad
 import gen_contrib_heatmap as gch
 from models.pointnet.src.utils import get_comment, get_data_path, data
+from batchObject import BatchObject
 
 # from models.pointnet.src.models.pointnet2_regression_v2 import Net
 from models.pointnet.src.models.pointnet2_classification import Net
@@ -38,8 +39,8 @@ class AdversarialPointCloud():
         # maxgradients = grad(outputs=class_activation_vector, inputs=feature_vec,
         #                     grad_outputs=torch.ones_like(class_activation_vector), allow_unused=True)[0]
 
-        # print("maxgradients")
-        # print(maxgradients)
+        print("maxgradients")
+        print(maxgradients)
         # print("feature_vec shape")
         # print(feature_vec.shape)
         # print("maxgradients")
@@ -58,6 +59,7 @@ class AdversarialPointCloud():
         #feature_vector = feature_vec.squeeze(dim=0).squeeze(dim=2) # Remove empty dimensions of the feature vector so we get [batch_size,1024]
 
         #multiply = tf.constant(feature_vector[1].get_shape().as_list())  # Feature vector matrix
+
         multiply = list(feature_vec[1].size())
         # print("list(feature_vec[1].size())")
         # print(multiply)
@@ -116,8 +118,20 @@ class AdversarialPointCloud():
             # 1. Get predictions and loss
             data = data.to(self.device)
 
-            pcTempResult = data
+            out, feature_vector = model(data)
+            # pred = out.max(dim=0)[1]
+            original_pred = out.max(dim=1)[1]
+            print("original_pred")
+            print(original_pred)
+
+            correct_nodes = original_pred.eq(data.y[:, 0].long()).sum().item()
+            #total_nodes = data.num_nodes
             totNumPoints = data.pos.size(0)
+            original_accuracy = correct_nodes / totNumPoints
+
+            pcTempResult = data
+            print("data")
+            print(data)
 
             # Multiply the class activation vector with a one hot vector to look only at the classes of interest.
             #class_activation_vector = tf.multiply(self.pred, tf.one_hot(indices=desiredClassLabel, depth=40))
@@ -126,23 +140,39 @@ class AdversarialPointCloud():
                 i += 1
                 print("ITERATION: ", i)
 
-                print("data.y[:, 0].long()")
-                print(data.y[:, 0].long())
+                # print("data.y[:, 0].long()")
+                # print(data.y[:, 0].long())
                 # Setup feed dict for current iteration
                 # feed_dict = {self.pointclouds_pl: pcTempResult,
                 #              self.labels_pl: labels_pl,
                 #              self.is_training_pl: self.is_training}
-
+                # pcTempResult = pcTempResult.to(self.device)
                 out, feature_vector = model(pcTempResult)
+                print("pcTempResult.pos")
+                print(pcTempResult.pos)
                 #pred = out.max(dim=0)[1]
                 pred = out.max(dim=1)[1]
+                print("pred")
+                print(pred)
+                correct_nodes = pred.eq(data.y[:, 0].long()).sum().item()
+                total_nodes = totNumPoints - sum(delCount)
+                accuracy = correct_nodes / total_nodes
+
                 # with torch.set_grad_enabled(True):
                 one_hot = F.one_hot(data.y[:, 0].float().clone().detach().requires_grad_(True).long(), -1)
 
                 class_activation_vector = torch.mul(out, one_hot)
-
+                print("feature_vector")
+                print(feature_vector)
+                print("feature_vector shape")
+                print(feature_vector.shape)
                 #maxgradients = self.getGradient(sess, poolingMode, class_activation_vector, feed_dict)
                 maxgradients = self.getGradient(poolingMode, class_activation_vector, feature_vector)
+                print("out")
+                print(out)
+                print("out shape")
+                print(out.shape)
+                #maxgradients = self.getGradient(poolingMode, class_activation_vector, out)
 
                 # ops = {'pred': self.pred,
                 #        'loss': self.classify_loss,
@@ -155,41 +185,41 @@ class AdversarialPointCloud():
                 total_seen = 0
                 loss_sum = 0
                 pcEvalTest = copy.deepcopy(pcTempResult)
-                accuracies = torch.empty(numTestRuns, device=self.device)
-                for n in range(numTestRuns):
-
-                    #TODO: Add this in later
-                    #pcEvalTest = provider.rotate_point_cloud_XYZ(pcEvalTest)
-
-                    # feed_dict2 = {self.pointclouds_pl: pcEvalTest,
-                    #               self.labels_pl: labels_pl,
-                    #               self.is_training_pl: self.is_training}
-
-                    out, feature_vector = model(pcEvalTest)
-                    # pred = out.max(dim=0)[1]
-                    pred = out.max(dim=1)[1]
-
-                    print("pred")
-                    print(pred)
-                    # eval_prediction, eval_loss, heatGradient = sess.run([ops['pred'], ops['loss'], ops['maxgradients']],
-                    #                                                     feed_dict=feed_dict2)
-
-                   # eval_prediction = np.argmax(eval_prediction, 1)
-                    loss = F.nll_loss(out, data.y[:, 0].long())
-                    correct_nodes = pred.eq(data.y[:, 0].long()).sum().item()
-                    total_nodes = data.num_nodes
-                    accuracy = correct_nodes / total_nodes
-                    accuracies[n] = accuracy
-                    #correct = np.sum(eval_prediction == labels_pl)
-                    # total_correct += correct
-                    # total_seen += 1
-                    # loss_sum += loss * batch_size
-
-                accuracy = torch.mean(accuracies)
-                print("GROUND TRUTH: ", data.y[:, 0].long())
-                print("PREDICTION: ", pred)
-                print("LOSS: ", loss)
-                print("ACCURACY: ", accuracy.item())
+                # accuracies = torch.empty(numTestRuns, device=self.device)
+                # for n in range(numTestRuns):
+                #
+                #     #TODO: Add this in later
+                #     #pcEvalTest = provider.rotate_point_cloud_XYZ(pcEvalTest)
+                #
+                #     # feed_dict2 = {self.pointclouds_pl: pcEvalTest,
+                #     #               self.labels_pl: labels_pl,
+                #     #               self.is_training_pl: self.is_training}
+                #
+                #     out, feature_vector = model(pcEvalTest)
+                #     # pred = out.max(dim=0)[1]
+                #     pred = out.max(dim=1)[1]
+                #
+                #     print("pred")
+                #     print(pred)
+                #     # eval_prediction, eval_loss, heatGradient = sess.run([ops['pred'], ops['loss'], ops['maxgradients']],
+                #     #                                                     feed_dict=feed_dict2)
+                #
+                #    # eval_prediction = np.argmax(eval_prediction, 1)
+                #     loss = F.nll_loss(out, data.y[:, 0].long())
+                #     correct_nodes = pred.eq(data.y[:, 0].long()).sum().item()
+                #     total_nodes = data.num_nodes
+                #     accuracy = correct_nodes / total_nodes
+                #     accuracies[n] = accuracy
+                #     #correct = np.sum(eval_prediction == labels_pl)
+                #     # total_correct += correct
+                #     # total_seen += 1
+                #     # loss_sum += loss * batch_size
+                #
+                # accuracy = torch.mean(accuracies)
+                # print("GROUND TRUTH: ", data.y[:, 0].long())
+                # print("PREDICTION: ", pred)
+                # print("LOSS: ", loss)
+                # print("ACCURACY: ", accuracy.item())
 
                # accuracy = total_correct / float(total_seen)
 
@@ -200,31 +230,40 @@ class AdversarialPointCloud():
                 #     storeAccuracyPerPointsRemoved(accuracy)
 
                 # Stop iterating when the eval_prediction deviates from ground truth
-                if data.y[:, 0].long() != pred and accuracy.item() <= 0.5:
-                    print("GROUND TRUTH DEVIATED FROM PREDICTION AFTER %s ITERATIONS" % i)
+                #if data.y[:, 0].long() != pred and accuracy.item() <= 0.5:
+                if original_pred != pred and abs(original_accuracy - accuracy) > 0.1:
+                    print("PREDICTION DEVIATED FROM ORIGINAL PREDICTION AFTER %s ITERATIONS" % i)
                     break
 
                 # Perform visual stuff here
                 if thresholdMode == "+average" or thresholdMode == "+median" or thresholdMode == "+midrange":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_above_threshold(maxgradients, pcTempResult,
+                    resultPCloudThreshLoc, vipPointsArr, Count, dropPointsArr, allPointsArr, allWeightArr = gch.delete_above_threshold(maxgradients, pcTempResult,
                                                                                          thresholdMode)
                 if thresholdMode == "-average" or thresholdMode == "-median" or thresholdMode == "-midrange":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_below_threshold(maxgradients, pcTempResult,
+                    resultPCloudThreshLoc, vipPointsArr, Count = gch.delete_below_threshold(maxgradients, pcTempResult,
                                                                                          thresholdMode)
                 if thresholdMode == "nonzero":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_all_nonzeros(maxgradients, pcTempResult)
+                    resultPCloudThreshLoc, vipPointsArr, Count = gch.delete_all_nonzeros(maxgradients, pcTempResult)
                 if thresholdMode == "zero":
-                    resultPCloudThresh, vipPointsArr, Count = gch.delete_all_zeros(maxgradients, pcTempResult)
+                    resultPCloudThreshLoc, vipPointsArr, Count = gch.delete_all_zeros(maxgradients, pcTempResult)
                 if thresholdMode == "+random" or thresholdMode == "-random":
-                    resultPCloudThresh, vipPointsArr = gch.delete_random_points(maxgradients, pcTempResult,
+                    resultPCloudThreshLoc, vipPointsArr = gch.delete_random_points(maxgradients, pcTempResult,
                                                                                 numDeletePoints[i])
                     Count = numDeletePoints[i]
                 print("REMOVING %s POINTS." % Count)
 
+                resultPCloudThreshFeatures = np.delete(pcTempResult.x.detach().cpu().numpy(), dropPointsArr, axis=0)
+                resultPCloudThreshBatch = np.delete(pcTempResult.batch.detach().cpu().numpy(), dropPointsArr, axis=0)
+                resultPCloudThreshLocTensor = torch.from_numpy(resultPCloudThreshLoc)
+                resultPCloudThreshFeaturesTensor = torch.from_numpy(resultPCloudThreshFeatures)
+                resultPCloudThreshBatchTensor = torch.from_numpy(resultPCloudThreshBatch)
+
+                pcTempResult = BatchObject(resultPCloudThreshFeaturesTensor.to(self.device), resultPCloudThreshLocTensor.to(self.device), resultPCloudThreshBatchTensor.to(self.device))
+
                 delCount.append(Count)
                 vipPcPointsArr.extend(vipPointsArr[0])
                 weightArray.extend(vipPointsArr[1])
-                pcTempResult = copy.deepcopy(resultPCloudThresh)
+                #pcTempResult = copy.deepcopy(resultPCloudThreshLoc)
 
             # Stop profiling and show the results
             endTime = time.time() - start_time
@@ -234,11 +273,13 @@ class AdversarialPointCloud():
 
             totalRemoved = sum(delCount)
             print("TOTAL REMOVED POINTS: ", totalRemoved)
-            print("TOTAL REMAINING POINTS: ", NUM_POINT - totalRemoved)
+            print("TOTAL REMAINING POINTS: ", totNumPoints - totalRemoved)
             #         gch.draw_pointcloud(pcTempResult) #-- Residual point cloud
             #         gch.draw_NewHeatcloud(vipPcPointsArr, weightArray) #-- Important points only
             vipPcPointsArr.extend(pcTempResult[0])
-            gch.draw_NewHeatcloud(vipPcPointsArr, weightArray)  # --All points combined
+            gch.draw_NewHeatcloud(vipPcPointsArr, weightArray, dropPointsArr, allPointsArr, allWeightArr, totNumPoints,
+                                  i, self.device)  # --All points combined
+            #gch.draw_NewHeatcloud(vipPcPointsArr, weightArray)  # --All points combined
             return delCount
 
 if __name__ == "__main__":
@@ -346,4 +387,4 @@ if __name__ == "__main__":
     adversarial_attack = AdversarialPointCloud(desired_class_label=desiredLabel, num_classes=num_labels, device=device)
 
     # adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
-    adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+average")
+    adversarial_attack.drop_and_store_results(poolingMode="maxpooling", thresholdMode="+midrange")
