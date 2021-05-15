@@ -166,6 +166,15 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             batch_labels = batch_labels.to(device=device)
             batch_data = batch_data.to(device=device)  # move to device, e.g. GPU
             batch_preds = model(batch_data)
+            # print("batch_preds shape")
+            # print(batch_preds.shape)
+            # # print("batch_preds")
+            # # print(batch_preds)
+            # # print("batch_labels")
+            # # print(batch_labels)
+            # print("batch_labels shape")
+            # print(batch_labels.shape)
+
             loss = loss_function(batch_preds, batch_labels)
             optimizer.zero_grad()
             loss.backward()
