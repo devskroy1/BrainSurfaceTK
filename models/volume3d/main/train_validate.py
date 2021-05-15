@@ -225,13 +225,13 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
             batch_labels_gcn = batch_labels_gcn.to(device)
             prediction = model(batch_data, bg, bg_node_features)
-            print("pred shape")
-            print(prediction.shape)
-            print(prediction)
-
-            print("batch_labels_gcn shape")
-            print(batch_labels_gcn.shape)
-            print(batch_labels_gcn)
+            # print("pred shape")
+            # print(prediction.shape)
+            # print(prediction)
+            #
+            # print("batch_labels_gcn shape")
+            # print(batch_labels_gcn.shape)
+            # print(batch_labels_gcn)
             #loss = loss_function(prediction, batch_labels_gcn)
             loss = loss_function(prediction, batch_labels_volcnn)
 
