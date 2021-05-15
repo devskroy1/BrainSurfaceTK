@@ -44,7 +44,7 @@ class BrainNetworkDataset(Dataset):
         self.max_workers = max_workers
 
         if features is None:
-            self.featureless = features
+            self.featureless = True
         else:
             self.featureless = False
 
@@ -267,6 +267,27 @@ class BrainNetworkDataset(Dataset):
 
         return (train_samples, train_targets), (val_samples, val_targets), (test_samples, test_targets)
 
+    # @staticmethod
+    # def search_for_files_and_targets(load_path, meta_data_file_path):
+    #     """
+    #     Function to search for potential vtps to be used. The meta_data dataframe is used to select the corresponding
+    #     file_paths and associate them with the respective scan_age.
+    #     :param load_path:
+    #     :param meta_data_file_path:
+    #     :return:
+    #     """
+    #     targets = list()
+    #     df = pd.read_csv(meta_data_file_path, sep='\t', header=0)
+    #     potential_files = [f for f in os.listdir(load_path)]
+    #     files_to_load = list()
+    #     for fn in potential_files:
+    #         participant_id, session_id = fn.split("_")[:2]
+    #         records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+    #         if len(records) == 1:
+    #             files_to_load.append(os.path.join(load_path, fn))
+    #             targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
+    #     return files_to_load, targets
+
     @staticmethod
     def search_for_files_and_targets(load_path, meta_data_file_path):
         """
@@ -282,9 +303,25 @@ class BrainNetworkDataset(Dataset):
         files_to_load = list()
         for fn in potential_files:
             participant_id, session_id = fn.split("_")[:2]
+            participant_id = participant_id.split("-")[1]
+            session_id = session_id.split("-")[1]
+            # print("df[participant_id]")
+            # print(df['participant_id'])
+            # print("df[session_id]")
+            # print(df['session_id'])
+
+            # print("participant_id")
+            # print(participant_id)
+            # print("session_id")
+            # print(session_id)
+            #records = df.loc[(df['participant_id'] == participant_id) & (df['session_id'] == session_id)]
             records = df[(df.participant_id == participant_id) & (df.session_id == int(session_id))]
+            # print("len(records)")
+            # print(len(records))
             if len(records) == 1:
                 files_to_load.append(os.path.join(load_path, fn))
+                # print("records.scan_age.values")
+                # print(records.scan_age.values)
                 targets.append(torch.tensor(records.scan_age.values, dtype=torch.float))
         return files_to_load, targets
 
@@ -406,7 +443,7 @@ class BrainNetworkDataset(Dataset):
         )
         unnorm_edge_lengths = torch.cat([edge_lengths,
                                          edge_lengths,
-                                         torch.zeros(len(g.nodes), 1, dtype=torch.float)])
+                                         torch.zeros(g.num_nodes(), 1, dtype=torch.float)])
         return unnorm_edge_lengths
 
     def normalise_dataset(self, data_path):
