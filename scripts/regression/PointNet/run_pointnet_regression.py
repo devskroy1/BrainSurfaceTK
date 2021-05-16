@@ -25,7 +25,7 @@ PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..
 if __name__ == '__main__':
 
     num_workers = 2
-    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth', 'segmentation']
     global_features = []
 
     #################################################
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # data_type = 'pial'
     # hemisphere = 'both'
 
-    comment = 'comment'
+    comment = 'Pointcloud_Grad_Cam'
 
     #################################################
     ############ EXPERIMENT DESCRIPTION #############
