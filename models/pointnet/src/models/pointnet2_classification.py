@@ -48,14 +48,14 @@ class Net(torch.nn.Module):
         self.num_global_features = num_global_features
 
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
-        # self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
-        # self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
-        # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
-        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
-
-        self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
+        self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
+        self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+
+        # self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
+        # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
         self.lin1 = Lin(1024 + num_global_features, 512)
         self.lin2 = Lin(512, 256)
@@ -80,7 +80,7 @@ class Net(torch.nn.Module):
         # print("sa1_batch.shape")
         # print(sa1_batch.shape)
         
-        #sa1a_out = self.sa1a_module(*sa1_out)
+        sa1a_out = self.sa1a_module(*sa1_out)
         #sa1a_x, sa1a_pos, sa1a_batch = sa1a_out
         
         # print("sa1a_x.shape")
@@ -90,8 +90,8 @@ class Net(torch.nn.Module):
         # print("sa1a_batch.shape")
         # print(sa1a_batch.shape)
 
-        #sa2_out = self.sa2_module(*sa1a_out)
-        sa2_out = self.sa2_module(*sa1_out)
+        sa2_out = self.sa2_module(*sa1a_out)
+        #sa2_out = self.sa2_module(*sa1_out)
         sa2_x, sa2_pos, sa2_batch = sa2_out
         # print("sa2_x.shape")
         # print(sa2_x.shape)

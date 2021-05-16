@@ -7,24 +7,37 @@ import copy
 import pickle
 import torch
 import torch.nn as nn
+import pyvista as pv
 import torch.nn.functional as F
+from tqdm import tqdm
 from models.pointnet.src.utils import get_comment, get_data_path, data
 from batchObject import BatchObject
 
-from models.pointnet.src.models.pointnet2_regression_v2 import Net
-#from models.pointnet.src.models.pointnet2_classification import Net
+#from models.pointnet.src.models.pointnet2_regression_v2 import Net
+from models.pointnet.src.models.pointnet2_classification import Net
 
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', 'models', 'pointnet') + '/'
 
-def drop_points_region():
+def drop_points_region_classification():
     print("num_labels")
     print(num_labels)
     model.load_state_dict(torch.load(PATH, map_location=device))
     model.eval()
 
-    for data in test_loader:
+    for idx, data in enumerate(test_loader):
+
+        if idx > 5:
+            break
+
+        patient_idx = indices['Test'][idx]
+        patient_id, session_id, patient_vtk_filepath = get_vtk_filepath(patient_idx)
         data = data.to(device)
+        # print("data.y[:, 0].float()")
+        # print(data.y[:, 0].float())
         original_pred = model(data)
+        original_loss = F.nll_loss(original_pred, data.y[:, 0].long())
+        # print("original_loss")
+        # print(original_loss)
         # print("original_pred")
         # print(original_pred)
         # print("original_pred shape")
@@ -44,6 +57,8 @@ def drop_points_region():
         # print(seg_regions)
         max_importance = 0
         most_important_label = -1
+        points_importance_scores = torch.empty((num_points), dtype=torch.float, device=device)
+        importance_scores = []
         for label in range(num_labels):
             drop_indices_array = []
             for n in range(num_points):
@@ -58,30 +73,203 @@ def drop_points_region():
             residual_batch = torch.from_numpy(np.delete(data.batch.detach().cpu().numpy(), drop_indices_array, axis=0))
             residual_data = BatchObject(residual_x.to(device), residual_pos.to(device), residual_batch.to(device))
             residual_pred = model(residual_data)
+            residual_loss = F.nll_loss(residual_pred, data.y[:, 0].long())
+            # print("residual_loss")
+            # print(residual_loss)
+            # print("residual_pred")
+            # print(residual_pred)
+            # # print("residual_pred shape")
+            # print(residual_pred.shape)
+
+            # importance = abs(residual_pred.item() - original_pred.item())
+            importance = abs(residual_loss.item() - original_loss.item())
+            # if original_pred != residual_pred:
+            #     print("Label at which prediction changes")
+            #     print(label)
+            #     print("Original pred")
+            #     print(original_pred)
+            #     print("Residual pred")
+            #     print(residual_pred)
+            # print("drop_indices_array")
+            # print(drop_indices_array)
+            # print("importance")
+            # print(importance)
+            # print("========================================")
+            # print("label")
+            # print(label)
+            # print("importance")
+            # print(importance)
+            # if importance > max_importance:
+            #     max_importance = importance
+            #     most_important_label = label
+
+            # print("drop_indices_array")
+            # print(drop_indices_array)
+            #
+            # print("--------------------------------------------------------")
+            importance_scores.append(importance)
+            for drop_idx in drop_indices_array:
+                points_importance_scores[drop_idx] = importance
+
+        print("patient idx")
+        print(patient_idx)
+        print("max of importance_scores")
+        print(max(importance_scores))
+        print("min of importance_scores")
+        print(min(importance_scores))
+        print("---------------------------------------------------------------------------")
+        add_point_importance_scores_to_vtk(points_importance_scores, patient_id, session_id, patient_vtk_filepath)
+        # print("max_importance")
+        # print(max_importance)
+        # print("most important label")
+        # print(most_important_label)
+
+
+def drop_points_region_regression():
+    print("num_labels")
+    print(num_labels)
+    model.load_state_dict(torch.load(PATH, map_location=device))
+    model.eval()
+
+    for idx, data in enumerate(test_loader):
+
+        if idx > 5:
+            break
+
+        patient_idx = indices['Test'][idx]
+        patient_id, session_id, patient_vtk_filepath = get_vtk_filepath(patient_idx)
+        data = data.to(device)
+        # print("data.y[:, 0].float()")
+        # print(data.y[:, 0].float())
+        original_pred = model(data)
+        original_loss = F.mse_loss(original_pred, data.y[:, 0].float())
+        # print("original_loss")
+        # print(original_loss)
+        # print("original_pred")
+        # print(original_pred)
+        # print("original_pred shape")
+        # print(original_pred.shape)
+
+        # print("data")
+        # print(data)
+        # print("data.batch")
+        # print(data.batch)
+        # print("data.x")
+        # print(data.x)
+        num_points = data.pos.size(0)
+        seg_regions = data.x[:, 3].long()
+        # print("seg_regions shape")
+        # print(seg_regions.shape)
+        # print("seg_regions")
+        # print(seg_regions)
+        max_importance = 0
+        most_important_label = -1
+        points_importance_scores = torch.empty((num_points), dtype=torch.float, device=device)
+        importance_scores = []
+        for label in range(num_labels):
+            drop_indices_array = []
+            for n in range(num_points):
+                # print("seg_regions[n]")
+                # print(seg_regions[n])
+                # print("seg_regions[n] shape")
+                # print(seg_regions[n].shape)
+                if seg_regions[n].item() - 1 == label:
+                    drop_indices_array.append(n)
+            residual_x = torch.from_numpy(np.delete(data.x.detach().cpu().numpy(), drop_indices_array, axis=0))
+            residual_pos = torch.from_numpy(np.delete(data.pos.detach().cpu().numpy(), drop_indices_array, axis=0))
+            residual_batch = torch.from_numpy(np.delete(data.batch.detach().cpu().numpy(), drop_indices_array, axis=0))
+            residual_data = BatchObject(residual_x.to(device), residual_pos.to(device), residual_batch.to(device))
+            residual_pred = model(residual_data)
+            residual_loss = F.mse_loss(residual_pred, data.y[:, 0].float())
+            # print("residual_loss")
+            # print(residual_loss)
             # print("residual_pred")
             # print(residual_pred)
             # print("residual_pred shape")
             # print(residual_pred.shape)
-            importance = abs(residual_pred.item() - original_pred.item())
-            if importance > max_importance:
-                max_importance = importance
-                most_important_label = label
 
-        print("max_importance")
-        print(max_importance)
-        print("most important label")
-        print(most_important_label)
-        break
+            # importance = abs(residual_pred.item() - original_pred.item())
+            importance = abs(residual_loss.item() - original_loss.item())
+
+            # print("label")
+            # print(label)
+            # print("importance")
+            # print(importance)
+            # if importance > max_importance:
+            #     max_importance = importance
+            #     most_important_label = label
+
+            # print("drop_indices_array")
+            # print(drop_indices_array)
+            #
+            # print("--------------------------------------------------------")
+            importance_scores.append(importance)
+            for drop_idx in drop_indices_array:
+                points_importance_scores[drop_idx] = importance
+
+        print("patient idx")
+        print(patient_idx)
+        print("max of importance_scores")
+        print(max(importance_scores))
+        print("min of importance_scores")
+        print(min(importance_scores))
+        print("---------------------------------------------------------------------------")
+        add_point_importance_scores_to_vtk(points_importance_scores, patient_id, session_id, patient_vtk_filepath)
+        # print("max_importance")
+        # print(max_importance)
+        # print("most important label")
+        # print(most_important_label)
+
+def get_vtk_filepath(patient_idx):
+
+    patient_id, session_id = patient_idx.split('_')
+
+    # Get file path to .vtk/.vtp for one patient
+    #file_path = self.get_file_path(patient_id, session_id)
+
+    file_name = "sub-" + patient_id + "_ses-" + session_id + files_ending
+    file_path = data_folder + '/' + file_name
+    return patient_id, session_id, file_path
+
+def add_point_importance_scores_to_vtk(importance_scores, patient_id, session_id, patient_vtk_filepath):
+    # print("Inside add_point_importance_scores_to_vtk()")
+    # print("importance_scores")
+    # print(importance_scores)
+    # print("importance_scores shape")
+    # print(importance_scores.shape)
+    importance_scores_numpy = importance_scores.detach().cpu().numpy()
+    importance_scores_numpy = np.squeeze(importance_scores_numpy)
+    # original_vtk_file_name = vtk_root + "/" + subject + ".vtk"
+    original_mesh = pv.read(patient_vtk_filepath)
+    # print("original_mesh.n_points")
+    # print(original_mesh.n_points)
+    # print("original_mesh.point_arrays")
+    # print(original_mesh.point_arrays)
+    original_mesh.point_arrays['importance score'] = importance_scores_numpy
+    # print("original_mesh.point_arrays")
+    # print(original_mesh.point_arrays)
+    subject = "sub-" + patient_id + "_ses-" + session_id
+    appended_vtk_file_name = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/pointsImportance/" \
+                             + subject + "_points_importance_scores.vtk"
+    original_mesh.save(appended_vtk_file_name)
 
 
-#Currently doing points dropping for Pointnet++ regression model
+#Currently doing points dropping for Pointnet++ classification model
 if __name__ == "__main__":
 
+    #Native surfaces
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth', 'segmentation']
+    #Aligned surfaces
+    #local_features = ['corrThickness', 'Curvature', 'Sulc']
     global_features = []
 
     recording = True
     REPROCESS = True
+
+    # data_nativeness = 'aligned'
+    # data_compression = "50"
+    # data_type = 'white'
+    # hemisphere = 'left'
 
     data_nativeness = 'native'
     data_compression = "10k"
@@ -105,7 +293,7 @@ if __name__ == "__main__":
     # 1. Model Parameters
     ################################################
     # lr = 0.001
-    # batch_size = 2
+    # batch_size = 1
     # gamma = 0.9875
     # scheduler_step_size = 2
     # target_class = 'scan_age'
@@ -175,7 +363,8 @@ if __name__ == "__main__":
 
     # PATH = PATH_TO_ROOT + '/pointnetModels/classification/model_best.pt'
 
-    #PATH = PATH_TO_ROOT + '/runs/classification/pointcloud_grad_cam/models/model_best.pt'
-    PATH = PATH_TO_ROOT + '/runs/regression/Pointcloud_Grad_Cam/models/model_best.pt'
+    PATH = PATH_TO_ROOT + '/runs/classification/pointcloud_grad_cam/models/model_best.pt'
+    #PATH = PATH_TO_ROOT + '/runs/regression/Pointcloud_Grad_Cam/models/model_best.pt'
 
-    drop_points_region()
+    drop_points_region_classification()
+    #drop_points_region_regression()
