@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # data_type = 'pial'
     # hemisphere = 'both'
 
-    comment = 'comment'
+    comment = 'pointcloud_grad_cam'
     # additional_comment = ''
 
     #################################################
