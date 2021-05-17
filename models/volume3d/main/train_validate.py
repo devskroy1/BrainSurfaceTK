@@ -19,7 +19,6 @@ from ..utils.utils import plot_preds
 from ..utils.models import ImageSegmentationDataset, Part3, resample_image, PrintTensor
 from ..utils.volumeCnnGCN import VolumeCNN_GCNRegressor
 import os.path as osp
-PATH_TO_VOLUME3D = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
 def save_graphs_train(fn, num_epochs, training_loss, val_loss_epoch5):
     '''
@@ -108,9 +107,9 @@ def save_to_log(model, params, fn, final_MAE, num_epochs, batch_size, lr, feats,
         log.write('\n')
         log.write(f'SUBJECT #{fn[-1]}:    Validation = {final_MAE},    ')
 
-def find_subjects_data_volcnn(subjects, dataset_volcnn_train):
+def find_subjects_data_volcnn(subjects, dataset_volcnn):
 
-    volcnn_samples_shape = list(dataset_volcnn_train.samples[0].shape)
+    volcnn_samples_shape = list(dataset_volcnn.samples[0].shape)
     batch_size_list = [len(subjects)]
     batch_data_shape = batch_size_list + volcnn_samples_shape
     batch_data = torch.empty(batch_data_shape, dtype=torch.float)
@@ -120,6 +119,7 @@ def find_subjects_data_volcnn(subjects, dataset_volcnn_train):
     # batch_labels = []
     # print("len(subjects)")
     # print(len(subjects))
+    # print("Inside find_subjects_data_volcnn()")
     # print("subjects")
     # print(subjects)
     # print("dataset_volcnn_train.ids")
@@ -128,12 +128,10 @@ def find_subjects_data_volcnn(subjects, dataset_volcnn_train):
         subject = subjects[i][0]
         # print("subject")
         # print(subject)
-        split_subject = subject.split("_")
-        subject_id = split_subject[0].split("-")[1]
-        sess_id = split_subject[1].split("-")[1]
-        for j in range(len(dataset_volcnn_train.ids)):
-            volcnn_subject_id = dataset_volcnn_train.ids[j][0]
-            volcnn_sess_id = dataset_volcnn_train.ids[j][1]
+        subject_id, sess_id = subject.split("_")
+        for j in range(len(dataset_volcnn.ids)):
+            volcnn_subject_id = dataset_volcnn.ids[j][0]
+            volcnn_sess_id = dataset_volcnn.ids[j][1]
             if subject_id == volcnn_subject_id and sess_id == volcnn_sess_id:
                 # print("subject_id")
                 # print(subject_id)
@@ -145,10 +143,12 @@ def find_subjects_data_volcnn(subjects, dataset_volcnn_train):
                 # print(dataset_volcnn_train.samples)
                 # print("dataset_volcnn_train.samples[j].shape")
                 # print(dataset_volcnn_train.samples[j].shape)
-                batch_data[i] = dataset_volcnn_train.samples[j]
-                batch_labels[i] = dataset_volcnn_train.targets[j]
+                batch_data[i] = dataset_volcnn.samples[j]
+                batch_labels[i] = dataset_volcnn.targets[j]
                 break
     # print("batch_Data")
+    # print(batch_data)
+    # print("batch_data")
     # print(batch_data)
     # print("batch_labels")
     # print(batch_labels)
@@ -199,10 +199,10 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     val_loader_volcnn = DataLoader(dataset_volumecnn_val, batch_size=batch_size)
 
     # 6. Define a model
-    model = Part3(feats, dropout_p).to(device=device)
+    #model = Part3(feats, dropout_p).to(device=device)
     in_dim = 6
     hidden_dim = 256
-    #model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
+    model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
 
     # 7. Print parameters
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -216,44 +216,50 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     for epoch in range(num_epochs):
         model.train()
         epoch_loss = []
-        for batch_data, batch_labels in train_loader_volcnn:
+        #for batch_data, batch_labels in train_loader_volcnn:
             # print("batch data")
             # print(batch_data)
-        #for iter, (subjects, bg, batch_labels_gcn) in enumerate(train_dl_gcn):
-           #  print("bg")
-           #  print(bg)
-           #  print("batch_labels_gcn shape")
-           #  print(batch_labels_gcn.shape)
-           #  batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
-           #  print("batch_data_volcnn")
-           #  print(batch_data_volcnn)
-           #  print("batch_labels_volcnn")
-           #  print(batch_labels_volcnn)
-           #
-           #  # print("batch_labels shape")
-           #  # print(batch_labels.shape)
-           #  bg = bg.to(device)
-           #  bg_node_features = bg.ndata["features"].to(device)
-           #  # print("bg_node_features")
-           #  # print(bg_node_features)
-           # # bg = dgl.add_self_loop(bg)
-           #  batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
-           #  batch_labels_gcn = batch_labels_gcn.to(device)
-           #  prediction = model(batch_data, bg, bg_node_features)
-            batch_data = batch_data.to(device=device)
-            prediction = model(batch_data)
+        for iter, (subjects, bg, batch_labels_gcn) in enumerate(train_dl_gcn):
+            # print("bg")
+            # print(bg)
+            # print("batch_labels_gcn shape")
+            # print(batch_labels_gcn.shape)
+            batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
+            # print("batch_data_volcnn")
+            # print(batch_data_volcnn)
+            # print("batch_labels_volcnn")
+            # print(batch_labels_volcnn)
+
+            # print("batch_labels shape")
+            # print(batch_labels.shape)
+            bg = bg.to(device)
+            bg_node_features = bg.ndata["features"].to(device)
+            # print("bg_node_features")
+            # print(bg_node_features)
+           # bg = dgl.add_self_loop(bg)
+            batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+            batch_labels_gcn = batch_labels_gcn.to(device)
+            prediction = model(batch_data, bg, bg_node_features)
+
+            # batch_data = batch_data.to(device=device)
+            # prediction = model(batch_data)
+
             # print("pred shape")
             # print(prediction.shape)
+            # print("prediction")
             # print(prediction)
-            #
-            print("batch_labels_gcn")
-            print(batch_labels_gcn)
-            print("batch_labels_gcn shape")
-            print(batch_labels_gcn.shape)
+            # #
+            # print("batch_labels_gcn")
+            # print(batch_labels_gcn)
+            # print("batch_labels_gcn shape")
+            # print(batch_labels_gcn.shape)
             #Should be 4 x 1
             # print(batch_labels_gcn)
 
+
             loss = loss_function(prediction, batch_labels_gcn)
+            # print("loss")
+            # print(loss)
             #loss = loss_function(prediction, batch_labels_volcnn)
 
             # batch_labels = batch_labels_volcnn.to(device=device)

@@ -38,7 +38,12 @@ class VolumeCNN_GCNRegressor(Module):
         #GCN Regressor
         self.graph_conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.graph_conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.predict_layer = nn.Linear(2*2*2*2*feats*(1*3*3) + hidden_dim, 1)
+        #self.predict_layer = nn.Linear(2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
+        self.predict_layer = nn.Linear(2 * 2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
+        #self.predict_layer = nn.Linear(10624, 1)
+        #self.predict_layer = nn.Linear(15936, 1)
+        #self.predict_layer = nn.Linear(25856, 1)
+       # self.predict_layer = nn.Linear(2*2*2*2*feats*(1*3*3) + hidden_dim, 1)
 
         #VolumeCNN
         self.model = Sequential(
@@ -50,9 +55,10 @@ class VolumeCNN_GCNRegressor(Module):
             BatchNorm3d(feats),
             ReLU(),
             Conv3d(feats, 2*feats, padding=0, kernel_size=2, stride=2, bias=True),
-            Dropout(p=dropout_p),
-
-            # 23, 28, 28
+            BatchNorm3d(2 * feats),
+           # Dropout(p=dropout_p),
+           #
+           # # 23, 28, 28
             Conv3d(2*feats, 2*feats, padding=0, kernel_size=3, stride=1, bias=True),
             BatchNorm3d(2*feats),
             ReLU(),
@@ -60,19 +66,26 @@ class VolumeCNN_GCNRegressor(Module):
             BatchNorm3d(2*feats),
             ReLU(),
             Conv3d(2*feats, 2*2*feats, padding=0, kernel_size=2, stride=2, bias=True),
-
+            #BatchNorm3d(2 * 2 * feats),
+            #
             # 9, 12, 12
             Conv3d(2*2*feats, 2*2*feats, padding=0, kernel_size=3, stride=1, bias=True),
+            #Dropout(p=dropout_p),
             BatchNorm3d(2*2*feats),
             ReLU(),
             Conv3d(2*2*feats, 2*2*feats, padding=0, kernel_size=3, stride=1, bias=True),
             BatchNorm3d(2*2*feats),
             ReLU(),
             Conv3d(2*2*feats, 2*2*2*feats, padding=0, kernel_size=1, stride=1, bias=True),
+            BatchNorm3d(2 * 2 * 2 * feats),
             Dropout(p=dropout_p),
+            # Conv3d(2 * 2 * feats, 2 * 2 * 2 * feats, padding=0, kernel_size=2, stride=1, bias=True),
+            # Dropout(p=dropout_p),
+
 
             # 5, 8, 8
             Conv3d(2*2*2*feats, 2*2*2*feats, padding=0, kernel_size=3, stride=1, bias=True),
+            #Conv3d(2 * 2 * 2 * feats, 2 * 2 * 2 * feats, padding=0, kernel_size=2, stride=1, bias=True),
             # 3, 6, 6
             BatchNorm3d(2*2*2*feats),
             ReLU(),
@@ -81,8 +94,9 @@ class VolumeCNN_GCNRegressor(Module):
             BatchNorm3d(2*2*2*feats),
             ReLU(),
             Conv3d(2*2*2*feats, 2*2*2*2*feats, padding=0, kernel_size=(1, 2, 2), stride=1, bias=True),
+            #BatchNorm3d(2 * 2 * 2 * 2 * feats),
             Dropout(p=dropout_p),
-            #  1, 3, 3
+            # # #  1, 3, 3
             Flatten(start_dim=1), # Output: 1
             #Linear(2*2*2*2*feats*(1*3*3), 1),
             )
@@ -95,15 +109,31 @@ class VolumeCNN_GCNRegressor(Module):
         graph = dgl.add_self_loop(graph)
         gcn_first_feat_map = self.graph_conv1(graph, features)
         gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
-        print("gcn_first_feat_map")
-        print(gcn_first_feat_map)
-        print("gcn_final_feat_map")
-        print(gcn_final_feat_map)
+        # print("gcn_first_feat_map")
+        # print(gcn_first_feat_map)
+        # print("gcn_final_feat_map shape")
+        # print(gcn_final_feat_map.shape)
+        #
+        # with graph.local_scope():
+        #     graph.ndata['tmp'] = gcn_final_feat_map
+        #     # Calculate graph representation by averaging all the node representations.
+        #     hg = dgl.mean_nodes(graph, 'tmp')
+        #
+        # print("hg shape")
+        # print(hg.shape)
+        # out = self.predict_layer(hg)
+        # print("prediction")
+        # print(out)
+        # print("prediction shape")
+        # print(out.shape)
+        # return out
 
         vol_conv_feat_map = self.model(x)
 
-        print("vol_conv_feat_map")
-        print(vol_conv_feat_map)
+        # print("vol_conv_feat_map")
+        # print(vol_conv_feat_map)
+        # print("vol_conv_feat_map shape")
+        # print(vol_conv_feat_map.shape)
         # print("vol_conv_feat_map")
         # print(vol_conv_feat_map)
 
@@ -132,8 +162,8 @@ class VolumeCNN_GCNRegressor(Module):
         # print(expanded_vol_conv_feat_map.shape)
 
         concat_feat_map = torch.cat((gcn_final_feat_map, expanded_vol_conv_feat_map), dim=1)
-        print("concat_feat_map")
-        print(concat_feat_map)
+        # print("concat_feat_map shape")
+        # print(concat_feat_map.shape)
         with graph.local_scope():
             graph.ndata['tmp'] = concat_feat_map
             # Calculate graph representation by averaging all the node representations.
@@ -143,11 +173,14 @@ class VolumeCNN_GCNRegressor(Module):
         # print("concat_feat_map")
         # print(concat_feat_map)
         #out = self.predict_layer(concat_feat_map)
+
+        # print("hg shape")
+        # print(hg.shape)
         out = self.predict_layer(hg)
-        print("prediction")
-        print(out)
-        print("prediction shape")
-        print(out.shape)
+        # print("prediction")
+        # print(out)
+        # print("prediction shape")
+        # print(out.shape)
         #Should be 4 x 1
         return out
         #return self.final_lin_layer(concat_feat_map)
