@@ -44,40 +44,40 @@ def str_to_bool(x):
         raise ValueError("Expected True or False for featureless.")
 
 #For native surface vtks
-# def str_to_features(x):
-#     if x.lower() == "all".lower():
-#         return ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi')
-#     elif x.lower() == "some".lower():
-#         return ('corrected_thickness', 'curvature', 'sulcal_depth')
-#     elif x.lower() == "None".lower():
-#         return None
-
-#For aligned surface vtks
 def str_to_features(x):
     if x.lower() == "all".lower():
         return ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi')
     elif x.lower() == "some".lower():
-        return ('corrThickness', 'Curvature', 'Sulc')
+        return ('corrected_thickness', 'curvature', 'sulcal_depth')
     elif x.lower() == "None".lower():
         return None
 
-#For native surface vtks
-# def features_to_str(x):
-#     if x == ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi'):
-#         return "all"
-#     elif x == ('corrected_thickness', 'curvature', 'sulcal_depth'):
-#         return "some"
-#     elif x == None:
-#         return "None"
-
 #For aligned surface vtks
+# def str_to_features(x):
+#     if x.lower() == "all".lower():
+#         return ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi')
+#     elif x.lower() == "some".lower():
+#         return ('corrThickness', 'Curvature', 'Sulc')
+#     elif x.lower() == "None".lower():
+#         return None
+
+#For native surface vtks
 def features_to_str(x):
     if x == ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi'):
         return "all"
-    elif x == ('corrThickness', 'Curvature', 'Sulc'):
+    elif x == ('corrected_thickness', 'curvature', 'sulcal_depth'):
         return "some"
     elif x == None:
         return "None"
+
+#For aligned surface vtks
+# def features_to_str(x):
+#     if x == ('corrected_thickness', 'initial_thickness', 'curvature', 'sulcal_depth', 'roi'):
+#         return "all"
+#     elif x == ('corrThickness', 'Curvature', 'Sulc'):
+#         return "some"
+#     elif x == None:
+#         return "None"
 
 def get_args():
     import argparse
