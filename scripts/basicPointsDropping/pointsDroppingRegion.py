@@ -26,8 +26,8 @@ def drop_points_region_classification():
 
     for idx, data in enumerate(test_loader):
 
-        if idx > 5:
-            break
+        # if idx > 5:
+        #     break
 
         patient_idx = indices['Test'][idx]
         patient_id, session_id, patient_vtk_filepath = get_vtk_filepath(patient_idx)
@@ -51,6 +51,8 @@ def drop_points_region_classification():
         # print(data.x)
         num_points = data.pos.size(0)
         seg_regions = data.x[:, 3].long()
+        print("unique seg regions")
+        print(torch.unique(seg_regions))
         # print("seg_regions shape")
         # print(seg_regions.shape)
         # print("seg_regions")
@@ -66,6 +68,11 @@ def drop_points_region_classification():
                 # print(seg_regions[n])
                 # print("seg_regions[n] shape")
                 # print(seg_regions[n].shape)
+                print("label")
+                print(label)
+                print("seg_regions[n].item() - 1")
+                print(seg_regions[n].item() - 1)
+
                 if seg_regions[n].item() - 1 == label:
                     drop_indices_array.append(n)
             residual_x = torch.from_numpy(np.delete(data.x.detach().cpu().numpy(), drop_indices_array, axis=0))
@@ -92,8 +99,8 @@ def drop_points_region_classification():
             #     print(residual_pred)
             # print("drop_indices_array")
             # print(drop_indices_array)
-            # print("importance")
-            # print(importance)
+            print("importance")
+            print(importance)
             # print("========================================")
             # print("label")
             # print(label)
@@ -119,6 +126,7 @@ def drop_points_region_classification():
         print(min(importance_scores))
         print("---------------------------------------------------------------------------")
         add_point_importance_scores_to_vtk(points_importance_scores, patient_id, session_id, patient_vtk_filepath)
+        break
         # print("max_importance")
         # print(max_importance)
         # print("most important label")
