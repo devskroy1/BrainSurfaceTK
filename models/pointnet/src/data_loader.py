@@ -1,3 +1,4 @@
+
 import os
 import os.path as osp
 
@@ -21,7 +22,6 @@ class OurDataset(InMemoryDataset):
                     global_feature=[], files_ending=None, reprocess=False, val=False, indices=None, add_faces=False):
         '''
         Creates a Pytorch dataset from the .vtk/.vtp brain data.
-
         :param root: Root path, where processed data objects will be placed
         :param task: Possible tasks include: {'classification', 'regression', 'segmentation'}
         :param target_class: Target class that is being predicted (if applicable).
@@ -40,6 +40,9 @@ class OurDataset(InMemoryDataset):
                IF THIS IS NOT ZERO, THE PROCESSING IS DONE FOR VALIDATION SET.
         '''
 
+        # print("reprocess")
+        # print(reprocess)
+
         # Train, test, validation
         self.train = train
         self.val = val
@@ -56,11 +59,19 @@ class OurDataset(InMemoryDataset):
 
         # Mapping between features and array number in the files.
         # Old labels: 'drawem', 'corr_thickness', 'myelin_map', 'curvature','sulc'
+
+        #Native surfaces
         self.feature_arrays = {'segmentation': 'segmentation',
                                'corrected_thickness': 'corrected_thickness',
                                'myelin_map': 'myelin_map',
                                'curvature': 'curvature',
                                'sulcal_depth': 'sulcal_depth'}
+
+        #Aligned surfaces
+        # self.feature_arrays = {'corrThickness': 'corrThickness',
+        #                        'MyelinMap': 'MyelinMap',
+        #                        'Curvature': 'Curvature',
+        #                        'Sulc': 'Sulc'}
 
         # The task at hand
         self.task = task
@@ -92,6 +103,7 @@ class OurDataset(InMemoryDataset):
             self.files_ending = files_ending
 
         # If the user asked to not reprocess and this is the train dataset, retrieve unique labels straight away
+        #if not self.reprocess and train and task == 'segmentation':
         if not self.reprocess and train:
             meta_data = read_meta()
             self.get_all_unique_labels(meta_data)
@@ -180,8 +192,19 @@ class OurDataset(InMemoryDataset):
             else:
                 drawem_list = []
 
-            features = [mesh.get_array(self.feature_arrays[key]) for key in list_features if key != 'drawem']
+            # print("self.feature_arrays")
+            # print(self.feature_arrays)
+            # print("mesh array names")
+            # print(mesh.array_names)
+            first_mesh_array_name = mesh.array_names[0]
 
+            prefix = first_mesh_array_name.split("drawem")[0]
+            # print("prefix")
+            # print(prefix)
+            #features = [mesh.get_array(prefix + self.feature_arrays[key]) for key in list_features if key != 'drawem']
+            features = [mesh.get_array(self.feature_arrays[key]) for key in list_features if key != 'drawem']
+            # print("features")
+            # print(features)
             return torch.tensor(features + drawem_list).t()
         else:
             return None
@@ -202,6 +225,7 @@ class OurDataset(InMemoryDataset):
 
 
     def get_all_unique_labels(self, meta_data):
+        #print("Inside get_all_unique_labels")
         '''
         Return unique mapping of drawem features such that
             Original: [0, 3, 5, 7, 9 ...]
@@ -257,12 +281,16 @@ class OurDataset(InMemoryDataset):
 
     def process_set(self):
 
+        # print("Inside process_set()")
         '''Reads and processes the data. Collates the processed data which is later saved.'''
         # 0. Get meta data
         meta_data = read_meta()
 
         # Get the mapping for the entire dataset, in order to normalise DRAWEM labels for segmentation
+        #if self.task == 'segmentation':
         label_mapping = self.get_all_unique_labels(meta_data)
+        # print("label_mapping")
+        # print(label_mapping)
 
         # 1. Initialise the variables
         data_list = []
@@ -310,6 +338,8 @@ class OurDataset(InMemoryDataset):
                     faces = mesh.faces.reshape((n_faces, -1))
                     faces = torch.tensor(faces[:, 1:].transpose())
 
+                # print("self.local_features")
+                # print(self.local_features)
                 # Features
                 x = self.get_features(self.local_features, mesh)
 
@@ -338,6 +368,8 @@ class OurDataset(InMemoryDataset):
                     patient_data = meta_data[
                         (meta_data[:, 0] == patient_id) & (meta_data[:, 1] == session_id)][0]
                     y = torch.tensor([[float(patient_data[self.meta_column_idx])] + global_x])
+                    # print("y")
+                    # print(y)
                     # y = torch.tensor([[float(meta_data[idx, self.meta_column_idx])] + global_x]) #TODO
 
                 # Add the data to the lists
