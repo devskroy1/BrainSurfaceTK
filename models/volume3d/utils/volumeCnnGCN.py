@@ -110,9 +110,10 @@ class VolumeCNN_GCNRegressor(Module):
 
         graph = dgl.add_self_loop(graph)
         gcn_first_feat_map = self.graph_conv1(graph, features)
-        gcn_second_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
-        gcn_third_feat_map = self.graph_conv3(graph, gcn_second_feat_map)
-        gcn_final_feat_map = self.graph_conv4(graph, gcn_third_feat_map)
+        gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
+        #gcn_third_feat_map = self.graph_conv3(graph, gcn_second_feat_map)
+        #gcn_final_feat_map = self.graph_conv4(graph, gcn_third_feat_map)
+        
         # print("gcn_first_feat_map")
         # print(gcn_first_feat_map)
         # print("gcn_final_feat_map shape")
