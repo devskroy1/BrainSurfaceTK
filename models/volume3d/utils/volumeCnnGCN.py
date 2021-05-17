@@ -38,6 +38,8 @@ class VolumeCNN_GCNRegressor(Module):
         #GCN Regressor
         self.graph_conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.graph_conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.graph_conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.graph_conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         #self.predict_layer = nn.Linear(2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
         self.predict_layer = nn.Linear(2 * 2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
         #self.predict_layer = nn.Linear(10624, 1)
@@ -108,7 +110,9 @@ class VolumeCNN_GCNRegressor(Module):
 
         graph = dgl.add_self_loop(graph)
         gcn_first_feat_map = self.graph_conv1(graph, features)
-        gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
+        gcn_second_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
+        gcn_third_feat_map = self.graph_conv3(graph, gcn_second_feat_map)
+        gcn_final_feat_map = self.graph_conv4(graph, gcn_third_feat_map)
         # print("gcn_first_feat_map")
         # print(gcn_first_feat_map)
         # print("gcn_final_feat_map shape")
