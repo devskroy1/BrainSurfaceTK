@@ -137,7 +137,7 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
     train_epoch_worst_diff = 0.
     train_total_size = 0
     for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
-        print(subjects)
+
 
         optimizer.zero_grad()
 
@@ -145,6 +145,10 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
         prediction = model(bg, bg_node_features)
+        print("prediction shape")
+        print(prediction.shape)
+        print("batch_labels shape")
+        print(batch_labels.shape)
         loss = loss_function(prediction, batch_labels)
         loss.backward()
         optimizer.step()

@@ -178,8 +178,11 @@ class Part3(Module):
             Dropout(p=dropout_p),
             #  1, 3, 3
             Flatten(start_dim=1), # Output: 1
-            Linear(2*2*2*2*feats*(1*3*3), 1),
+            #Linear(2*2*2*2*feats*(1*3*3), 1),
             )
 
     def forward(self, x):
+        out = self.model(x)
+        print("prediction")
+        print(out)
         return self.model(x)

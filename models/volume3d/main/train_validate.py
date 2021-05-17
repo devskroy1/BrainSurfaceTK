@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 import torch
 import torch.nn.functional as F
+import dgl
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.nn import Module, Conv3d, ConvTranspose3d, Linear, ReLU, Sequential, Linear, Flatten, L1Loss, BatchNorm3d, \
@@ -198,10 +199,10 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     val_loader_volcnn = DataLoader(dataset_volumecnn_val, batch_size=batch_size)
 
     # 6. Define a model
-    #model = Part3(feats, dropout_p).to(device=device)
+    model = Part3(feats, dropout_p).to(device=device)
     in_dim = 6
     hidden_dim = 256
-    model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
+    #model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
 
     # 7. Print parameters
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -215,25 +216,45 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     for epoch in range(num_epochs):
         model.train()
         epoch_loss = []
-        #for batch_data, batch_labels in train_loader_volcnn:
-        for iter, (subjects, bg, batch_labels_gcn) in enumerate(train_dl_gcn):
-            batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
-            # print("batch_labels shape")
-            # print(batch_labels.shape)
-            bg = bg.to(device)
-            bg_node_features = bg.ndata["features"].to(device)
-            batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
-            batch_labels_gcn = batch_labels_gcn.to(device)
-            prediction = model(batch_data, bg, bg_node_features)
+        for batch_data, batch_labels in train_loader_volcnn:
+            # print("batch data")
+            # print(batch_data)
+        #for iter, (subjects, bg, batch_labels_gcn) in enumerate(train_dl_gcn):
+           #  print("bg")
+           #  print(bg)
+           #  print("batch_labels_gcn shape")
+           #  print(batch_labels_gcn.shape)
+           #  batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
+           #  print("batch_data_volcnn")
+           #  print(batch_data_volcnn)
+           #  print("batch_labels_volcnn")
+           #  print(batch_labels_volcnn)
+           #
+           #  # print("batch_labels shape")
+           #  # print(batch_labels.shape)
+           #  bg = bg.to(device)
+           #  bg_node_features = bg.ndata["features"].to(device)
+           #  # print("bg_node_features")
+           #  # print(bg_node_features)
+           # # bg = dgl.add_self_loop(bg)
+           #  batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
+           #  batch_labels_gcn = batch_labels_gcn.to(device)
+           #  prediction = model(batch_data, bg, bg_node_features)
+            batch_data = batch_data.to(device=device)
+            prediction = model(batch_data)
             # print("pred shape")
             # print(prediction.shape)
             # print(prediction)
             #
-            # print("batch_labels_gcn shape")
-            # print(batch_labels_gcn.shape)
+            print("batch_labels_gcn")
+            print(batch_labels_gcn)
+            print("batch_labels_gcn shape")
+            print(batch_labels_gcn.shape)
+            #Should be 4 x 1
             # print(batch_labels_gcn)
-            #loss = loss_function(prediction, batch_labels_gcn)
-            loss = loss_function(prediction, batch_labels_volcnn)
+
+            loss = loss_function(prediction, batch_labels_gcn)
+            #loss = loss_function(prediction, batch_labels_volcnn)
 
             # batch_labels = batch_labels_volcnn.to(device=device)
             # batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU

@@ -38,6 +38,7 @@ class VolumeCNN_GCNRegressor(Module):
         #GCN Regressor
         self.graph_conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.graph_conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.predict_layer = nn.Linear(2*2*2*2*feats*(1*3*3) + hidden_dim, 1)
 
         #VolumeCNN
         self.model = Sequential(
@@ -91,14 +92,18 @@ class VolumeCNN_GCNRegressor(Module):
 
     def forward(self, x, graph, features):
 
+        graph = dgl.add_self_loop(graph)
         gcn_first_feat_map = self.graph_conv1(graph, features)
         gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
-
-        # print("gcn_final_feat_map")
-        # print(gcn_final_feat_map)
+        print("gcn_first_feat_map")
+        print(gcn_first_feat_map)
+        print("gcn_final_feat_map")
+        print(gcn_final_feat_map)
 
         vol_conv_feat_map = self.model(x)
 
+        print("vol_conv_feat_map")
+        print(vol_conv_feat_map)
         # print("vol_conv_feat_map")
         # print(vol_conv_feat_map)
 
@@ -112,10 +117,12 @@ class VolumeCNN_GCNRegressor(Module):
 
         mid = num_nodes // batch_size
         for n in range(batch_size):
+            # print("vol_conv_feat_map[n, :]")
+            # print(vol_conv_feat_map[n, :])
             expanded_vol_conv_feat_map[n * mid : (n + 1) * mid, :] = vol_conv_feat_map[n, :]
 
-        print("expanded_vol_conv_feat_map[0]")
-        print(expanded_vol_conv_feat_map[0])
+        # print("expanded_vol_conv_feat_map[0]")
+        # print(expanded_vol_conv_feat_map[0])
 
         # print("gcn_final_feat_map shape")
         # print(gcn_final_feat_map.shape)
@@ -125,9 +132,23 @@ class VolumeCNN_GCNRegressor(Module):
         # print(expanded_vol_conv_feat_map.shape)
 
         concat_feat_map = torch.cat((gcn_final_feat_map, expanded_vol_conv_feat_map), dim=1)
+        print("concat_feat_map")
+        print(concat_feat_map)
+        with graph.local_scope():
+            graph.ndata['tmp'] = concat_feat_map
+            # Calculate graph representation by averaging all the node representations.
+            hg = dgl.mean_nodes(graph, 'tmp')
         # print("concat_feat_map shape")
         # print(concat_feat_map.shape)
         # print("concat_feat_map")
         # print(concat_feat_map)
-        return self.final_lin_layer(concat_feat_map)
+        #out = self.predict_layer(concat_feat_map)
+        out = self.predict_layer(hg)
+        print("prediction")
+        print(out)
+        print("prediction shape")
+        print(out.shape)
+        #Should be 4 x 1
+        return out
+        #return self.final_lin_layer(concat_feat_map)
         #return self.model(x)
