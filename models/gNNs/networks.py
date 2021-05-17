@@ -16,11 +16,13 @@ class BasicGCNRegressor(nn.Module):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
+
         with graph.local_scope():
             graph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.
             hg = dgl.mean_nodes(graph, 'tmp')
 
+        #return self.predict_layer(hidden)
         return self.predict_layer(hg)
 
 
