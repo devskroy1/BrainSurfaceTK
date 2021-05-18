@@ -170,26 +170,26 @@ class VolumeCNN_GCNRegressor(Module):
         # print("concat_feat_map shape")
         # print(concat_feat_map.shape)
 
-        # with graph.local_scope():
-        #     graph.ndata['tmp'] = concat_feat_map
-        #     # Calculate graph representation by averaging all the node representations.
-        #     hg = dgl.mean_nodes(graph, 'tmp')
+        with graph.local_scope():
+            graph.ndata['tmp'] = concat_feat_map
+            # Calculate graph representation by averaging all the node representations.
+            hg = dgl.mean_nodes(graph, 'tmp')
 
         # print("concat_feat_map shape")
         # print(concat_feat_map.shape)
         # print("concat_feat_map")
         # print(concat_feat_map)
-        out = self.predict_layer(concat_feat_map)
+        #out = self.predict_layer(concat_feat_map)
 
         # print("hg shape")
         # print(hg.shape)
 
-       # out = self.predict_layer(hg)
+        out = self.predict_layer(hg)
 
         # print("prediction")
         # print(out)
-        print("prediction shape")
-        print(out.shape)
+        # print("prediction shape")
+        # print(out.shape)
         #Should be 4 x 1
         return out
         #return self.final_lin_layer(concat_feat_map)
