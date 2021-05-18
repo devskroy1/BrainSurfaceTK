@@ -24,8 +24,8 @@ def add_node_saliency_scores_to_vtk(saliency_scores, vtk_root, subject):
     original_mesh.point_arrays['saliency score'] = saliency_scores_numpy
     # print("original_mesh.point_arrays")
     # print(original_mesh.point_arrays)
-    appended_vtk_file_name = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/gcnRegressionSaliencyScores/" \
-                             + subject + "_population_saliency_scores.vtk"
+    appended_vtk_file_name = "/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/badPialSurfaces/" \
+                             + subject + "_.vtk"
     original_mesh.save(appended_vtk_file_name)
 
 # def add_node_saliency_scores_to_vtk_populn(saliency_scores, vtk_root):
