@@ -82,7 +82,8 @@ class Net(torch.nn.Module):
         
         sa1a_out = self.sa1a_module(*sa1_out)
         #sa1a_x, sa1a_pos, sa1a_batch = sa1a_out
-        
+        print("sa1s_out")
+        print(sa1a_out)
         # print("sa1a_x.shape")
         # print(sa1a_x.shape)
         # print("sa1a_pos.shape")
@@ -91,6 +92,8 @@ class Net(torch.nn.Module):
         # print(sa1a_batch.shape)
 
         sa2_out = self.sa2_module(*sa1a_out)
+        print("sa2_out")
+        print(sa2_out)
         #sa2_out = self.sa2_module(*sa1_out)
         sa2_x, sa2_pos, sa2_batch = sa2_out
         # print("sa2_x.shape")
@@ -101,6 +104,8 @@ class Net(torch.nn.Module):
         # print(sa2_batch.shape)
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
+        print("sa3_out")
+        print(sa3_out)
         # print("sa3 x shape")
         # print(x.shape)
         # print("sa3 pos shape")
@@ -112,11 +117,19 @@ class Net(torch.nn.Module):
             x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
 
         x = F.relu(self.lin1(x))
+        print("x after lin1")
+        print(x)
         # x = F.dropout(x, p=0.5, training=self.training)
         x = F.relu(self.lin2(x))
+        print("x after lin2")
+        print(x)
         x = F.relu(self.lin3(x))
+        print("x after lin3")
+        print(x)
         # x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin4(x)
+        print("x after lin4")
+        print(x)
         # print("x shape after final lin layer")
         # print(x.shape)
         return F.log_softmax(x, dim=-1)
