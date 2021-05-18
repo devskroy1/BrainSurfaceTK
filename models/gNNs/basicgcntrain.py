@@ -349,7 +349,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                     # print("target age")
                     # print(denorm_target_f(batch_labels[n], ds))
                     age_diff = abs(denorm_target_f(preds, ds) - denorm_target_f(batch_labels[n], ds))
-
+                    age_diff_scalar = age_diff[0][0].item()
                     # print("age_diff")
                     # print(age_diff)
                     # print("-----------------------------------------------------")
@@ -357,10 +357,10 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
                     #loss = loss_function(preds, batch_labels[n])
                     # print("loss")
                     # print(loss)
-                    pial_qa_age_diffs.append(age_diff[0][0])
-                    # if loss.item() > 0.1:
-                    #     add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
-                    #                             subject=subjects[n][0])
+                    pial_qa_age_diffs.append(age_diff_scalar)
+                    if age_diff_scalar > 1.5:
+                        add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+                                                subject=subjects[n][0])
 
                 # saliency_scores = cam[:, :num_nodes_first_graph]
                 # print("saliency scores shape")
