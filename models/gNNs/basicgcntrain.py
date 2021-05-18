@@ -648,7 +648,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
             bg_node_features = bg.ndata["features"].to(device)
             batch_labels = batch_labels.to(device)
 
-            predictions = model(bg, bg_node_features)
+            predictions = model(bg, bg_node_features, is_training=False)
             loss = loss_function(predictions, batch_labels)
 
             diff = diff_func(denorm_target_f(predictions, ds),
@@ -780,12 +780,12 @@ if __name__ == "__main__":
         val_epoch_loss, val_epoch_error, val_epoch_max_diff = evaluate(model, val_dl, val_ds,
                                                                                          loss_function,
                                                                                          diff_func, denorm_target_f,
-                                                                                         device, True)
+                                                                                         device)
         # Test
         test_epoch_loss, test_epoch_error, test_epoch_max_diff = evaluate(model, test_dl, test_ds,
                                                                                              loss_function,
                                                                                              diff_func, denorm_target_f,
-                                                                                             device, False)
+                                                                                             device)
 
         # Record to TensorBoard
         update_writer(writer, train_epoch_loss, val_epoch_loss, test_epoch_loss, train_epoch_error, val_epoch_error,
