@@ -251,8 +251,8 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             # #
             # print("batch_labels_gcn")
             # print(batch_labels_gcn)
-            # print("batch_labels_gcn shape")
-            # print(batch_labels_gcn.shape)
+            print("batch_labels_gcn shape")
+            print(batch_labels_gcn.shape)
             #Should be 4 x 1
             # print(batch_labels_gcn)
 
