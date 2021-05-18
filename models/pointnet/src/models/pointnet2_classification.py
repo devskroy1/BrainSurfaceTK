@@ -54,13 +54,16 @@ class Net(torch.nn.Module):
         # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
         self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
-        self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
-        self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+        #self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        self.sa3_module = GlobalSAModule(MLP([128 + 3, 256, 256, 512]))
+        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
-        self.lin1 = Lin(1024 + num_global_features, 512)
-        self.lin2 = Lin(512, 256)
-        self.lin3 = Lin(256, 128)
-        self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
+        #self.lin1 = Lin(1024 + num_global_features, 512)
+        self.lin1 = Lin(512 + num_global_features, 256)
+        # self.lin2 = Lin(512, 256)
+        # self.lin3 = Lin(256, 128)
+        #self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
+        self.lin4 = Lin(256, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
     def forward(self, data):
         # print("Inside pointnet2 clsn forward")
@@ -91,16 +94,20 @@ class Net(torch.nn.Module):
         # print(sa1a_batch.shape)
 
         #sa2_out = self.sa2_module(*sa1a_out)
-        sa2_out = self.sa2_module(*sa1_out)
-        sa2_x, sa2_pos, sa2_batch = sa2_out
+        # sa2_out = self.sa2_module(*sa1_out)
+        # x, pos, batch = sa2_out
+        #
         # print("sa2_x.shape")
-        # print(sa2_x.shape)
+        # print(x.shape)
         # print("sa2_pos.shape")
         # print(sa2_pos.shape)
         # print("sa2_batch.shape")
         # print(sa2_batch.shape)
-        sa3_out = self.sa3_module(*sa2_out)
+
+       # sa3_out = self.sa3_module(*sa2_out)
+        sa3_out = self.sa3_module(*sa1_out)
         x, pos, batch = sa3_out
+
         # print("sa3 x shape")
         # print(x.shape)
         # print("sa3 pos shape")
@@ -113,8 +120,8 @@ class Net(torch.nn.Module):
 
         x = F.relu(self.lin1(x))
         # x = F.dropout(x, p=0.5, training=self.training)
-        x = F.relu(self.lin2(x))
-        x = F.relu(self.lin3(x))
+        # x = F.relu(self.lin2(x))
+        # x = F.relu(self.lin3(x))
         # x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin4(x)
         # print("x shape after final lin layer")
