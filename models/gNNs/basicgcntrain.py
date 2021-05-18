@@ -147,6 +147,7 @@ def get_dataloaders(args):
     print("Dataloaders created")
     return train_dl, val_dl, test_dl, train_dataset, val_dataset, test_dataset
 
+#Train with basic saliency scores
 def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, optimizer, scheduler, device):
     model.train()
     train_epoch_loss = 0
@@ -160,15 +161,34 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         # print(subjects)
 
         bg = bg.to(device)
+
+        graphs = dgl.unbatch(bg)
+        first_graph = graphs[0]
+        first_graph_node_features = first_graph.ndata["features"].to(device)
+
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
-        prediction = model(bg, bg_node_features, is_training=True)
-        loss = loss_function(prediction, batch_labels)
+
+        #prediction = model(bg, bg_node_features, is_training=True)
+
+        predictions, _ = model(graph=bg, features=bg_node_features, is_training=True)
+
+        loss = loss_function(predictions, batch_labels)
         loss.backward()
         optimizer.step()
 
+        if (epoch == args.max_epochs - 1) and (iter < 6):
+            _, saliency_scores = model(graph=first_graph, features=first_graph_node_features, is_training=True)
+            # saliency_scores = cam[:, :num_nodes_first_graph]
+            # print("saliency scores shape")
+            # print(saliency_scores.shape)
+            # Append saliency scores to VTK only for the first subject in the batch
+            # print("Before calling add_node_saliency_scores_to_vtk()")
+            add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+                                            subject=subjects[0][0])
+
         with torch.no_grad():
-            train_diff = diff_func(denorm_target(prediction, train_ds),
+            train_diff = diff_func(denorm_target(predictions, train_ds),
                                    denorm_target(batch_labels, train_ds))  # shape: (batch_size, 1)
             train_epoch_error += train_diff.sum().detach().item()
             worst_diff = torch.max(train_diff).detach().item()
@@ -185,6 +205,46 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
 
     return train_epoch_loss, train_epoch_error, train_epoch_worst_diff
 
+#Original train()
+# def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, optimizer, scheduler, device):
+#     model.train()
+#     train_epoch_loss = 0
+#     train_epoch_error = 0.
+#     train_epoch_worst_diff = 0.
+#     train_total_size = 0
+#     for iter, (subjects, bg, batch_labels) in enumerate(train_dl):
+#         optimizer.zero_grad()
+#
+#         # print("Train subjects")
+#         # print(subjects)
+#
+#         bg = bg.to(device)
+#         bg_node_features = bg.ndata["features"].to(device)
+#         batch_labels = batch_labels.to(device)
+#         prediction = model(bg, bg_node_features, is_training=True)
+#         loss = loss_function(prediction, batch_labels)
+#         loss.backward()
+#         optimizer.step()
+#
+#         with torch.no_grad():
+#             train_diff = diff_func(denorm_target(prediction, train_ds),
+#                                    denorm_target(batch_labels, train_ds))  # shape: (batch_size, 1)
+#             train_epoch_error += train_diff.sum().detach().item()
+#             worst_diff = torch.max(train_diff).detach().item()
+#             if worst_diff > train_epoch_worst_diff:
+#                 train_epoch_worst_diff = worst_diff
+#         train_epoch_loss += loss.detach().item()
+#         train_total_size += len(batch_labels)
+#
+#     # train_epoch_loss = train_epoch_loss / (iter + 1)
+#     train_epoch_loss /= (iter + 1)  # Calculate mean sum batch loss over this epoch MSELoss
+#     train_epoch_error /= train_total_size  # Calculate mean L1 error over all the training data over this epoch
+#
+#     scheduler.step()
+#
+#     return train_epoch_loss, train_epoch_error, train_epoch_worst_diff
+
+#Pop salcy map train()
 # def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, optimizer, scheduler, device):
 #     model.train()
 #     train_epoch_loss = 0
@@ -289,101 +349,101 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
 #     return train_epoch_loss, train_epoch_error, train_epoch_worst_diff
 
 # Basic saliency scores
-def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, val):
-    with torch.no_grad():
-        model.eval()
-        epoch_loss = 0
-        epoch_error = 0.
-        total_size = 0
-        epoch_max_diff = 0.
-        batch_subjects = list()
-        batch_preds = list()
-        batch_targets = list()
-        batch_diffs = list()
-        # batch_size = args.batch_size
-        # print("About to enter evaluate for loop")
-        for iter, (subjects, bg, batch_labels) in enumerate(dl):
-            # print("About to evaluate on new batch of subject graphs")
-            # print("iter")
-            # print(iter)
-            # print("batch_labels")
-            # print(batch_labels)
-            # print("batch_labels shape")
-            # print(batch_labels.shape)
-            # bg stands for batch graph
-            #if (iter > 5) and (epoch == 1) and not val:
-            if (iter > 5) and (epoch == args.max_epochs - 1) and not val:
-                break
-            bg = bg.to(device)
-            # get node feature
-            graphs = dgl.unbatch(bg)
-            first_graph = graphs[0]
-            bg_node_features = bg.ndata["features"].to(device)
-            #total_num_nodes = bg_node_features.size(0)
-
-            first_graph_node_features = first_graph.ndata["features"].to(device)
-            num_nodes_first_graph = first_graph_node_features.size(0)
-
-            #num_nodes_per_graph = total_num_nodes // batch_size
-
-            batch_labels = batch_labels.to(device)
-
-            predictions, _ = model(graph=bg, features=bg_node_features, is_training=False)
-
-            #i = 0
-            #for subject in subjects:
-                # print("i")
-                # print(i)
-            #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
-            #if (epoch == 1) and not val:
-            if (epoch == args.max_epochs - 1) and not val:
-                _, saliency_scores = model(graph=first_graph, features=first_graph_node_features, is_training=False)
-                # saliency_scores = cam[:, :num_nodes_first_graph]
-                # print("saliency scores shape")
-                # print(saliency_scores.shape)
-                #Append saliency scores to VTK only for the first subject in the batch
-                # print("Before calling add_node_saliency_scores_to_vtk()")
-                add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
-                                            subject=subjects[0][0])
-                # print("After calling add_node_saliency_scores_to_vtk()")
-            # print("After calling add_node_saliency_scores_to_vtk()")
-             #   i += 1
-
-            loss = loss_function(predictions, batch_labels)
-            # if (epoch == args.max_epochs - 1) and not val:
-            #     if loss.item() > 10:
-            #         print("Poorly extracted subject surfaces")
-            #         print(subjects)
-            # print("After calling loss function")
-            diff = diff_func(denorm_target_f(predictions, ds),
-                             denorm_target_f(batch_labels, ds))
-            epoch_error += diff.sum().item()
-            # Identify max difference
-            max_diff = torch.max(diff).item()
-            if max_diff > epoch_max_diff:
-                epoch_max_diff = max_diff
-            epoch_loss += loss.item()
-
-            # Store
-            batch_subjects.append(subjects)
-            batch_preds.append(predictions.cpu())
-            batch_targets.append(batch_labels.cpu())
-            batch_diffs.append(diff.cpu())
-
-            total_size += len(batch_labels)
-        # print("After exiting for loop iterating over subject batches")
-        epoch_loss /= (iter + 1)
-        epoch_error /= total_size
-
-        all_subjects = np.concatenate(batch_subjects)
-        all_preds = denorm_target_f(torch.cat(batch_preds), ds)
-        all_targets = denorm_target_f(torch.cat(batch_targets), ds)
-        all_diffs = torch.cat(batch_diffs)
-
-        # csv_material = np.concatenate((all_subjects, all_preds.numpy(), all_targets.numpy(), all_diffs.numpy()),
-        #                               axis=-1)
-
-    return epoch_loss, epoch_error, torch.max(all_diffs).item()
+# def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, val):
+#     with torch.no_grad():
+#         model.eval()
+#         epoch_loss = 0
+#         epoch_error = 0.
+#         total_size = 0
+#         epoch_max_diff = 0.
+#         batch_subjects = list()
+#         batch_preds = list()
+#         batch_targets = list()
+#         batch_diffs = list()
+#         # batch_size = args.batch_size
+#         # print("About to enter evaluate for loop")
+#         for iter, (subjects, bg, batch_labels) in enumerate(dl):
+#             # print("About to evaluate on new batch of subject graphs")
+#             # print("iter")
+#             # print(iter)
+#             # print("batch_labels")
+#             # print(batch_labels)
+#             # print("batch_labels shape")
+#             # print(batch_labels.shape)
+#             # bg stands for batch graph
+#             #if (iter > 5) and (epoch == 1) and not val:
+#             if (iter > 5) and (epoch == args.max_epochs - 1) and not val:
+#                 break
+#             bg = bg.to(device)
+#             # get node feature
+#             graphs = dgl.unbatch(bg)
+#             first_graph = graphs[0]
+#             bg_node_features = bg.ndata["features"].to(device)
+#             #total_num_nodes = bg_node_features.size(0)
+#
+#             first_graph_node_features = first_graph.ndata["features"].to(device)
+#             num_nodes_first_graph = first_graph_node_features.size(0)
+#
+#             #num_nodes_per_graph = total_num_nodes // batch_size
+#
+#             batch_labels = batch_labels.to(device)
+#
+#             predictions, _ = model(graph=bg, features=bg_node_features, is_training=False)
+#
+#             #i = 0
+#             #for subject in subjects:
+#                 # print("i")
+#                 # print(i)
+#             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
+#             #if (epoch == 1) and not val:
+#             if (epoch == args.max_epochs - 1) and not val:
+#                 _, saliency_scores = model(graph=first_graph, features=first_graph_node_features, is_training=False)
+#                 # saliency_scores = cam[:, :num_nodes_first_graph]
+#                 # print("saliency scores shape")
+#                 # print(saliency_scores.shape)
+#                 #Append saliency scores to VTK only for the first subject in the batch
+#                 # print("Before calling add_node_saliency_scores_to_vtk()")
+#                 add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+#                                             subject=subjects[0][0])
+#                 # print("After calling add_node_saliency_scores_to_vtk()")
+#             # print("After calling add_node_saliency_scores_to_vtk()")
+#              #   i += 1
+#
+#             loss = loss_function(predictions, batch_labels)
+#             # if (epoch == args.max_epochs - 1) and not val:
+#             #     if loss.item() > 10:
+#             #         print("Poorly extracted subject surfaces")
+#             #         print(subjects)
+#             # print("After calling loss function")
+#             diff = diff_func(denorm_target_f(predictions, ds),
+#                              denorm_target_f(batch_labels, ds))
+#             epoch_error += diff.sum().item()
+#             # Identify max difference
+#             max_diff = torch.max(diff).item()
+#             if max_diff > epoch_max_diff:
+#                 epoch_max_diff = max_diff
+#             epoch_loss += loss.item()
+#
+#             # Store
+#             batch_subjects.append(subjects)
+#             batch_preds.append(predictions.cpu())
+#             batch_targets.append(batch_labels.cpu())
+#             batch_diffs.append(diff.cpu())
+#
+#             total_size += len(batch_labels)
+#         # print("After exiting for loop iterating over subject batches")
+#         epoch_loss /= (iter + 1)
+#         epoch_error /= total_size
+#
+#         all_subjects = np.concatenate(batch_subjects)
+#         all_preds = denorm_target_f(torch.cat(batch_preds), ds)
+#         all_targets = denorm_target_f(torch.cat(batch_targets), ds)
+#         all_diffs = torch.cat(batch_diffs)
+#
+#         # csv_material = np.concatenate((all_subjects, all_preds.numpy(), all_targets.numpy(), all_diffs.numpy()),
+#         #                               axis=-1)
+#
+#     return epoch_loss, epoch_error, torch.max(all_diffs).item()
 
 # Population level saliency map method (with aligned surfaces)
 # def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, val):
@@ -568,6 +628,58 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
 #         #                               axis=-1)
 #
 #     return epoch_loss, epoch_error, torch.max(all_diffs).item()
+
+#Original evaluate()
+def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
+    with torch.no_grad():
+        model.eval()
+        epoch_loss = 0
+        epoch_error = 0.
+        total_size = 0
+        epoch_max_diff = 0.
+        batch_subjects = list()
+        batch_preds = list()
+        batch_targets = list()
+        batch_diffs = list()
+        for iter, (subjects, bg, batch_labels) in enumerate(dl):
+            # bg stands for batch graph
+            bg = bg.to(device)
+            # get node feature
+            bg_node_features = bg.ndata["features"].to(device)
+            batch_labels = batch_labels.to(device)
+
+            predictions = model(bg, bg_node_features)
+            loss = loss_function(predictions, batch_labels)
+
+            diff = diff_func(denorm_target_f(predictions, ds),
+                             denorm_target_f(batch_labels, ds))
+            epoch_error += diff.sum().item()
+            # Identify max difference
+            max_diff = torch.max(diff).item()
+            if max_diff > epoch_max_diff:
+                epoch_max_diff = max_diff
+            epoch_loss += loss.item()
+
+            # Store
+            batch_subjects.append(subjects)
+            batch_preds.append(predictions.cpu())
+            batch_targets.append(batch_labels.cpu())
+            batch_diffs.append(diff.cpu())
+
+            total_size += len(batch_labels)
+
+        epoch_loss /= (iter + 1)
+        epoch_error /= total_size
+
+        all_subjects = np.concatenate(batch_subjects)
+        all_preds = denorm_target_f(torch.cat(batch_preds), ds)
+        all_targets = denorm_target_f(torch.cat(batch_targets), ds)
+        all_diffs = torch.cat(batch_diffs)
+
+        # csv_material = np.concatenate((all_subjects, all_preds.numpy(), all_targets.numpy(), all_diffs.numpy()),
+        #                               axis=-1)
+
+    return epoch_loss, epoch_error, torch.max(all_diffs).item()
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
