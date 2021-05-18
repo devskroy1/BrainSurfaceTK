@@ -302,7 +302,7 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
         batch_diffs = list()
         # batch_size = args.batch_size
         # print("About to enter evaluate for loop")
-        pial_qa_losses = []
+        pial_qa_age_diffs = []
         for iter, (subjects, bg, batch_labels) in enumerate(dl):
             # print("batch_labels[0]")
             # print(batch_labels[0])
@@ -340,16 +340,34 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             #saliency_scores = cam[:, i * num_nodes_per_graph:(i + 1) * num_nodes_per_graph]
             #if (epoch == 1) and not val:
             if (epoch == args.max_epochs - 1) and not val:
-                preds, saliency_scores = model(graph=first_graph, features=first_graph_node_features, is_training=False)
+                for n in range(len(graphs)):
+                    graph = graphs[n]
+                    graph_node_features = graph.ndata["features"].to(device)
+                    preds, saliency_scores = model(graph=graph, features=graph_node_features, is_training=False)
+                    # print("predicted age")
+                    # print(denorm_target_f(preds, ds))
+                    # print("target age")
+                    # print(denorm_target_f(batch_labels[n], ds))
+                    age_diff = abs(denorm_target_f(preds, ds) - denorm_target_f(batch_labels[n], ds))
+
+                    # print("age_diff")
+                    # print(age_diff)
+                    # print("-----------------------------------------------------")
+
+                    #loss = loss_function(preds, batch_labels[n])
+                    # print("loss")
+                    # print(loss)
+                    pial_qa_age_diffs.append(age_diff[0][0])
+                    # if loss.item() > 0.1:
+                    #     add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
+                    #                             subject=subjects[n][0])
+
                 # saliency_scores = cam[:, :num_nodes_first_graph]
                 # print("saliency scores shape")
                 # print(saliency_scores.shape)
                 #Append saliency scores to VTK only for the first subject in the batch
                 # print("Before calling add_node_saliency_scores_to_vtk()")
-                loss = loss_function(preds, batch_labels[0])
-                # print("loss")
-                # print(loss)
-                pial_qa_losses.append(loss.item())
+
                 # if loss.item() > SOME_THRESHOLD:
                 #     add_node_saliency_scores_to_vtk(saliency_scores=saliency_scores, vtk_root=args.load_path,
                 #                             subject=subjects[0][0])
@@ -383,9 +401,9 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device, v
             total_size += len(batch_labels)
 
         if (epoch == args.max_epochs - 1) and not val:
-            print("Sorted losses")
-            pial_qa_losses.sort()
-            print(pial_qa_losses)
+            print("Sorted age diffs")
+            pial_qa_age_diffs.sort()
+            print(pial_qa_age_diffs)
         # print("After exiting for loop iterating over subject batches")
         epoch_loss /= (iter + 1)
         epoch_error /= total_size

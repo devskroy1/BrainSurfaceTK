@@ -65,6 +65,7 @@ class BrainNetworkDataset(Dataset):
 
         self.sample_filepaths, self.targets_mu, self.targets_std = self.get_sample_file_paths(save_path, dataset)
 
+
         print("Initialisation complete")
 
     def generate_dataset(self, files_path, meta_data_filepath, save_path, index_split_pickle_fp=None):
@@ -679,9 +680,9 @@ class BrainNetworkDataset(Dataset):
         else:
             parent_path = self.update_save_path(ds_store_fp, dataset)
             targets_mu, targets_std = self.load_sample_from_pickle(os.path.join(parent_path, "mu_std.pickle"))
+
             return [os.path.join(parent_path, fp) for fp in os.listdir(parent_path) if
                     fp != "mu_std.pickle"], targets_mu, targets_std
-
 
 if __name__ == "__main__":
     # Local
