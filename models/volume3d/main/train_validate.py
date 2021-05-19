@@ -6,7 +6,6 @@ import pandas as pd
 import seaborn as sns
 import torch
 import torch.nn.functional as F
-import dgl
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.nn import Module, Conv3d, ConvTranspose3d, Linear, ReLU, Sequential, Linear, Flatten, L1Loss, BatchNorm3d, \
@@ -205,7 +204,7 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     # 6. Define a model
     #model = Part3(feats, dropout_p).to(device=device)
     in_dim = 6
-    hidden_dim = 256
+    hidden_dim = 64
     model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
 
     # 7. Print parameters

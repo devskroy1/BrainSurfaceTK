@@ -5,7 +5,7 @@ import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset, DataLoader
 import dgl
-from dgl.nn.pytorch import GraphConv
+from dgl.nn.pytorch.conv import GraphConv
 
 class BasicGCNRegressor(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes):
@@ -116,8 +116,8 @@ class VolumeCNN_GCNRegressor(Module):
         
         # print("gcn_first_feat_map")
         # print(gcn_first_feat_map)
-        # print("gcn_final_feat_map shape")
-        # print(gcn_final_feat_map.shape)
+        print("gcn_final_feat_map shape")
+        print(gcn_final_feat_map.shape)
         #
         # with graph.local_scope():
         #     graph.ndata['tmp'] = gcn_final_feat_map
@@ -163,12 +163,12 @@ class VolumeCNN_GCNRegressor(Module):
         # print(gcn_final_feat_map.shape)
         # print("vol_conv_feat_map shape")
         # print(vol_conv_feat_map.shape)
-        # print("expanded_vol_conv_feat_map shape")
-        # print(expanded_vol_conv_feat_map.shape)
+        print("expanded_vol_conv_feat_map shape")
+        print(expanded_vol_conv_feat_map.shape)
 
         concat_feat_map = torch.cat((gcn_final_feat_map, expanded_vol_conv_feat_map), dim=1)
-        # print("concat_feat_map shape")
-        # print(concat_feat_map.shape)
+        print("concat_feat_map shape")
+        print(concat_feat_map.shape)
 
         with graph.local_scope():
             graph.ndata['tmp'] = concat_feat_map
