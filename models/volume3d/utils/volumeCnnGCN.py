@@ -180,7 +180,7 @@ class VolumeCNN_GCNRegressor(Module):
         # print("concat_feat_map")
         # print(concat_feat_map)
         #out = self.predict_layer(concat_feat_map)
-
+        #
         # print("hg shape")
         # print(hg.shape)
 

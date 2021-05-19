@@ -142,7 +142,7 @@ if __name__ == '__main__':
                                               dropout_p, dataset_train,
                                               dataset_val, fn, counter,
                                               scheduler_frequency,
-                                              writer, train_dl_gcn, val_dl_gcn)
+                                              writer, train_dl_gcn, val_dl_gcn, train_dataset_gcn, val_dataset_gcn)
 
     # 8. Save the results
     save_to_log(model, params,
@@ -167,7 +167,7 @@ if __name__ == '__main__':
                                                                  dataset_train, dataset_test,
                                                                  fn, counter,
                                                                  scheduler_frequency,
-                                                                 writer, train_dl_gcn, test_dl_gcn)
+                                                                 writer, train_dl_gcn, test_dl_gcn, train_dataset_gcn, test_dataset_gcn)
 
     # 4. Record the TEST results
     save_to_log_test(model, params, fn, score, num_epochs, batch_size,

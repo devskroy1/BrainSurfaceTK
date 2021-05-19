@@ -107,6 +107,10 @@ def save_to_log(model, params, fn, final_MAE, num_epochs, batch_size, lr, feats,
         log.write('\n')
         log.write(f'SUBJECT #{fn[-1]}:    Validation = {final_MAE},    ')
 
+def denorm_target_f(target, dataset):
+    # used to unstandardise the target (to get the scan age of the patient)
+    return (target.cpu() * dataset.targets_std) + dataset.targets_mu
+
 def find_subjects_data_volcnn(subjects, dataset_volcnn):
 
     volcnn_samples_shape = list(dataset_volcnn.samples[0].shape)
@@ -156,7 +160,7 @@ def find_subjects_data_volcnn(subjects, dataset_volcnn):
 
 #Both Volume3DCNN and GCN
 def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_volumecnn_train, dataset_volumecnn_val, fn, number_here,
-                   scheduler_freq, writer, train_dl_gcn, val_dl_gcn):
+                   scheduler_freq, writer, train_dl_gcn, val_dl_gcn, train_ds_gcn, val_ds_gcn):
     '''
     Main train-val loop. Train on training data and evaluate on validation data.
 
@@ -201,7 +205,7 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     # 6. Define a model
     #model = Part3(feats, dropout_p).to(device=device)
     in_dim = 6
-    hidden_dim = 64
+    hidden_dim = 256
     model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
 
     # 7. Print parameters
@@ -257,7 +261,15 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             # print(batch_labels_gcn)
 
 
-            loss = loss_function(prediction, batch_labels_gcn)
+            #loss = loss_function(prediction, batch_labels_gcn)
+            predicted_age = denorm_target_f(prediction, train_ds_gcn)
+            true_age = denorm_target_f(batch_labels_gcn, train_ds_gcn)
+            # print("pred age")
+            # print(predicted_age)
+            # print("true age")
+            # print(true_age)
+
+            loss = loss_function(predicted_age, true_age)
             # print("loss")
             # print(loss)
             #loss = loss_function(prediction, batch_labels_volcnn)
@@ -307,9 +319,18 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
                     batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
                     batch_labels_gcn = batch_labels_gcn.to(device)
                     prediction = model(batch_data, bg, bg_node_features)
-                    pred_ages.append([prediction[i].item() for i in range(len(prediction))])
-                    actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
-                    loss = loss_function(prediction, batch_labels_gcn)
+
+                    predicted_age = denorm_target_f(prediction, val_ds_gcn)
+                    true_age = denorm_target_f(batch_labels_gcn, val_ds_gcn)
+
+                    # pred_ages.append([prediction[i].item() for i in range(len(prediction))])
+                    # actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
+                    pred_ages.append([predicted_age[i].item() for i in range(len(predicted_age))])
+                    actual_ages.append([true_age[i].item() for i in range(len(true_age))])
+
+                    #loss = loss_function(prediction, batch_labels_gcn)
+                    loss = loss_function(predicted_age, true_age)
+
                     val_loss.append(loss.item())
 
                 mean_val_error5 = np.mean(val_loss)
@@ -351,9 +372,21 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
             batch_data = batch_data_volcnn.to(device=device)  # move to device, e.g. GPU
             batch_labels_gcn = batch_labels_gcn.to(device)
             prediction = model(batch_data, bg, bg_node_features)
-            pred_ages.append([prediction[i].item() for i in range(len(prediction))])
-            actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
-            loss = loss_function(prediction, batch_labels_gcn)
+
+            # pred_ages.append([prediction[i].item() for i in range(len(prediction))])
+            # actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
+            # loss = loss_function(prediction, batch_labels_gcn)
+
+            predicted_age = denorm_target_f(prediction, val_ds_gcn)
+            true_age = denorm_target_f(batch_labels_gcn, val_ds_gcn)
+
+            # pred_ages.append([prediction[i].item() for i in range(len(prediction))])
+            # actual_ages.append([batch_labels_gcn[i].item() for i in range(len(batch_labels_gcn))])
+            pred_ages.append([predicted_age[i].item() for i in range(len(predicted_age))])
+            actual_ages.append([true_age[i].item() for i in range(len(true_age))])
+
+            loss = loss_function(predicted_age, true_age)
+
             i_fold_val_scores.append(loss.item())
 
     plot_preds(pred_ages, actual_ages, writer, epoch, test=False)
