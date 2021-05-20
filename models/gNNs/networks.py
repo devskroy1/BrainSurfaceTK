@@ -33,14 +33,16 @@ class BasicGCNSegmentation(nn.Module):
         super(BasicGCNSegmentation, self).__init__()
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.conv3 = GraphConv(hidden_dim, n_classes, activation=None)
+        self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv4 = GraphConv(hidden_dim, n_classes, activation=None)
 
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
-        return self.conv3(graph, hidden)
+        hidden = self.conv3(graph, hidden)
+        return self.conv4(graph, hidden)
 
 
 

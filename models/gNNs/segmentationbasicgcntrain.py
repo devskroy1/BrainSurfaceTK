@@ -50,12 +50,12 @@ if __name__ == "__main__":
     meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
-    lr = 8e-4
+    lr = 0.001
     T_max = 10
     eta_min = 1e-6
 
     writer = SummaryWriter(comment="segmentationbasicgcn")
-    batch_size = 64
+    batch_size = 2
     train_test_split = (0.8, 0.1, 0.1)
 
     print("Batch size: ")
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(6, 32, 40)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     best_loss = math.inf
 
     print("Starting")
-    for epoch in range(1000):
+    for epoch in range(150):
 
         # Train
         model.train()
