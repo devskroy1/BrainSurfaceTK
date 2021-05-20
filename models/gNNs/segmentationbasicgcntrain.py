@@ -77,7 +77,7 @@ if __name__ == "__main__":
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = EdgeConvGCNSegmentation(6, 32, 40, device)  # 3 features, 40 outputs (segmentation)
+    model = EdgeConvGCNSegmentation(6, 64, 40, device)  # 3 features, 40 outputs (segmentation)
     #model = DGCNNSegmentation(3, 256, 40, batch_size, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     best_loss = math.inf
 
     print("Starting")
-    for epoch in range(300):
+    for epoch in range(150):
 
         # Train
         model.train()
