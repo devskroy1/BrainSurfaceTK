@@ -201,7 +201,7 @@ def train_test(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_volu
     # 6. Define a model
     #model = Part3(feats, dropout_p).to(device=device)
     in_dim = 6
-    hidden_dim = 64
+    hidden_dim = 256
     model = VolumeCNN_GCNRegressor(feats, dropout_p, in_dim, hidden_dim, device).to(device)
 
     # 7. Print parameters
