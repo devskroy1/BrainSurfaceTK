@@ -26,7 +26,7 @@ if __name__ == '__main__':
     PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..') + '/'
 
     num_workers = 2
-    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth', 'segmentation']
+    local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     global_features = []
 
     #################################################
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "5k"
     data_type = 'white'
     hemisphere = 'both'
 
