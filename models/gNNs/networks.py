@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import scipy.spatial
-from torch_geometric.nn import knn_graph, SAGPooling, graclus
+from torch_geometric.nn import knn_graph, SAGPooling, graclus, EdgePooling
 from dgl.nn.pytorch import GraphConv
 from dgl.subgraph import edge_subgraph
 
@@ -67,6 +67,7 @@ class BasicGCNSegmentation(nn.Module):
         hidden = self.conv1(graph, features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         edge_index = self.knn(hidden, hidden, 20)
+
         # print("hidden shape")
         # print(hidden.shape)
         # print("edge_index shape")
