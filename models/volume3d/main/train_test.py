@@ -393,8 +393,8 @@ def find_subjects_data_volcnn(subjects, dataset_volcnn):
 
 
 #Just Volume3DCNN
-def train_test(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_volumecnn_train, dataset_volumecnn_test,
-               fn, number_here, scheduler_freq, writer, train_dl_gcn, test_dl_gcn):
+def train_test(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_train, dataset_test,
+               fn, number_here, scheduler_freq, writer):
     '''
     Main train-test loop. Train on training data and evaluate on testing data.
 

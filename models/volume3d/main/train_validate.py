@@ -446,8 +446,8 @@ def train_validate(lr, feats, num_epochs, gamma, batch_size, dropout_p, dataset_
     train_loader = DataLoader(dataset_train, batch_size=batch_size)
     val_loader = DataLoader(dataset_val, batch_size=batch_size)
 
-    print("dataset_train.samples")
-    print(dataset_train.samples)
+    # print("dataset_train.samples")
+    # print(dataset_train.samples)
 
     # 6. Define a model
     model = Part3(feats, dropout_p).to(device=device)
