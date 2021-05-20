@@ -42,8 +42,10 @@ class VolumeCNN_GCNRegressor(Module):
         self.graph_conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.graph_conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.graph_conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        #self.predict_layer = nn.Linear(2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
+        # self.predict_layer = nn.Linear(hidden_dim, 1)
+
         self.predict_layer = nn.Linear(2 * 2 * 2 * 2 * feats * (1 * 3 * 3) + hidden_dim, 1)
+
         #self.predict_layer = nn.Linear(10624, 1)
         #self.predict_layer = nn.Linear(15936, 1)
         #self.predict_layer = nn.Linear(25856, 1)
@@ -110,7 +112,7 @@ class VolumeCNN_GCNRegressor(Module):
 
     def forward(self, x, graph, features):
 
-        graph = dgl.add_self_loop(graph)
+        #graph = dgl.add_self_loop(graph)
         gcn_first_feat_map = self.graph_conv1(graph, features)
         gcn_final_feat_map = self.graph_conv2(graph, gcn_first_feat_map)
         #gcn_third_feat_map = self.graph_conv3(graph, gcn_second_feat_map)
@@ -118,8 +120,8 @@ class VolumeCNN_GCNRegressor(Module):
         
         # print("gcn_first_feat_map")
         # print(gcn_first_feat_map)
-        print("gcn_final_feat_map shape")
-        print(gcn_final_feat_map.shape)
+        # print("gcn_final_feat_map shape")
+        # print(gcn_final_feat_map.shape)
         #
         # with graph.local_scope():
         #     graph.ndata['tmp'] = gcn_final_feat_map
@@ -165,38 +167,20 @@ class VolumeCNN_GCNRegressor(Module):
         # print(gcn_final_feat_map.shape)
         # print("vol_conv_feat_map shape")
         # print(vol_conv_feat_map.shape)
-        print("expanded_vol_conv_feat_map shape")
-        print(expanded_vol_conv_feat_map.shape)
+        # print("expanded_vol_conv_feat_map shape")
+        # print(expanded_vol_conv_feat_map.shape)
 
         concat_feat_map = torch.cat((gcn_final_feat_map, expanded_vol_conv_feat_map), dim=1)
-        print("concat_feat_map shape")
-        print(concat_feat_map.shape)
+        # print("concat_feat_map shape")
+        # print(concat_feat_map.shape)
 
-        graphs = dgl.unbatch(graph)
-        num_nodes_graphs = torch.empty(len(graphs), device=self.device)
-        for g in range(len(graphs)):
-            num_nodes_graphs[g] = graphs[g].num_nodes()
-
-        # q = Queue()
-        # q1 = self.enthread(q, target=self.set_batch_num_nodes, args=(graph, num_nodes_graphs))
-        # q2 = self.enthread(q, target=self.mean_nodes, args=(graph, concat_feat_map))
-        # hg = q2.get()
-
-
-        #self.set_batch_num_nodes(graph, num_nodes_graphs)
-
-        # print("graph._batch_num_nodes")
-        # print(graph._batch_num_nodes)
-
-        batch_graph = dgl.batch(graphs)
-
-        with batch_graph.local_scope():
-            batch_graph.ndata['tmp'] = concat_feat_map
+        with graph.local_scope():
+            graph.ndata['tmp'] = concat_feat_map
             # Calculate graph representation by averaging all the node representations.
-            hg = dgl.mean_nodes(batch_graph, 'tmp')
+            hg = dgl.mean_nodes(graph, 'tmp')
 
-        print("hg shape")
-        print(hg.shape)
+        # print("hg shape")
+        # print(hg.shape)
 
         # print("concat_feat_map shape")
         # print(concat_feat_map.shape)
@@ -218,21 +202,3 @@ class VolumeCNN_GCNRegressor(Module):
         #return self.final_lin_layer(concat_feat_map)
         #return self.model(x)
 
-    def enthread(self, q, target, args):
-
-        def wrapper():
-            q.put(target(*args))
-
-        t = threading.Thread(target=wrapper)
-        t.start()
-        return q
-
-    def set_batch_num_nodes(self, graph, num_nodes_graphs):
-        graph.set_batch_num_nodes(num_nodes_graphs)
-
-    def mean_nodes(self, graph, concat_feat_map):
-        with graph.local_scope():
-            graph.ndata['tmp'] = concat_feat_map
-            # Calculate graph representation by averaging all the node representations.
-            hg = dgl.mean_nodes(graph, 'tmp')
-        return hg
