@@ -184,9 +184,9 @@ class Part3(Module):
 
     def forward(self, x):
         out = self.model(x)
-        print("out shape")
-        print(out.shape)
-        print("out")
-        print(out)
+        #print("out shape")
+        #print(out.shape)
+        #print("out")
+        #print(out)
         return out
         #return self.model(x)
