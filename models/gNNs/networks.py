@@ -57,8 +57,8 @@ class BasicGCNSegmentation(nn.Module):
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.conv5 = GraphConv(hidden_dim, n_classes, activation=None)
+        self.conv4 = GraphConv(hidden_dim, n_classes, activation=nn.ReLU())
+        #self.conv5 = GraphConv(hidden_dim, n_classes, activation=None)
         # self.sagPooling1 = SAGPooling(hidden_dim)
         # self.sagPooling2 = SAGPooling(hidden_dim)
         self.device = device
@@ -123,9 +123,9 @@ class BasicGCNSegmentation(nn.Module):
         #hidden = self.conv3(graph, hidden)
 
         hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv4(graph, hidden)
-        hidden = F.dropout(hidden, self.dropout, training=self.training)
-        return self.conv5(graph, hidden)
+        #hidden = self.conv4(graph, hidden)
+        #hidden = F.dropout(hidden, self.dropout, training=self.training)
+        return self.conv4(graph, hidden)
 
     def knn(self, x, y, k, batch_x=None, batch_y=None):
         if batch_x is None:
