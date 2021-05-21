@@ -46,12 +46,12 @@ if __name__ == "__main__":
 
     # Imperial
     load_path = os.path.join(
-        "/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/hemispheres/reducedto_20k/white/vtk")
+        "/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/merged/reducedto_10k/white/vtk")
     #meta_data_file_path = os.path.join("/vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/combined.tsv")
     meta_data_file_path = os.path.join("/vol/bitbucket/sr4617/ForkedBrainSurfaceTK/models/pointnet/src/meta_data.tsv")
     save_path = "/vol/bitbucket/sr4617/tmp/dataset"
 
-    lr = 8e-4
+    lr = 0.001
     T_max = 10
     eta_min = 1e-6
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(3, 256, 40, device)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(6, 256, 40, device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     best_loss = math.inf
 
     print("Starting")
-    for epoch in range(1000):
+    for epoch in range(300):
 
         # Train
         model.train()

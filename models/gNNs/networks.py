@@ -53,6 +53,7 @@ class BasicGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNSegmentation, self).__init__()
         self.dropout = 0.5
+        self.hidden_dim = hidden_dim
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
@@ -68,11 +69,25 @@ class BasicGCNSegmentation(nn.Module):
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         edge_index = self.knn(hidden, hidden, 20)
 
+        edgePooling = EdgePooling(in_channels=self.hidden_dim)
+        graphs = dgl.unbatch(graph)
+
+        batch_vector = torch.empty(graph.num_nodes(), device=self.device)
+        start_index = 0
+        for g in range(len(graphs)):
+            num_nodes_graph = graphs[g].num_nodes()
+            batch_vector[start_index : start_index + num_nodes_graph - 1] = g
+            start_index += num_nodes_graph
+
+        x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch_vector)
+
         # print("hidden shape")
         # print(hidden.shape)
         # print("edge_index shape")
         # print(edge_index.shape)
-        hidden = graclus(edge_index)
+
+        #hidden = graclus(edge_index)
+
         # sag_pool_out1 = self.sagPooling1(hidden.to(self.device), edge_index.to(self.device))
         # # print("sag_pool_out1[0] shape")
         # # print(sag_pool_out1[0].shape)
@@ -94,13 +109,19 @@ class BasicGCNSegmentation(nn.Module):
         # print(graph)
         # graph = dgl.add_self_loop(graph)
         # hidden = self.conv2(graph, sag_pooled_features)
-        print("graclus hidden shape")
-        print(hidden.shape)
-        print("graph")
-        print(graph)
-        hidden = self.conv2(graph.to(self.device), hidden.to(self.device))
+        # print("graclus hidden shape")
+        # print(hidden.shape)
+        # print("graph")
+        # print(graph)
+
+        #hidden = self.conv2(graph.to(self.device), hidden.to(self.device))
+        hidden = self.conv2(graph, x)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv3(graph, hidden)
+        x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+
+        hidden = self.conv3(graph, x)
+        #hidden = self.conv3(graph, hidden)
+
         hidden = F.dropout(hidden, self.dropout, training=self.training)
         hidden = self.conv4(graph, hidden)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
