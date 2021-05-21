@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import scipy.spatial
 from torch_geometric.nn import knn_graph, SAGPooling, graclus, EdgePooling
-from dgl.nn.pytorch import GraphConv
-from dgl.subgraph import edge_subgraph
+from dgl.nn.pytorch import GraphConv, SortPooling
+from dgl.subgraph import node_subgraph
 
 from models.gNNs.layers import GNNLayer
 
@@ -58,6 +58,8 @@ class BasicGCNSegmentation(nn.Module):
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, n_classes, activation=nn.ReLU())
+        self.sort_pool1 = SortPooling(k=1000)
+        self.sort_pool2 = SortPooling(k=100)
         #self.conv5 = GraphConv(hidden_dim, n_classes, activation=None)
         # self.sagPooling1 = SAGPooling(hidden_dim)
         # self.sagPooling2 = SAGPooling(hidden_dim)
@@ -65,21 +67,32 @@ class BasicGCNSegmentation(nn.Module):
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
+
         hidden = self.conv1(graph, features)
         hidden = F.dropout(hidden, self.dropout, training=self.training)
-        edge_index = self.knn(hidden, hidden, 20)
 
-        edgePooling = EdgePooling(in_channels=self.hidden_dim)
-        graphs = dgl.unbatch(graph)
+        # edge_index = self.knn(hidden, hidden, 20)
+        #
+        # # print("edge_index dtype")
+        # # print(edge_index.dtype)
+        # edgePooling = EdgePooling(in_channels=self.hidden_dim).to(self.device)
+        # graphs = dgl.unbatch(graph)
+        #
+        # batch_vector = torch.empty(graph.num_nodes(), device=self.device)
+        # start_index = 0
+        # for g in range(len(graphs)):
+        #     num_nodes_graph = graphs[g].num_nodes()
+        #     batch_vector[start_index : start_index + num_nodes_graph - 1] = g
+        #     start_index += num_nodes_graph
+        #
+        # # graph = graph.to(self.device)
+        # # features = features.to(self.device)
+        # batch_vector = batch_vector.long()
+        # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch_vector)
 
-        batch_vector = torch.empty(graph.num_nodes(), device=self.device)
-        start_index = 0
-        for g in range(len(graphs)):
-            num_nodes_graph = graphs[g].num_nodes()
-            batch_vector[start_index : start_index + num_nodes_graph - 1] = g
-            start_index += num_nodes_graph
 
-        x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch_vector)
+
+        #x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch_vector)
 
         # print("hidden shape")
         # print(hidden.shape)
@@ -115,17 +128,63 @@ class BasicGCNSegmentation(nn.Module):
         # print(graph)
 
         #hidden = self.conv2(graph.to(self.device), hidden.to(self.device))
-        hidden = self.conv2(graph, x)
-        hidden = F.dropout(hidden, self.dropout, training=self.training)
-        x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+        print("Before conv2")
+        print("graph ")
+        print(graph)
+        print("hidden shape")
+        print(hidden.shape)
+        # print("x shape")
+        # print(x.shape)
+        topk_node_idxs_batches, sort_pool_out_1 = self.sort_pool1(graph, hidden)
+        graphs = dgl.unbatch(graph)
+        batch_size = len(graphs)
+        subgraphs = []
+        for g in range(batch_size):
+            topk_node_idxs = topk_node_idxs_batches[g]
+            subgraph = node_subgraph(graphs[g], topk_node_idxs)
+            subgraphs.append(subgraph)
+        batched_subgraph = dgl.batch(subgraphs)
 
-        hidden = self.conv3(graph, x)
-        #hidden = self.conv3(graph, hidden)
+        print("topk_node_idxs_batches shape")
+        print(topk_node_idxs_batches.shape)
+        #Should be 2 X 1000
+        print("sort_pool_out_1 shape")
+        print(sort_pool_out_1.shape)
+
+        # hidden = self.conv2(graph, hidden)
+        # print("conv2 out shape")
+        # print(hidden.shape)
+        sort_pool_out_1 = sort_pool_out_1.reshape(batch_size * self.sort_pool1.k, -1)
+        hidden = self.conv2(batched_subgraph, sort_pool_out_1)
+        print("conv2 out shape")
+        print(hidden.shape)
 
         hidden = F.dropout(hidden, self.dropout, training=self.training)
-        #hidden = self.conv4(graph, hidden)
+        topk_node_idxs_batches, sort_pool_out_2 = self.sort_pool2(batched_subgraph, hidden)
+        graphs = dgl.unbatch(batched_subgraph)
+        subgraphs = []
+        for g in range(batch_size):
+            topk_node_idxs = topk_node_idxs_batches[g]
+            subgraph = node_subgraph(graphs[g], topk_node_idxs)
+            subgraphs.append(subgraph)
+        batched_subgraph = dgl.batch(subgraphs)
+
+
+       # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch.to(self.device))
+        #x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+
+        #hidden = self.conv3(graph, x)
+
+        sort_pool_out_2 = sort_pool_out_2.reshape(batch_size * self.sort_pool2.k, -1)
+        hidden = self.conv3(batched_subgraph, sort_pool_out_2)
+        print("conv3 out shape")
+        print(hidden.shape)
+        hidden = F.dropout(hidden, self.dropout, training=self.training)
+        out = self.conv4(batched_subgraph, hidden)
+        print("conv4 out shape")
+        print(out.shape)
         #hidden = F.dropout(hidden, self.dropout, training=self.training)
-        return self.conv4(graph, hidden)
+        return out
 
     def knn(self, x, y, k, batch_x=None, batch_y=None):
         if batch_x is None:

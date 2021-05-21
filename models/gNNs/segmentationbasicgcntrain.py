@@ -72,10 +72,12 @@ if __name__ == "__main__":
     test_dl = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate, num_workers=8)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("device")
+    print(device)
     # Create model
     print("Creating Model")
     # model = BasicGCN(5, 256, 1)
-    model = BasicGCNSegmentation(6, 256, 40, device)  # 3 features, 40 outputs (segmentation)
+    model = BasicGCNSegmentation(6, 256, 40, device).to(device)  # 3 features, 40 outputs (segmentation)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     print("Model made")
@@ -101,7 +103,8 @@ if __name__ == "__main__":
             bg = bg.to(device)
             bg_node_features = bg.ndata["features"].to(device)
             batch_labels = bg.ndata["segmentation"].to(device)  # TEMP FIX WITH FLOAT HERE
-
+            print("batch_labels shape")
+            print(batch_labels.shape)
             prediction = model(bg, bg_node_features)
             loss = loss_function(prediction, batch_labels)
             loss.backward()
