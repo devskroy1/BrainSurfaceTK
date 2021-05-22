@@ -10,4 +10,4 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/merged/reducedto_10k/white/vtk False some --batch_size 2 --save_path ../tmp_save --results ./results
+python -u models/gNNs/basicgcntrain.py /vol/biomedic/users/aa16914/shared/data/dhcp_neonatal_brain/surface_native_04152020/merged/reducedto_10k/white/vtk False some --batch_size 2 --lr 0.001 --save_path ../tmp_save --results ./results

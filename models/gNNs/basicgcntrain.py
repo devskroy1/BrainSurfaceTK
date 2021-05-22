@@ -289,15 +289,15 @@ if __name__ == "__main__":
 
     writer = SummaryWriter(log_dir=args.experiment_folder, comment=f"-{args.experiment_name}")
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Create model
     print("Creating Model")
-    model = BasicGCNRegressor(3 + len(args.features), 64, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
+    model = BasicGCNRegressor(3 + len(args.features), 256, 1, device)  # 5 features in a node, 256 in the hidden, 1 output (age)
     #model = LearnablePoolingGCNRegressor(3 + len(args.features), 256, 1)  # 5 features in a node, 256 in the hidden, 1 output (age)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.T_max, eta_min=args.eta_min)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
     print(model)

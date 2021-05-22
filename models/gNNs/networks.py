@@ -10,13 +10,17 @@ from dgl.subgraph import node_subgraph
 from models.gNNs.layers import GNNLayer
 
 class BasicGCNRegressor(nn.Module):
-    def __init__(self, in_dim, hidden_dim, n_classes):
+    def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNRegressor, self).__init__()
         self.dropout = 0.5
+        self.hidden_dim = hidden_dim
+        self.device = device
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.sort_pool1 = SortPooling(k=1000)
+        self.sort_pool2 = SortPooling(k=100)
         # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
@@ -28,12 +32,52 @@ class BasicGCNRegressor(nn.Module):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         # print("After self.conv1")
-        hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv2(graph, hidden)
-        hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv3(graph, hidden)
-        hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv4(graph, hidden)
+        #hidden = F.dropout(hidden, self.dropout, training=self.training)
+
+        topk_node_idxs_batches, sort_pool_out_1 = self.sort_pool1(graph, hidden)
+        graphs = dgl.unbatch(graph)
+        batch_size = len(graphs)
+        subgraphs = []
+        for g in range(batch_size):
+            topk_node_idxs = topk_node_idxs_batches[g]
+            subgraph = node_subgraph(graphs[g], topk_node_idxs)
+            subgraphs.append(subgraph)
+        batched_subgraph = dgl.batch(subgraphs)
+
+        sort_pool_out_1 = sort_pool_out_1.reshape(batch_size * self.sort_pool1.k, -1)
+        hidden = self.conv2(batched_subgraph, sort_pool_out_1)
+        # print("conv2 out shape")
+        # print(hidden.shape)
+
+       # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        topk_node_idxs_batches, sort_pool_out_2 = self.sort_pool2(batched_subgraph, hidden)
+        graphs = dgl.unbatch(batched_subgraph)
+        subgraphs = []
+        for g in range(batch_size):
+            topk_node_idxs = topk_node_idxs_batches[g]
+            subgraph = node_subgraph(graphs[g], topk_node_idxs)
+            subgraphs.append(subgraph)
+        batched_subgraph = dgl.batch(subgraphs)
+
+        # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch.to(self.device))
+        # x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+
+        # hidden = self.conv3(graph, x)
+
+        sort_pool_out_2 = sort_pool_out_2.reshape(batch_size * self.sort_pool2.k, -1)
+        hidden = self.conv3(batched_subgraph, sort_pool_out_2)
+        # print("conv3 out shape")
+        # print(hidden.shape)
+       # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv4(batched_subgraph, hidden)
+        # print("conv4 out shape")
+        # print(hidden.shape)
+
+        # hidden = self.conv2(graph, hidden)
+        # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # hidden = self.conv3(graph, hidden)
+        # hidden = F.dropout(hidden, self.dropout, training=self.training)
+        # hidden = self.conv4(graph, hidden)
         # hidden = F.dropout(hidden, self.dropout, training=self.training)
         # hidden = self.conv5(graph, hidden)
         # hidden = F.dropout(hidden, self.dropout, training=self.training)
@@ -42,10 +86,10 @@ class BasicGCNRegressor(nn.Module):
         # hidden = self.conv7(graph, hidden)
         # hidden = F.dropout(hidden, self.dropout, training=self.training)
         # hidden = self.conv8(graph, hidden)
-        with graph.local_scope():
-            graph.ndata['tmp'] = hidden
+        with batched_subgraph.local_scope():
+            batched_subgraph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.
-            hg = dgl.mean_nodes(graph, 'tmp')
+            hg = dgl.mean_nodes(batched_subgraph, 'tmp')
 
         return self.predict_layer(hg)
 
@@ -184,7 +228,7 @@ class BasicGCNSegmentation(nn.Module):
         print("conv4 out shape")
         print(out.shape)
         #hidden = F.dropout(hidden, self.dropout, training=self.training)
-        return out
+        return out, topk_node_idxs_batches
 
     def knn(self, x, y, k, batch_x=None, batch_y=None):
         if batch_x is None:
