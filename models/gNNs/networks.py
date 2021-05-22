@@ -3,12 +3,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import scipy.spatial
+from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import knn_graph, SAGPooling, graclus, EdgePooling
-from dgl.nn.pytorch import GraphConv, SortPooling
+from dgl.nn.pytorch import GraphConv, SortPooling, MaxPooling, AvgPooling, GlobalAttentionPooling
 from dgl.subgraph import node_subgraph
 
 from models.gNNs.layers import GNNLayer
 
+def MLP(channels, batch_norm=True):
+    return Seq(*[
+        Seq(Lin(channels[i - 1], channels[i]), ReLU(), BN(channels[i]))
+        for i in range(1, len(channels))
+    ])
+
+#GCN Regressor with GlobalAttentionPooling
 class BasicGCNRegressor(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNRegressor, self).__init__()
@@ -19,79 +27,250 @@ class BasicGCNRegressor(nn.Module):
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.sort_pool1 = SortPooling(k=1000)
-        self.sort_pool2 = SortPooling(k=100)
+        self.globalAttentionPooling1 = GlobalAttentionPooling(MLP([hidden_dim, hidden_dim, hidden_dim, 1]))
+
+        #self.globalAttentionPooling2 = GlobalAttentionPooling(MLP([hidden_dim*2, hidden_dim*2, hidden_dim*2, hidden_dim*4]))
+
         # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv8 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.predict_layer = nn.Linear(hidden_dim, n_classes)
+        self.predict_layer = nn.Linear(hidden_dim * 2, n_classes)
 
     def forward(self, graph, features):
-        # print("Inside BasicGCNRegressor forward()")
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
-        # print("After self.conv1")
-        #hidden = F.dropout(hidden, self.dropout, training=self.training)
+        hidden = self.conv2(graph, hidden)
+        hidden = self.conv3(graph, hidden)
+        hidden = self.conv4(graph, hidden)
 
-        topk_node_idxs_batches, sort_pool_out_1 = self.sort_pool1(graph, hidden)
-        graphs = dgl.unbatch(graph)
-        batch_size = len(graphs)
-        subgraphs = []
-        for g in range(batch_size):
-            topk_node_idxs = topk_node_idxs_batches[g]
-            subgraph = node_subgraph(graphs[g], topk_node_idxs)
-            subgraphs.append(subgraph)
-        batched_subgraph = dgl.batch(subgraphs)
-
-        sort_pool_out_1 = sort_pool_out_1.reshape(batch_size * self.sort_pool1.k, -1)
-        hidden = self.conv2(batched_subgraph, sort_pool_out_1)
-        # print("conv2 out shape")
-        # print(hidden.shape)
-
-       # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        topk_node_idxs_batches, sort_pool_out_2 = self.sort_pool2(batched_subgraph, hidden)
-        graphs = dgl.unbatch(batched_subgraph)
-        subgraphs = []
-        for g in range(batch_size):
-            topk_node_idxs = topk_node_idxs_batches[g]
-            subgraph = node_subgraph(graphs[g], topk_node_idxs)
-            subgraphs.append(subgraph)
-        batched_subgraph = dgl.batch(subgraphs)
-
-        # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch.to(self.device))
-        # x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
-
-        # hidden = self.conv3(graph, x)
-
-        sort_pool_out_2 = sort_pool_out_2.reshape(batch_size * self.sort_pool2.k, -1)
-        hidden = self.conv3(batched_subgraph, sort_pool_out_2)
-        # print("conv3 out shape")
-        # print(hidden.shape)
-       # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        hidden = self.conv4(batched_subgraph, hidden)
-        # print("conv4 out shape")
-        # print(hidden.shape)
-
-        # hidden = self.conv2(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv3(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv4(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv5(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv6(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv7(graph, hidden)
-        # hidden = F.dropout(hidden, self.dropout, training=self.training)
-        # hidden = self.conv8(graph, hidden)
-        with batched_subgraph.local_scope():
-            batched_subgraph.ndata['tmp'] = hidden
+        with graph.local_scope():
+            graph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.
-            hg = dgl.mean_nodes(batched_subgraph, 'tmp')
+            hg = dgl.mean_nodes(graph, 'tmp')
 
-        return self.predict_layer(hg)
+        # print("hg shape")
+        # print(hg.shape)
+        # return self.predict_layer(hg)
+
+        # print("hg shape")
+        # print(hg.shape)
+        global_attention_pooling_feats = self.globalAttentionPooling1(graph, hidden)
+        # print("global_attention_pooling_feats shape")
+        # print(global_attention_pooling_feats.shape)
+        global_attention_pooling_hg = torch.cat((hg, global_attention_pooling_feats), dim=1)
+        # print("max_pool_hg shape torch cat")
+        # print(max_pool_hg.shape)
+
+        # max_pool_hg = self.max_pool1(graph, hg)
+        # print("global_attention_pooling_hg shape")
+        # print(global_attention_pooling_hg.shape)
+
+        return self.predict_layer(global_attention_pooling_hg)
+        #return self.predict_layer(hg)
+
+#GCN Regressor with Max/Avg pooling
+# class BasicGCNRegressor(nn.Module):
+#     def __init__(self, in_dim, hidden_dim, n_classes, device):
+#         super(BasicGCNRegressor, self).__init__()
+#         self.dropout = 0.5
+#         self.hidden_dim = hidden_dim
+#         self.device = device
+#         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.sort_pool1 = SortPooling(k=1000)
+#         # self.sort_pool2 = SortPooling(k=100)
+#         self.max_pool1 = MaxPooling()
+#         self.max_pool2 = MaxPooling()
+#         self.avg_pool1 = AvgPooling()
+#         # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv8 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.predict_layer = nn.Linear(hidden_dim * 2, n_classes)
+#
+#     def forward(self, graph, features):
+#         # print("Inside BasicGCNRegressor forward()")
+#         # Perform graph convolution and activation function.
+#         hidden = self.conv1(graph, features)
+#         # print("After self.conv1")
+#         #hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # max_pool_1_out = self.max_pool1(graph, hidden)
+#         #
+#         # print("max_pool_1_out shape")
+#         # print(max_pool_1_out.shape)
+#
+#         hidden = self.conv2(graph, hidden)
+#
+#         hidden = self.conv3(graph, hidden)
+#         hidden = self.conv4(graph, hidden)
+#         # print("hidden.shape")
+#         # print(hidden.shape)
+#
+#         # topk_node_idxs_batches, sort_pool_out_1 = self.sort_pool1(graph, hidden)
+#         # graphs = dgl.unbatch(graph)
+#         # batch_size = len(graphs)
+#         # subgraphs = []
+#         # for g in range(batch_size):
+#         #     topk_node_idxs = topk_node_idxs_batches[g]
+#         #     subgraph = node_subgraph(graphs[g], topk_node_idxs)
+#         #     subgraphs.append(subgraph)
+#         # batched_subgraph = dgl.batch(subgraphs)
+#
+#         #sort_pool_out_1 = sort_pool_out_1.reshape(batch_size * self.sort_pool1.k, -1)
+#
+#         # hidden = self.conv2(batched_subgraph, sort_pool_out_1)
+#         # print("conv2 out shape")
+#         # print(hidden.shape)
+#
+#        # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#        #  topk_node_idxs_batches, sort_pool_out_2 = self.sort_pool2(batched_subgraph, hidden)
+#        #  graphs = dgl.unbatch(batched_subgraph)
+#        #  subgraphs = []
+#        #  for g in range(batch_size):
+#        #      topk_node_idxs = topk_node_idxs_batches[g]
+#        #      subgraph = node_subgraph(graphs[g], topk_node_idxs)
+#        #      subgraphs.append(subgraph)
+#        #  batched_subgraph = dgl.batch(subgraphs)
+#        #
+#        #  # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch.to(self.device))
+#        #  # x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+#        #
+#        #  # hidden = self.conv3(graph, x)
+#        #
+#        #  sort_pool_out_2 = sort_pool_out_2.reshape(batch_size * self.sort_pool2.k, -1)
+#        #  hidden = self.conv3(batched_subgraph, sort_pool_out_2)
+#        #  # print("conv3 out shape")
+#        #  # print(hidden.shape)
+#        # # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#        #  hidden = self.conv4(batched_subgraph, hidden)
+#         # print("conv4 out shape")
+#         # print(hidden.shape)
+#
+#         # hidden = self.conv2(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv3(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv4(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv5(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv6(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv7(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv8(graph, hidden)
+#
+#         #max_pool_feats = self.max_pool1(graph, hidden)
+#         avg_pool_feats = self.avg_pool1(graph, hidden)
+#         # print("max_pool_feats shape")
+#         # print(max_pool_feats.shape)
+#         with graph.local_scope():
+#             graph.ndata['tmp'] = hidden
+#             # Calculate graph representation by averaging all the node representations.
+#             hg = dgl.mean_nodes(graph, 'tmp')
+#
+#         # print("hg shape")
+#         # print(hg.shape)
+#         avg_pool_hg = torch.cat((hg, avg_pool_feats), dim=1)
+#         # print("max_pool_hg shape torch cat")
+#         # print(max_pool_hg.shape)
+#
+#         # max_pool_hg = self.max_pool1(graph, hg)
+#         # print("max_pool_hg shape max pool")
+#         # print(max_pool_hg.shape)
+#
+#         return self.predict_layer(avg_pool_hg)
+#         #return self.predict_layer(hg)
+
+#GCN Regressor with Sort pooling
+# class BasicGCNRegressor(nn.Module):
+#     def __init__(self, in_dim, hidden_dim, n_classes, device):
+#         super(BasicGCNRegressor, self).__init__()
+#         self.dropout = 0.5
+#         self.hidden_dim = hidden_dim
+#         self.device = device
+#         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.sort_pool1 = SortPooling(k=1000)
+#         self.sort_pool2 = SortPooling(k=100)
+#         self.max_pool1 = MaxPooling()
+#         self.max_pool2 = MaxPooling()
+#         # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv8 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.predict_layer = nn.Linear(hidden_dim, n_classes)
+#
+#     def forward(self, graph, features):
+#         # print("Inside BasicGCNRegressor forward()")
+#         # Perform graph convolution and activation function.
+#         hidden = self.conv1(graph, features)
+#         # print("After self.conv1")
+#         #hidden = F.dropout(hidden, self.dropout, training=self.training)
+#
+#         topk_node_idxs_batches, sort_pool_out_1 = self.sort_pool1(graph, hidden)
+#         graphs = dgl.unbatch(graph)
+#         batch_size = len(graphs)
+#         subgraphs = []
+#         for g in range(batch_size):
+#             topk_node_idxs = topk_node_idxs_batches[g]
+#             subgraph = node_subgraph(graphs[g], topk_node_idxs)
+#             subgraphs.append(subgraph)
+#         batched_subgraph = dgl.batch(subgraphs)
+#
+#         sort_pool_out_1 = sort_pool_out_1.reshape(batch_size * self.sort_pool1.k, -1)
+#         hidden = self.conv2(batched_subgraph, sort_pool_out_1)
+#         # print("conv2 out shape")
+#         # print(hidden.shape)
+#
+#        # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         topk_node_idxs_batches, sort_pool_out_2 = self.sort_pool2(batched_subgraph, hidden)
+#         graphs = dgl.unbatch(batched_subgraph)
+#         subgraphs = []
+#         for g in range(batch_size):
+#             topk_node_idxs = topk_node_idxs_batches[g]
+#             subgraph = node_subgraph(graphs[g], topk_node_idxs)
+#             subgraphs.append(subgraph)
+#         batched_subgraph = dgl.batch(subgraphs)
+#
+#         # x, edge_index, batch, unpool_info = edgePooling(hidden.to(self.device), edge_index.to(self.device), batch.to(self.device))
+#         # x, edge_index, batch, unpool_info = edgePooling(hidden, edge_index, batch)
+#
+#         # hidden = self.conv3(graph, x)
+#
+#         sort_pool_out_2 = sort_pool_out_2.reshape(batch_size * self.sort_pool2.k, -1)
+#         hidden = self.conv3(batched_subgraph, sort_pool_out_2)
+#         # print("conv3 out shape")
+#         # print(hidden.shape)
+#        # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         hidden = self.conv4(batched_subgraph, hidden)
+#         # print("conv4 out shape")
+#         # print(hidden.shape)
+#
+#         # hidden = self.conv2(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv3(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv4(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv5(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv6(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv7(graph, hidden)
+#         # hidden = F.dropout(hidden, self.dropout, training=self.training)
+#         # hidden = self.conv8(graph, hidden)
+#         with batched_subgraph.local_scope():
+#             batched_subgraph.ndata['tmp'] = hidden
+#             # Calculate graph representation by averaging all the node representations.
+#             hg = dgl.mean_nodes(batched_subgraph, 'tmp')
+#
+#         return self.predict_layer(hg)
 
 class BasicGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
