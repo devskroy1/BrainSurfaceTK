@@ -16,18 +16,18 @@ def MLP(channels, batch_norm=True):
         for i in range(1, len(channels))
     ])
 
-#GCN Regressor with GlobalAttentionPooling
+#Basic GCN Regressor
 class BasicGCNRegressor(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(BasicGCNRegressor, self).__init__()
-        self.dropout = 0.5
+        #self.dropout = 0.5
         self.hidden_dim = hidden_dim
         self.device = device
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.globalAttentionPooling1 = GlobalAttentionPooling(MLP([hidden_dim, hidden_dim, hidden_dim, 1]))
+       # self.globalAttentionPooling1 = GlobalAttentionPooling(MLP([hidden_dim, hidden_dim, hidden_dim, 1]))
 
         #self.globalAttentionPooling2 = GlobalAttentionPooling(MLP([hidden_dim*2, hidden_dim*2, hidden_dim*2, hidden_dim*4]))
 
@@ -35,7 +35,7 @@ class BasicGCNRegressor(nn.Module):
         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         # self.conv8 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
-        self.predict_layer = nn.Linear(hidden_dim * 2, n_classes)
+        self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
@@ -55,19 +55,72 @@ class BasicGCNRegressor(nn.Module):
 
         # print("hg shape")
         # print(hg.shape)
-        global_attention_pooling_feats = self.globalAttentionPooling1(graph, hidden)
-        # print("global_attention_pooling_feats shape")
-        # print(global_attention_pooling_feats.shape)
-        global_attention_pooling_hg = torch.cat((hg, global_attention_pooling_feats), dim=1)
-        # print("max_pool_hg shape torch cat")
-        # print(max_pool_hg.shape)
+        # global_attention_pooling_feats = self.globalAttentionPooling1(graph, hidden)
+        # # print("global_attention_pooling_feats shape")
+        # # print(global_attention_pooling_feats.shape)
+        # global_attention_pooling_hg = torch.cat((hg, global_attention_pooling_feats), dim=1)
+        # # print("max_pool_hg shape torch cat")
+        # # print(max_pool_hg.shape)
+        #
+        # # max_pool_hg = self.max_pool1(graph, hg)
+        # # print("global_attention_pooling_hg shape")
+        # # print(global_attention_pooling_hg.shape)
+        #
+        # return self.predict_layer(global_attention_pooling_hg)
+        return self.predict_layer(hg)
 
-        # max_pool_hg = self.max_pool1(graph, hg)
-        # print("global_attention_pooling_hg shape")
-        # print(global_attention_pooling_hg.shape)
-
-        return self.predict_layer(global_attention_pooling_hg)
-        #return self.predict_layer(hg)
+# #GCN Regressor with GlobalAttentionPooling
+# class BasicGCNRegressor(nn.Module):
+#     def __init__(self, in_dim, hidden_dim, n_classes, device):
+#         super(BasicGCNRegressor, self).__init__()
+#         self.dropout = 0.5
+#         self.hidden_dim = hidden_dim
+#         self.device = device
+#         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.globalAttentionPooling1 = GlobalAttentionPooling(MLP([hidden_dim, hidden_dim, hidden_dim, 1]))
+#
+#         #self.globalAttentionPooling2 = GlobalAttentionPooling(MLP([hidden_dim*2, hidden_dim*2, hidden_dim*2, hidden_dim*4]))
+#
+#         # self.conv5 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv6 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv7 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         # self.conv8 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+#         self.predict_layer = nn.Linear(hidden_dim * 2, n_classes)
+#
+#     def forward(self, graph, features):
+#         # Perform graph convolution and activation function.
+#         hidden = self.conv1(graph, features)
+#         hidden = self.conv2(graph, hidden)
+#         hidden = self.conv3(graph, hidden)
+#         hidden = self.conv4(graph, hidden)
+#
+#         with graph.local_scope():
+#             graph.ndata['tmp'] = hidden
+#             # Calculate graph representation by averaging all the node representations.
+#             hg = dgl.mean_nodes(graph, 'tmp')
+#
+#         # print("hg shape")
+#         # print(hg.shape)
+#         # return self.predict_layer(hg)
+#
+#         # print("hg shape")
+#         # print(hg.shape)
+#         global_attention_pooling_feats = self.globalAttentionPooling1(graph, hidden)
+#         # print("global_attention_pooling_feats shape")
+#         # print(global_attention_pooling_feats.shape)
+#         global_attention_pooling_hg = torch.cat((hg, global_attention_pooling_feats), dim=1)
+#         # print("max_pool_hg shape torch cat")
+#         # print(max_pool_hg.shape)
+#
+#         # max_pool_hg = self.max_pool1(graph, hg)
+#         # print("global_attention_pooling_hg shape")
+#         # print(global_attention_pooling_hg.shape)
+#
+#         return self.predict_layer(global_attention_pooling_hg)
+#         #return self.predict_layer(hg)
 
 #GCN Regressor with Max/Avg pooling
 # class BasicGCNRegressor(nn.Module):
