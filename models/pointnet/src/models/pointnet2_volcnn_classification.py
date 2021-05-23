@@ -139,6 +139,7 @@ class Net(torch.nn.Module):
         self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+        self.predict_linear = Lin(2*2*2*2*feats*(1*3*3) + 1024 + num_global_features, 2)
 
         self.lin1 = Lin(1024 + num_global_features, 512)
         self.lin2 = Lin(512, 256)
@@ -146,7 +147,7 @@ class Net(torch.nn.Module):
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
         #Volume CNN
-        self.model = Sequential(
+        self.volcnn_model = Sequential(
             # 50, 60, 60
             Conv3d(1, feats, padding=0, kernel_size=3, stride=1, bias=True),
             BatchNorm3d(feats),
@@ -189,10 +190,10 @@ class Net(torch.nn.Module):
             Dropout(p=dropout_p),
             #  1, 3, 3
             Flatten(start_dim=1), # Output: 2
-            Linear(2*2*2*2*feats*(1*3*3), 2),
+            #Linear(2*2*2*2*feats*(1*3*3), 2),
             )
 
-    def forward(self, data):
+    def forward(self, vol_cnn_data, data):
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa1a_out = self.sa1a_module(*sa1_out)
@@ -200,14 +201,28 @@ class Net(torch.nn.Module):
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
 
+        print("sa3_out x shape")
+        print(x.shape)
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
             x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
 
-        x = F.relu(self.lin1(x))
-        # x = F.dropout(x, p=0.5, training=self.training)
-        x = F.relu(self.lin2(x))
-        x = F.relu(self.lin3(x))
-        # x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin4(x)
+        # concat_x_pos = torch.cat((data.x, data.pos), dim=1)
+        # print("concat_x_pos shape")
+        # print(concat_x_pos.shape)
+
+        vol_conv_feat_map = self.volcnn_model(vol_cnn_data)
+
+        print("vol_conv_feat_map shape")
+        print(vol_conv_feat_map.shape)
+        concat_feat_map = torch.cat((x, vol_conv_feat_map), dim=1)
+
+        x = self.predict_linear(concat_feat_map)
+
+        # x = F.relu(self.lin1(x))
+        # # x = F.dropout(x, p=0.5, training=self.training)
+        # x = F.relu(self.lin2(x))
+        # x = F.relu(self.lin3(x))
+        # # x = F.dropout(x, p=0.5, training=self.training)
+        # x = self.lin4(x)
         return F.log_softmax(x, dim=-1)

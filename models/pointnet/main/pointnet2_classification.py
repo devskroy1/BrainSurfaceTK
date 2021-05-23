@@ -15,39 +15,115 @@ from torch.optim.lr_scheduler import StepLR
 
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pointnet.src.models.pointnet2_classification import Net
+#from models.pointnet.src.models.pointnet2_classification import Net
+from models.pointnet.src.models.pointnet2_volcnn_classification import Net
+
 from models.pointnet.src.utils import get_data_path, data
 
+def find_subjects_data_volcnn(subjects, dataset_volcnn):
 
-def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
+    volcnn_samples_shape = list(dataset_volcnn.samples[0].shape)
+    batch_size_list = [len(subjects)]
+    batch_data_shape = batch_size_list + volcnn_samples_shape
+    batch_data = torch.empty(batch_data_shape, dtype=torch.float)
+    batch_labels = torch.empty((len(subjects), 1), dtype=torch.float)
+
+    # batch_data = []
+    # batch_labels = []
+    # print("len(subjects)")
+    # print(len(subjects))
+    # print("Inside find_subjects_data_volcnn()")
+    # print("subjects")
+    # print(subjects)
+    # print("dataset_volcnn_train.ids")
+    # print(dataset_volcnn_train.ids)
+    for i in range(len(subjects)):
+        subject = subjects[i][0]
+        # print("subject")
+        # print(subject)
+        subject_id, sess_id = subject.split("_")
+        for j in range(len(dataset_volcnn.ids)):
+            volcnn_subject_id = dataset_volcnn.ids[j][0]
+            volcnn_sess_id = dataset_volcnn.ids[j][1]
+            if subject_id == volcnn_subject_id and sess_id == volcnn_sess_id:
+                # print("subject_id")
+                # print(subject_id)
+                # print("sess_id")
+                # print(sess_id)
+                # print("dataset_volcnn_train.samples shape")
+                # print(dataset_volcnn_train.samples.shape)
+                # print("dataset_volcnn_train.samples")
+                # print(dataset_volcnn_train.samples)
+                # print("dataset_volcnn_train.samples[j].shape")
+                # print(dataset_volcnn_train.samples[j].shape)
+                batch_data[i] = dataset_volcnn.samples[j]
+                batch_labels[i] = dataset_volcnn.targets[j]
+                break
+    # print("batch_Data")
+    # print(batch_data)
+    # print("batch_data")
+    # print(batch_data)
+    # print("batch_labels")
+    # print(batch_labels)
+    return batch_data, batch_labels
+
+#Just Pointnet++ classificn
+# def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
+#     model.train()
+#     loss_train = 0.0
+#     correct = 0
+#
+#     for data in train_loader:
+#         data = data.to(device)
+#         pred = model(data)
+#         perd_label = pred.max(1)[1]
+#         # print("pred shape")
+#         # print(pred.shape)
+#         # print("data.y shape")
+#         # print(data.y.shape)
+#         loss = F.nll_loss(pred, data.y[:, 0].long())
+#         loss.backward()
+#         optimizer.step()
+#         correct += perd_label.eq(data.y[:, 0].long()).sum().item()
+#         loss_train += loss.item()
+#     acc = correct / len(train_loader.dataset)
+#
+#     scheduler.step()
+#
+#     if writer is not None:
+#         writer.add_scalar('Acc/train', acc, epoch)
+#         writer.add_scalar('Loss/train', loss_train / len(train_loader), epoch)
+#     print('Train acc: ' + str(acc))
+
+#Pointnet++ and VolCNN classificn
+def train(model, train_dl_pointnet, dataset_volumecnn_train, epoch, device, optimizer, scheduler, writer):
     model.train()
+    # epoch_loss = []
     loss_train = 0.0
     correct = 0
 
-    for data in train_loader:
-        data = data.to(device)
-        pred = model(data)
-        perd_label = pred.max(1)[1]
-        # print("pred shape")
-        # print(pred.shape)
-        # print("data.y shape")
-        # print(data.y.shape)
+    # for batch_data, batch_labels in train_loader:
+    for iter, (subjects, data) in enumerate(train_dl_pointnet):
+        batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
+        batch_data = batch_data_volcnn.to(device=device)
+        prediction = model(batch_data, data)
+        pred_label = prediction.max(1)[1]
         loss = F.nll_loss(pred, data.y[:, 0].long())
         loss.backward()
         optimizer.step()
-        correct += perd_label.eq(data.y[:, 0].long()).sum().item()
+        correct += pred_label.eq(data.y[:, 0].long()).sum().item()
         loss_train += loss.item()
-    acc = correct / len(train_loader.dataset)
 
+    acc = correct / len(train_dl_pointnet.dataset)
     scheduler.step()
 
     if writer is not None:
         writer.add_scalar('Acc/train', acc, epoch)
-        writer.add_scalar('Loss/train', loss_train / len(train_loader), epoch)
+        writer.add_scalar('Loss/train', loss_train / len(train_dl_pointnet), epoch)
     print('Train acc: ' + str(acc))
 
-
-def test_classification(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
+#Pointnet++ and VolCNN classificn
+def test_classification(model, loader_pointnet, dataset_volumecnn_val, dataset_volumecnn_test, indices, device, recording, results_folder, val=True, epoch=0):
     model.eval()
 
     if recording:
@@ -62,10 +138,16 @@ def test_classification(model, loader, indices, device, recording, results_folde
                 result_writer.writerow(['Test accuracy'])
 
             correct = 0
-            for idx, data in enumerate(loader):
+            for idx, (subjects, data) in enumerate(loader_pointnet):
+                if val:
+                    batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_val)
+                else:
+                    batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_test)
                 data = data.to(device)
                 with torch.no_grad():
-                    pred = model(data).max(1)[1]
+                    batch_data = batch_data_volcnn.to(device=device)
+                    prediction = model(batch_data, data)
+                    pred = prediction.max(1)[1]
 
                     for i in range(len(pred)):
                         print(str(pred[i].item()).center(20, ' '),
@@ -78,7 +160,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
 
                 correct += pred.eq(data.y[:, 0].long()).sum().item()
 
-            acc = correct / len(loader.dataset)
+            acc = correct / len(loader_pointnet.dataset)
 
             if val:
                 print(f'Epoch {epoch} validation accuracy: {acc}')
@@ -93,10 +175,17 @@ def test_classification(model, loader, indices, device, recording, results_folde
             print('Test'.center(60, '-'))
 
         correct = 0
-        for idx, data in enumerate(loader):
+        for idx, (subjects, data) in enumerate(loader_pointnet):
+            if val:
+                batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_val)
+            else:
+                batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_test)
+
             data = data.to(device)
             with torch.no_grad():
-                pred = model(data).max(1)[1]
+                batch_data = batch_data_volcnn.to(device=device)
+                prediction = model(batch_data, data)
+                pred = prediction.max(1)[1]
 
                 for i in range(len(pred)):
                     print(str(pred[i].item()).center(20, ' '),
@@ -105,7 +194,7 @@ def test_classification(model, loader, indices, device, recording, results_folde
 
             correct += pred.eq(data.y[:, 0].long()).sum().item()
 
-        acc = correct / len(loader.dataset)
+        acc = correct / len(loader_pointnet.dataset)
 
         if val:
             print(f'Epoch {epoch} validation accuracy: {acc}')
@@ -113,6 +202,74 @@ def test_classification(model, loader, indices, device, recording, results_folde
             print(f'Test accuracy: {acc}')
 
     return acc
+
+#Just Pointnet++ classificn
+# def test_classification(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
+#     model.eval()
+#
+#     if recording:
+#
+#         with open(results_folder + '/results.csv', 'a', newline='') as results_file:
+#             result_writer = csv.writer(results_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+#             if val:
+#                 print('Validation'.center(60, '-'))
+#                 result_writer.writerow(['Val accuracy Epoch - ' + str(epoch)])
+#             else:
+#                 print('Test'.center(60, '-'))
+#                 result_writer.writerow(['Test accuracy'])
+#
+#             correct = 0
+#             for idx, data in enumerate(loader):
+#                 data = data.to(device)
+#                 with torch.no_grad():
+#                     pred = model(data).max(1)[1]
+#
+#                     for i in range(len(pred)):
+#                         print(str(pred[i].item()).center(20, ' '),
+#                               str(data.y[:, 0][i].item()).center(20, ' '),
+#                               indices[idx * len(pred) + i])
+#
+#                         result_writer.writerow([indices[idx * len(pred) + i][:11], indices[idx * len(pred) + i][12:],
+#                                                 str(pred[i].item()), str(data.y[:, 0][i].item()),
+#                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
+#
+#                 correct += pred.eq(data.y[:, 0].long()).sum().item()
+#
+#             acc = correct / len(loader.dataset)
+#
+#             if val:
+#                 print(f'Epoch {epoch} validation accuracy: {acc}')
+#                 result_writer.writerow(['Epoch average error:', str(acc)])
+#             else:
+#                 print(f'Test accuracy: {acc}')
+#                 result_writer.writerow(['Test average error:', str(acc)])
+#     else:
+#         if val:
+#             print('Validation'.center(60, '-'))
+#         else:
+#             print('Test'.center(60, '-'))
+#
+#         correct = 0
+#         for idx, data in enumerate(loader):
+#             data = data.to(device)
+#             with torch.no_grad():
+#                 pred = model(data).max(1)[1]
+#
+#                 for i in range(len(pred)):
+#                     print(str(pred[i].item()).center(20, ' '),
+#                           str(data.y[:, 0][i].item()).center(20, ' '),
+#                           indices[idx * len(pred) + i])
+#
+#             correct += pred.eq(data.y[:, 0].long()).sum().item()
+#
+#         acc = correct / len(loader.dataset)
+#
+#         if val:
+#             print(f'Epoch {epoch} validation accuracy: {acc}')
+#         else:
+#             print(f'Test accuracy: {acc}')
+#
+#     return acc
 
 
 if __name__ == '__main__':

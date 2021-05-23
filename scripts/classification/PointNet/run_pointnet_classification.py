@@ -17,6 +17,8 @@ from torch.utils.tensorboard import SummaryWriter
 from models.pointnet.src.models.pointnet2_classification import Net
 from models.pointnet.main.pointnet2_classification import train, test_classification
 from models.pointnet.src.utils import get_data_path, data
+from models.volume3d.main.main import create_subject_folder
+from models.volume3d.utils.utils import read_meta, clean_data, split_data, get_ids_and_ages, plot_preds
 
 PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..') + '/'
 PATH_TO_POINTNET = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..', 'models', 'pointnet') + '/'
@@ -47,6 +49,45 @@ if __name__ == '__main__':
 
     comment = 'comment'
     # additional_comment = ''
+
+    # 1. What are you predicting?
+    categories = {'gender': 3, 'birth_age': 4, 'weight': 5, 'scan_age': 7, 'scan_num': 8}
+    meta_column_idx = categories['gender']
+
+    # 2. Read the data and clean it
+    meta_data = read_meta()
+
+    ## 3. Get a list of ids and ages (labels)
+    # ids, ages = get_ids_and_ages(meta_data, meta_column_idx)
+
+    # 4. Set the parameters for the data pre-processing and split
+    ################################
+    ################################
+
+    spacing = [3, 3, 3]
+    image_size = [60, 60, 50]
+    smoothen = 8
+    edgen = False
+    test_size = 0.09
+    val_size = 0.1
+    random_state = 42
+
+    # 4. Create subject folder
+    fn, counter = create_subject_folder()
+    path = osp.join(osp.dirname(osp.realpath(__file__)), '..', f'{fn}/')
+
+    # 5. Split the data
+    dataset_volumecnn_train, dataset_volumecnn_val, dataset_volumecnn_test = split_data(meta_data,
+                                                          meta_column_idx,
+                                                          spacing,
+                                                          image_size,
+                                                          smoothen,
+                                                          edgen,
+                                                          val_size,
+                                                          test_size,
+                                                          path=path,
+                                                          reprocess=REPROCESS)
+
 
     #################################################
     ############ EXPERIMENT DESCRIPTION #############
@@ -145,10 +186,11 @@ if __name__ == '__main__':
     # MAIN TRAINING LOOP
     for epoch in range(1, numb_epochs + 1):
         start = time.time()
-        train(model, train_loader, epoch, device,
+        train(model, train_loader, dataset_volumecnn_train, epoch, device,
               optimizer, scheduler, writer)
 
-        val_acc = test_classification(model, val_loader,
+        val_acc = test_classification(model, val_loader, dataset_volumecnn_val,
+                                      dataset_volumecnn_test,
                                       indices['Val'], device,
                                       recording, results_folder,
                                       epoch=epoch)
@@ -165,7 +207,7 @@ if __name__ == '__main__':
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)
 
-        test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_classification(model, test_loader, dataset_volumecnn_val, dataset_volumecnn_test, indices['Test'], device, recording, results_folder, val=False)
 
     if recording:
         # save the last model
@@ -178,4 +220,4 @@ if __name__ == '__main__':
             result_writer = csv.writer(results_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             result_writer.writerow(['Best model!'])
 
-        test_classification(model, test_loader, indices['Test'], device, recording, results_folder, val=False)
+        test_classification(model, test_loader, dataset_volumecnn_val, dataset_volumecnn_test, indices['Test'], device, recording, results_folder, val=False)
