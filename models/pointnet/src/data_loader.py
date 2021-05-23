@@ -280,6 +280,7 @@ class OurDataset(InMemoryDataset):
                 self.classes[category] = class_num
 
         # 3. These lists will collect all the information for each patient in order
+        subjects = []
         lens = []
         xs = []
         poss = []
@@ -290,6 +291,8 @@ class OurDataset(InMemoryDataset):
         # for idx, patient_id in enumerate(meta_data[:, 0]):
         print('Processing patient data for the split...')
         for patient_idx in tqdm(self.indices_):
+
+            subjects.append(patient_idx)
 
             patient_id, session_id = patient_idx.split('_')
 
@@ -355,19 +358,19 @@ class OurDataset(InMemoryDataset):
 
         if self.add_faces:
             # Now add all patient data to the list
-            for x, points, y, faces in zip(xs, poss, ys, faces_list):
+            for subject, x, points, y, faces in zip(subjects, xs, poss, ys, faces_list):
                 # Create a data object and add to data_list
                 data = Data(x=x, pos=points, y=y, face=faces)
 
-                data_list.append(data)
+                data_list.append((subject, data))
 
         else:
             # Now add all patient data to the list
-            for x, points, y in zip(xs, poss, ys):
+            for subject, x, points, y in zip(subjects, xs, poss, ys):
                 # Create a data object and add to data_list
                 data = Data(x=x, pos=points, y=y)
 
-                data_list.append(data)
+                data_list.append((subject, data))
 
         # Do any pre-processing that is required
         if self.pre_filter is not None:
