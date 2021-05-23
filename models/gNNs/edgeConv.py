@@ -114,7 +114,7 @@ class EdgeConvGCNSegmentation(nn.Module):
             # mlp_dims = dims
             #mlp_dims = [256, 256, 256]
             #layers.append(EdgeConv(nn=MLP(dims), aggr='max'))
-            layers.append(DynamicEdgeConv(nn=MLP(dims), k=5, aggr='max'))
+            layers.append(DynamicEdgeConv(nn=MLP(dims), k=50, aggr='max'))
         return nn.Sequential(*layers)
 
     # def knn(self, x, k):
