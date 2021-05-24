@@ -14,7 +14,8 @@ import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 
-from models.pointnet.src.models.pointnet2_classification import Net
+#from models.pointnet.src.models.pointnet2_classification import Net
+from models.pointnet.src.models.pointnet2_volcnn_classification import Net
 from models.pointnet.main.pointnet2_classification import train, test_classification
 from models.pointnet.src.utils import get_data_path, data
 from models.volume3d.main.main import create_subject_folder
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "5k"
+    data_compression = "10k"
     data_type = 'white'
     hemisphere = 'both'
 
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     # 4. Create subject folder
     fn, counter = create_subject_folder()
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', f'{fn}/')
+    task = 'classification'
 
     # 5. Split the data
     dataset_volumecnn_train, dataset_volumecnn_val, dataset_volumecnn_test = split_data(meta_data,
@@ -86,7 +88,8 @@ if __name__ == '__main__':
                                                           val_size,
                                                           test_size,
                                                           path=path,
-                                                          reprocess=REPROCESS)
+                                                          reprocess=REPROCESS,
+                                                          task=task)
 
 
     #################################################
@@ -98,6 +101,7 @@ if __name__ == '__main__':
     lr = 0.001
     batch_size = 2
     gamma = 0.9875
+    num_of_parameters_multiplier = 10
     scheduler_step_size = 2
     target_class = 'gender'
     task = 'classification'
@@ -138,7 +142,7 @@ if __name__ == '__main__':
 
     # 7. Create the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(numb_local_features, numb_global_features).to(device)
+    model = Net(numb_local_features, numb_global_features, num_of_parameters_multiplier, device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=scheduler_step_size, gamma=gamma)
 

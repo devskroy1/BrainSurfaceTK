@@ -360,17 +360,17 @@ class OurDataset(InMemoryDataset):
             # Now add all patient data to the list
             for subject, x, points, y, faces in zip(subjects, xs, poss, ys, faces_list):
                 # Create a data object and add to data_list
-                data = Data(x=x, pos=points, y=y, face=faces)
+                data = Data(x=x, pos=points, y=y, face=faces, subject=subject)
 
-                data_list.append((subject, data))
+                data_list.append(data)
 
         else:
             # Now add all patient data to the list
             for subject, x, points, y in zip(subjects, xs, poss, ys):
                 # Create a data object and add to data_list
-                data = Data(x=x, pos=points, y=y)
+                data = Data(x=x, pos=points, y=y, subject=subject)
 
-                data_list.append((subject, data))
+                data_list.append(data)
 
         # Do any pre-processing that is required
         if self.pre_filter is not None:

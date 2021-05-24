@@ -103,12 +103,19 @@ def train(model, train_dl_pointnet, dataset_volumecnn_train, epoch, device, opti
     correct = 0
 
     # for batch_data, batch_labels in train_loader:
-    for iter, (subjects, data) in enumerate(train_dl_pointnet):
+    #for iter, (subjects, data) in enumerate(train_dl_pointnet):
+    for iter, data in enumerate(train_dl_pointnet):
+        # print("data")
+        # print(data)
+        data = data.to(device)
+        subjects = data.subject
+        # print("subjects")
+        # print(subjects)
         batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_train)
         batch_data = batch_data_volcnn.to(device=device)
         prediction = model(batch_data, data)
         pred_label = prediction.max(1)[1]
-        loss = F.nll_loss(pred, data.y[:, 0].long())
+        loss = F.nll_loss(prediction, data.y[:, 0].long())
         loss.backward()
         optimizer.step()
         correct += pred_label.eq(data.y[:, 0].long()).sum().item()
@@ -138,7 +145,8 @@ def test_classification(model, loader_pointnet, dataset_volumecnn_val, dataset_v
                 result_writer.writerow(['Test accuracy'])
 
             correct = 0
-            for idx, (subjects, data) in enumerate(loader_pointnet):
+            for idx, data in enumerate(loader_pointnet):
+                subjects = data.subject
                 if val:
                     batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_val)
                 else:
@@ -175,12 +183,12 @@ def test_classification(model, loader_pointnet, dataset_volumecnn_val, dataset_v
             print('Test'.center(60, '-'))
 
         correct = 0
-        for idx, (subjects, data) in enumerate(loader_pointnet):
+        for idx, data in enumerate(loader_pointnet):
+            subjects = data.subject
             if val:
                 batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_val)
             else:
                 batch_data_volcnn, batch_labels_volcnn = find_subjects_data_volcnn(subjects, dataset_volumecnn_test)
-
             data = data.to(device)
             with torch.no_grad():
                 batch_data = batch_data_volcnn.to(device=device)

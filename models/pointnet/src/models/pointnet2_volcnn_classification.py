@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
+from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN, Flatten, BatchNorm3d, Dropout, Module, Conv3d
+
 from torch_geometric.nn import PointConv, fps, radius, global_max_pool
 
 class SAModule(torch.nn.Module):
@@ -128,9 +129,10 @@ def MLP(channels, batch_norm=True):
 #         return F.log_softmax(x, dim=-1)
 
 class Net(torch.nn.Module):
-    def __init__(self, num_local_features, num_global_features):
+    def __init__(self, num_local_features, num_global_features, feats, device, dropout_p=0.5):
         super(Net, self).__init__()
 
+        self.device = device
         self.num_global_features = num_global_features
 
         #Pointnet++ classification
@@ -147,7 +149,7 @@ class Net(torch.nn.Module):
         self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
         #Volume CNN
-        self.volcnn_model = Sequential(
+        self.volcnn_model = Seq(
             # 50, 60, 60
             Conv3d(1, feats, padding=0, kernel_size=3, stride=1, bias=True),
             BatchNorm3d(feats),
@@ -215,7 +217,26 @@ class Net(torch.nn.Module):
 
         print("vol_conv_feat_map shape")
         print(vol_conv_feat_map.shape)
-        concat_feat_map = torch.cat((x, vol_conv_feat_map), dim=1)
+
+        batch_size = vol_conv_feat_map.size(0)
+        vol_conv_hidden_dims = vol_conv_feat_map.size(1)
+        num_points = x.size(0)
+        expanded_vol_conv_feat_map = torch.empty((num_points, vol_conv_hidden_dims), dtype=torch.float,
+                                                 device=self.device)
+
+        # print("expanded_vol_conv_feat_map")
+        # print(expanded_vol_conv_feat_map)
+
+        mid = num_points // batch_size
+        for n in range(batch_size):
+            # print("vol_conv_feat_map[n, :]")
+            # print(vol_conv_feat_map[n, :])
+            expanded_vol_conv_feat_map[n * mid: (n + 1) * mid, :] = vol_conv_feat_map[n, :]
+
+        print("expanded_vol_conv_feat_map shape")
+        print(expanded_vol_conv_feat_map.shape)
+
+        concat_feat_map = torch.cat((x, expanded_vol_conv_feat_map), dim=1)
 
         x = self.predict_linear(concat_feat_map)
 
