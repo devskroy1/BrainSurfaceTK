@@ -203,8 +203,8 @@ class Net(torch.nn.Module):
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
 
-        print("sa3_out x shape")
-        print(x.shape)
+        # print("sa3_out x shape")
+        # print(x.shape)
         # Concatenates global features to the inputs.
         if self.num_global_features > 0:
             x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
@@ -215,28 +215,28 @@ class Net(torch.nn.Module):
 
         vol_conv_feat_map = self.volcnn_model(vol_cnn_data)
 
-        print("vol_conv_feat_map shape")
-        print(vol_conv_feat_map.shape)
+        # print("vol_conv_feat_map shape")
+        # print(vol_conv_feat_map.shape)
 
-        batch_size = vol_conv_feat_map.size(0)
-        vol_conv_hidden_dims = vol_conv_feat_map.size(1)
-        num_points = x.size(0)
-        expanded_vol_conv_feat_map = torch.empty((num_points, vol_conv_hidden_dims), dtype=torch.float,
-                                                 device=self.device)
+        # batch_size = vol_conv_feat_map.size(0)
+        # vol_conv_hidden_dims = vol_conv_feat_map.size(1)
+        # num_points = x.size(0)
+        # expanded_vol_conv_feat_map = torch.empty((num_points, vol_conv_hidden_dims), dtype=torch.float,
+        #                                          device=self.device)
+        #
+        # # print("expanded_vol_conv_feat_map")
+        # # print(expanded_vol_conv_feat_map)
+        #
+        # mid = num_points // batch_size
+        # for n in range(batch_size):
+        #     # print("vol_conv_feat_map[n, :]")
+        #     # print(vol_conv_feat_map[n, :])
+        #     expanded_vol_conv_feat_map[n * mid: (n + 1) * mid, :] = vol_conv_feat_map[n, :]
+        #
+        # print("expanded_vol_conv_feat_map shape")
+        # print(expanded_vol_conv_feat_map.shape)
 
-        # print("expanded_vol_conv_feat_map")
-        # print(expanded_vol_conv_feat_map)
-
-        mid = num_points // batch_size
-        for n in range(batch_size):
-            # print("vol_conv_feat_map[n, :]")
-            # print(vol_conv_feat_map[n, :])
-            expanded_vol_conv_feat_map[n * mid: (n + 1) * mid, :] = vol_conv_feat_map[n, :]
-
-        print("expanded_vol_conv_feat_map shape")
-        print(expanded_vol_conv_feat_map.shape)
-
-        concat_feat_map = torch.cat((x, expanded_vol_conv_feat_map), dim=1)
+        concat_feat_map = torch.cat((x, vol_conv_feat_map), dim=1)
 
         x = self.predict_linear(concat_feat_map)
 
