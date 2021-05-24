@@ -162,7 +162,7 @@ val_size = 0.1
 random_state = 42
 
 
-def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen, val_size, test_size, path='./', reprocess=True):
+def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen, val_size, test_size, path='./', reprocess=True, task='regression'):
     '''
     Splits the data
 
@@ -181,6 +181,11 @@ def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen,
     with open(PATH_TO_VOLUME3D + 'utils/names.pk', 'rb') as f:
         indices = pickle.load(f)
 
+    classes = dict()
+    if task == 'classification':
+        categories = set(meta_data[:, meta_column_idx])
+        for class_num, category in enumerate(categories):
+            classes[category] = class_num
 
     train_indices = indices['Train']
     val_indices = indices['Val']
@@ -191,8 +196,10 @@ def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen,
     for pat_ses_id in train_indices:
         patient_id, session_id = pat_ses_id.split('_')
         patient_data = meta_data[(meta_data[:, 1] == patient_id) & (meta_data[:, 2] == session_id)][0]
-
-        y_train.append(float(patient_data[meta_column_idx]))
+        if task == 'classification':
+            y_train.append([classes[patient_data[meta_column_idx]]])
+        else:
+            y_train.append(float(patient_data[meta_column_idx]))
         X_train.append((patient_id, session_id))
 
     X_test = []
@@ -200,8 +207,10 @@ def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen,
     for pat_ses_id in test_indices:
         patient_id, session_id = pat_ses_id.split('_')
         patient_data = meta_data[(meta_data[:, 1] == patient_id) & (meta_data[:, 2] == session_id)][0]
-
-        y_test.append(float(patient_data[meta_column_idx]))
+        if task == 'classification':
+            y_test.append([classes[patient_data[meta_column_idx]]])
+        else:
+            y_test.append(float(patient_data[meta_column_idx]))
         X_test.append((patient_id, session_id))
 
     X_val = []
@@ -210,7 +219,10 @@ def split_data(meta_data, meta_column_idx, spacing, image_size, smoothen, edgen,
         patient_id, session_id = pat_ses_id.split('_')
         patient_data = meta_data[(meta_data[:, 1] == patient_id) & (meta_data[:, 2] == session_id)][0]
 
-        y_val.append(float(patient_data[meta_column_idx]))
+        if task == 'classification':
+            y_val.append([classes[patient_data[meta_column_idx]]])
+        else:
+            y_val.append(float(patient_data[meta_column_idx]))
         X_val.append((patient_id, session_id))
 
     # ImageSegmentationDataset
@@ -256,8 +268,6 @@ def get_ids_and_ages(meta_data, meta_column_idx):
             ages.append(float(meta_data[idx, meta_column_idx]))
 
     return ids, ages
-
-
 
 # Calculate parameters low and high from window and level
 def wl_to_lh(window, level):

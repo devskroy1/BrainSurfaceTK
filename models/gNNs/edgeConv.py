@@ -35,7 +35,7 @@ class MLP(nn.Module):
 class EdgeConvGCNSegmentation(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, device):
         super(EdgeConvGCNSegmentation, self).__init__()
-        self.edge_conv_dims = [[32, 32, 32], [64, 64, 64], [128, 128]]
+        self.edge_conv_dims = [[16, 16, 16], [32, 32, 32], [64, 64]]
         self.edge_convs = self.make_edge_conv_layers_()
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim*2, hidden_dim*2, activation=nn.ReLU())
@@ -71,12 +71,12 @@ class EdgeConvGCNSegmentation(nn.Module):
 
         #EdgeConv
         # print("Before calling knn() 1")
-        #edge_index = self.knn(hidden, hidden, 20)
+        edge_index = self.knn(hidden, hidden, 20)
         # print("After calling knn1")
-        #hidden = edgeConv1(hidden.to(self.device), edge_index.to(self.device))
+        hidden = edgeConv1(hidden.to(self.device), edge_index.to(self.device))
 
         #DynEdgeConv
-        hidden = dynEdgeConv1(hidden.to(self.device))
+        #hidden = dynEdgeConv1(hidden.to(self.device))
 
         # print("hidden shape after edgeConv1")
         # print(hidden.shape)
@@ -86,12 +86,12 @@ class EdgeConvGCNSegmentation(nn.Module):
 
         # # EdgeConv
         # print("Before calling knn() 2")
-        #edge_index = self.knn(hidden, hidden, 20)
+        edge_index = self.knn(hidden, hidden, 20)
         # print("After calling knn() 2")
-        #hidden = edgeConv2(hidden.to(self.device), edge_index.to(self.device))
+        hidden = edgeConv2(hidden.to(self.device), edge_index.to(self.device))
 
         # DynEdgeConv
-        hidden = dynEdgeConv2(hidden.to(self.device))
+        #hidden = dynEdgeConv2(hidden.to(self.device))
 
         # print("hidden shape after edgeConv2")
         # print(hidden.shape)
@@ -113,8 +113,8 @@ class EdgeConvGCNSegmentation(nn.Module):
             # mlp_dims = [dims[0] * 2] + dims[1::]
             # mlp_dims = dims
             #mlp_dims = [256, 256, 256]
-            #layers.append(EdgeConv(nn=MLP(dims), aggr='max'))
-            layers.append(DynamicEdgeConv(nn=MLP(dims), k=50, aggr='max'))
+            layers.append(EdgeConv(nn=MLP(dims), aggr='max'))
+            #layers.append(DynamicEdgeConv(nn=MLP(dims), k=50, aggr='max'))
         return nn.Sequential(*layers)
 
     # def knn(self, x, k):
