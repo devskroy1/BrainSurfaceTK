@@ -228,6 +228,9 @@ class AttentivePooling(nn.Module):
         # print("permuted_x shape")
         # print(permuted_x.shape)
         #scores = self.score_fn(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+        score_fn_output = self.score_fn(permuted_x)
+        # print("score_fn_output shape")
+        # print(score_fn_output.shape)
         scores = self.score_fn(permuted_x).permute(0,3,1,2)
 
         # sum over the neighbors

@@ -14,20 +14,20 @@ class SAModule(torch.nn.Module):
         self.conv = PointConv(nn)
 
     def forward(self, x, pos, batch):
-        print("x shape")
-        print(x.shape)
-        print("pos shape")
-        print(pos.shape)
-        print("batch shape")
-        print(batch.shape)
+        # print("x shape")
+        # print(x.shape)
+        # print("pos shape")
+        # print(pos.shape)
+        # print("batch shape")
+        # print(batch.shape)
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
                           max_num_neighbors=64)  # TODO: FIGURE OUT THIS WITH RESPECT TO NUMBER OF POINTS
         edge_index = torch.stack([col, row], dim=0)
-        print("edge_index shape")
-        print(edge_index.shape)
-        print("pos[idx] shape")
-        print(pos[idx].shape)
+        # print("edge_index shape")
+        # print(edge_index.shape)
+        # print("pos[idx] shape")
+        # print(pos[idx].shape)
         x = self.conv(x, (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
@@ -86,15 +86,15 @@ class Net(torch.nn.Module):
 
         self.mlp1 = SharedMLP(8, 8, activation_fn=nn.LeakyReLU(0.2))
         # self.mlp2 = SharedMLP(136, 32)
-        self.mlp2 = SharedMLP(16, 32)
+        self.mlp2 = SharedMLP(4, 32)
         self.shortcut = SharedMLP(8, 32, bn=True)
 
         self.lse1 = LocalSpatialEncoding(8, num_neighbours, self.device)
         self.lse2 = LocalSpatialEncoding(8, num_neighbours, self.device)
 
-        self.pool1 = AttentivePooling(16, 8)
+        self.pool1 = AttentivePooling(8, 8)
         # self.pool2 = AttentivePooling(136, 136)
-        self.pool2 = AttentivePooling(16, 16)
+        self.pool2 = AttentivePooling(8, 4)
         self.lrelu = nn.LeakyReLU()
 
         self.lin1 = Lin(1024 + num_global_features, 512)
@@ -152,22 +152,29 @@ class Net(torch.nn.Module):
         # print("x shape after self.mlp1()")
         # print(x.shape)
 
-        x = self.lse1(coords, x, knn_out_batch)
-        # x = self.pool1(x)
+       # x = self.lse1(coords, x, knn_out_batch)
+       #  print("x shape before pool1")
+       #  print(x.shape)
+        x = self.pool1(x)
+        # print("x.shape after pool1")
+        # print(x.shape)
         #
         # x = self.lse2(coords, x, knn_out_batch)
-        # x = self.pool2(x)
+        x = self.pool2(x)
+        # print("x.shape after pool2")
+        # print(x.shape)
         #
-        # x = self.lrelu(self.mlp2(x) + self.shortcut(features))
-        print("x.shape after lse1")
-        print(x.shape)
-        print("Batch size")
-        print(B)
-        print("num_points")
-        print(N)
+        x = self.lrelu(self.mlp2(x) + self.shortcut(features))
+        # print("x.shape after lrelu")
+        # print(x.shape)
+        # print("Batch size")
+        # print(B)
+        # print("num_points")
+        # print(N)
         d_out = x.size(1)
         coords = coords.reshape(B*N, 3)
-        x = x.reshape(B*N*d_out, d_out)
+        #x = x.reshape(B * N * d_out, d_out)
+        x = x.reshape(B*N, d_out)
 
         batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
         for b in range(1, B):
