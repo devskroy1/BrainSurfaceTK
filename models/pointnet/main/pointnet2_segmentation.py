@@ -100,10 +100,10 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
 
         pred = out.max(dim=1)[1]
 
-        print("out shape")
-        print(out.shape)
-        print("y tensor sluce shape")
-        print(y_tensor_slice.shape)
+        # print("out shape")
+        # print(out.shape)
+        # print("y tensor sluce shape")
+        # print(y_tensor_slice.shape)
         #New code
         loss = F.nll_loss(out, y_tensor_slice)
         #Original code
