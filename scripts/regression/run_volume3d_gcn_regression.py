@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     save_path = "/vol/bitbucket/sr4617/tmp_save/vol_cnn_gcn_regression"
 
-    lr = 0.001
+    lr = 0.01
     T_max = 10
     eta_min = 1e-6
     local_features = ('corrected_thickness', 'curvature', 'sulcal_depth')
