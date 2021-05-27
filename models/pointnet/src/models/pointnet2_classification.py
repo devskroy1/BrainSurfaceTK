@@ -152,21 +152,30 @@ class Net(torch.nn.Module):
         self.num_global_features = num_global_features
 
         # 3+6 IS 3 FOR COORDINATES, 6 FOR FEATURES PER POINT.
-        #self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
+        # #self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 96]))
+        # self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
+        # #self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 8, 8, 16]))
+        # #self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
+        # #self.sa2_module = SAModule(0.25, 0.4, MLP([96 + 3, 128, 128, 256]))
+        # #self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        # #self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+        # self.sa3_module = GlobalSAModule(MLP([128 + 3, 128, 256, 512]))
+        # #self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+        # #self.sa3_module = GlobalSAModule(MLP([16 + 3, 16, 16, 32]))
+
         self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
-        #self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 8, 8, 16]))
-        #self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
-        #self.sa2_module = SAModule(0.25, 0.4, MLP([96 + 3, 128, 128, 256]))
-        #self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
-        #self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
-        self.sa3_module = GlobalSAModule(MLP([128 + 3, 128, 256, 512]))
-        #self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
-        #self.sa3_module = GlobalSAModule(MLP([16 + 3, 16, 16, 32]))
+        # self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
+        # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+       # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+        self.sa3_module = GlobalSAModule(MLP([128 + 3, 128, 128, 256]))
+
+        self.lin1 = Lin(256, 128)
+        self.lin2 = Lin(128, 2)
 
         # self.lin1 = Lin(1024 + num_global_features, 512)
-        self.lin2 = Lin(512, 256)
-        self.lin3 = Lin(256, 128)
-        self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
+        # self.lin2 = Lin(512, 256)
+        # self.lin3 = Lin(256, 128)
+        # self.lin4 = Lin(128, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
         #self.lin4 = Lin(32, 2)  # OUTPUT = NUMBER OF CLASSES, 1 IF REGRESSION TASK
 
     def forward(self, data):
@@ -185,10 +194,10 @@ class Net(torch.nn.Module):
         if self.num_global_features > 0:
             x = torch.cat((x, data.y[:, 1:self.num_global_features + 1].view(-1, self.num_global_features)), 1)
         #
-        # x = F.relu(self.lin1(x))
-        # x = F.dropout(x, p=0.5, training=self.training)
+        x = F.relu(self.lin1(x))
+        # # x = F.dropout(x, p=0.5, training=self.training)
         x = F.relu(self.lin2(x))
-        x = F.relu(self.lin3(x))
-        # x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin4(x)
+        # x = F.relu(self.lin3(x))
+        # # x = F.dropout(x, p=0.5, training=self.training)
+        # x = self.lin4(x)
         return F.log_softmax(x, dim=-1)
