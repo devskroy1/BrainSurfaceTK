@@ -163,14 +163,14 @@ class Net(torch.nn.Module):
         # #self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
         # #self.sa3_module = GlobalSAModule(MLP([16 + 3, 16, 16, 32]))
 
-        self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
+        self.sa1_module = SAModule(0.5, 0.2, MLP([3 + num_local_features, 8, 8, 16]))
         # self.sa1a_module = SAModule(0.5, 0.2, MLP([96 + 3, 96, 96, 128]))
         # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
-        self.sa3_module = GlobalSAModule(MLP([128 + 3, 128, 128, 256]))
+        self.sa3_module = GlobalSAModule(MLP([16 + 3, 32, 32, 64]))
 
-        self.lin1 = Lin(256, 128)
-        self.lin2 = Lin(128, 2)
+        self.lin1 = Lin(64, 1)
+        #self.lin2 = Lin(32, 2)
 
         # self.lin1 = Lin(1024 + num_global_features, 512)
         # self.lin2 = Lin(512, 256)
@@ -196,7 +196,7 @@ class Net(torch.nn.Module):
         #
         x = F.relu(self.lin1(x))
         # # x = F.dropout(x, p=0.5, training=self.training)
-        x = F.relu(self.lin2(x))
+        # x = F.relu(self.lin2(x))
         # x = F.relu(self.lin3(x))
         # # x = F.dropout(x, p=0.5, training=self.training)
         # x = self.lin4(x)
