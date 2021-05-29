@@ -79,9 +79,9 @@ def get_args():
     parser.add_argument("--save_path", help="where to store the dataset files", type=str, default="../tmp")
 
     # Training Args
-    parser.add_argument("--max_epochs", help="max epochs", type=int, default=300)
+    parser.add_argument("--max_epochs", help="max epochs", type=int, default=200)
     parser.add_argument("--batch_size", help="batch size", type=int, default=64)
-    parser.add_argument("--lr", help="lr", type=float, default=8e-4)
+    parser.add_argument("--lr", help="lr", type=float, default=0.001)
     parser.add_argument("--T_max", help="T_max", type=int, default=10)
     parser.add_argument("--eta_min", help="eta_min", type=float, default=1e-6)
 
@@ -143,11 +143,14 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
         prediction = model(bg, bg_node_features)
-        print("prediction")
-        print(prediction)
-        print("batch_labels")
-        print(batch_labels)
-        loss = loss_function(prediction, batch_labels)
+        predicted_age = denorm_target_f(prediction, train_ds)
+        true_age = denorm_target_f(batch_labels, train_ds)
+        loss = loss_function(predicted_age, true_age)
+        # print("prediction")
+        # print(prediction)
+        # print("batch_labels")
+        # print(batch_labels)
+        #loss = loss_function(prediction, batch_labels)
         loss.backward()
         optimizer.step()
 
@@ -189,7 +192,12 @@ def evaluate(model, dl, ds, loss_function, diff_func, denorm_target_f, device):
             batch_labels = batch_labels.to(device)
 
             predictions = model(bg, bg_node_features)
-            loss = loss_function(predictions, batch_labels)
+
+            predicted_age = denorm_target_f(predictions, ds)
+            true_age = denorm_target_f(batch_labels, ds)
+            loss = loss_function(predicted_age, true_age)
+
+            #loss = loss_function(predictions, batch_labels)
 
             diff = diff_func(denorm_target_f(predictions, ds),
                              denorm_target_f(batch_labels, ds))
@@ -302,8 +310,8 @@ if __name__ == "__main__":
     print(f"Model is on: {'cuda' if torch.cuda.is_available() else 'cpu'}")
     print("Total number of parameters: ", count_parameters(model))
 
-    loss_function = nn.MSELoss(reduction="sum")
-
+    # loss_function = nn.MSELoss(reduction="sum")
+    loss_function = nn.L1Loss()
     diff_func = nn.L1Loss(reduction="none")
 
     best_val_loss = math.inf
@@ -338,7 +346,7 @@ if __name__ == "__main__":
         update_best_model(model, val_epoch_loss, best_val_loss, args)
         torch.save(model, os.path.join(args.experiment_folder, "curr_model"))
 
-        print('Epoch {}, train_loss {:.4f}, test_loss {:.4f}'.format(epoch, train_epoch_loss, test_epoch_loss))
+        print('Epoch {}, train_loss {:.4f}, val_loss {:.4f}, test_loss {:.4f}'.format(epoch, train_epoch_loss, val_epoch_loss, test_epoch_loss))
 
     mem = get_gpu_memory_map()
 

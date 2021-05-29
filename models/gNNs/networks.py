@@ -10,21 +10,25 @@ class BasicGCNRegressor(nn.Module):
         super(BasicGCNRegressor, self).__init__()
         self.conv1 = GraphConv(in_dim, hidden_dim, activation=nn.ReLU())
         self.conv2 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv3 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
+        self.conv4 = GraphConv(hidden_dim, hidden_dim, activation=nn.ReLU())
         self.predict_layer = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, graph, features):
         # Perform graph convolution and activation function.
         hidden = self.conv1(graph, features)
         hidden = self.conv2(graph, hidden)
-        print("conv2 hidden shape")
-        print(hidden.shape)
+        hidden = self.conv3(graph, hidden)
+        hidden = self.conv4(graph, hidden)
+        # print("conv2 hidden shape")
+        # print(hidden.shape)
         with graph.local_scope():
             graph.ndata['tmp'] = hidden
             # Calculate graph representation by averaging all the node representations.
             hg = dgl.mean_nodes(graph, 'tmp')
 
-        print("hg shape")
-        print(hg.shape)
+        # print("hg shape")
+        # print(hg.shape)
         return self.predict_layer(hg)
 
 

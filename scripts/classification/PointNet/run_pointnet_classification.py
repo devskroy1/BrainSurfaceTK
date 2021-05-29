@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     data_nativeness = 'native'
     data_compression = "10k"
-    data_type = 'white'
+    data_type = 'pial'
     hemisphere = 'both'
 
     # data_nativeness = 'native'
