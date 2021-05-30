@@ -1,7 +1,14 @@
+import os.path as osp
+
+PATH_TO_ROOT = osp.join(osp.dirname(osp.realpath(__file__)), '..', '..', '..')
+import sys
+
+sys.path.append(PATH_TO_ROOT)
+
 import pickle
 import pyvista as pv
 import sys
-from models.layers import mesh_prepare
+from models.MeshCNN.models.layers import mesh_prepare
 
 __author__ = "Francis Rhys Ward"
 __license__ = "MIT"
