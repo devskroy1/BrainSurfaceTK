@@ -1,5 +1,5 @@
 Sukant Roy:
-Used code from the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch), the PointASNL Github repository (https://github.com/yanx27/PointASNL) and the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM).
+Used code from the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch), the PointASNL Github repository (https://github.com/yanx27/PointASNL) and the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM). See LICENSE file in project root directory in master branch for their licenses.
 
 Alexey Zhakarov, Andy Wang, Cemlyn Waters, Francis Rhys Ward, Vitalis Vosylius:
 # BrainSurfaceToolKit
