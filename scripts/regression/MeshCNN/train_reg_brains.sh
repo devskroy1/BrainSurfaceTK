@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 ## run the training
-pushd models/MeshCNN
+pushd ../../../models/MeshCNN
 
 python3 train.py \
---dataroot datasets \
+--dataroot datasetsOriginal/all_brains_merged_10k \
 --checkpoints_dir checkpoints/reg \
 --export_folder checkpoints/mesh_collapses \
 --name brains \
