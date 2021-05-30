@@ -27,7 +27,8 @@ if __name__ == '__main__':
 
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = []
+    #Try using weight global feature
+    global_features = ['weight']
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
@@ -37,7 +38,7 @@ if __name__ == '__main__':
 
     data_nativeness = 'native'
     data_compression = "10k"
-    data_type = 'pial'
+    data_type = 'white'
     hemisphere = 'both'
 
     # data_nativeness = 'native'
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
-    target_class = 'gender'
+    target_class = 'birth_age'
     task = 'classification'
     numb_epochs = 200
     number_of_points = 10000
