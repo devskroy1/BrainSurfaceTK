@@ -71,7 +71,7 @@ if __name__ == '__main__':
     categories = {'gender': 2, 'birth_age': 3, 'weight': 4, 'scan_age': 6, 'scan_num': 7}
     list_attrs = ['gender', 'scan_age', 'birth_age']
 
-    attribute = 'gender'
+    attribute = 'scan_age'
 
     with open(PATH_TO_POINTNET + 'src/names.pk', 'rb') as f:
         indices = pickle.load(f)
@@ -116,6 +116,10 @@ if __name__ == '__main__':
     plt.hist(test_column, bins=2, alpha=0.5, label="Test")
     all_column = get_column(attribute=attribute)
     plt.hist(all_column, bins=2, alpha=0.5, label="All")
+    print("all_column min")
+    print(all_column.min())
+    print("all_column max")
+    print(all_column.max())
     # print("all attribute column num. elems")
     # print(all_column.size)
     # print("train attribute column num. elems")
@@ -132,15 +136,15 @@ if __name__ == '__main__':
     # print(indices)
     # print("len(indices)")
     # print(len(indices))
-    print("number of training surfaces")
-    print(len(indices['Train']))
-    print("number of validation surfaces")
-    print(len(indices['Val']))
-    print("number of test surfaces")
-    print(len(indices['Test']))
-    sum_indices = len(indices['Train']) + len(indices['Val']) + len(indices['Test'])
-    print("total number of surfaces")
-    print(sum_indices)
+    # print("number of training surfaces")
+    # print(len(indices['Train']))
+    # print("number of validation surfaces")
+    # print(len(indices['Val']))
+    # print("number of test surfaces")
+    # print(len(indices['Test']))
+    # sum_indices = len(indices['Train']) + len(indices['Val']) + len(indices['Test'])
+    # print("total number of surfaces")
+    # print(sum_indices)
 
     #test_ax = test_column.plot.hist(bins=25)
 
