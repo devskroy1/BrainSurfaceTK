@@ -28,6 +28,7 @@ if __name__ == '__main__':
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     #Try using weight global feature
+    #global_features = []
     global_features = ['weight']
 
     #################################################
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     ################################################
 
     ########## INDICES FOR DATA SPLIT #############
-    with open(PATH_TO_POINTNET + 'src/names.pk', 'rb') as f:
+    with open(PATH_TO_POINTNET + 'src/names_preterm.pk', 'rb') as f:
         indices = pickle.load(f)
     ###############################################
 
