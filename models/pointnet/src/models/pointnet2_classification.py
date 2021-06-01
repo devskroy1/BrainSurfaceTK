@@ -86,15 +86,15 @@ class Net(torch.nn.Module):
 
         self.mlp1 = SharedMLP(8, 8, activation_fn=nn.LeakyReLU(0.2))
         # self.mlp2 = SharedMLP(136, 32)
-        self.mlp2 = SharedMLP(4, 32)
+        self.mlp2 = SharedMLP(16, 32)
         self.shortcut = SharedMLP(8, 32, bn=True)
 
         self.lse1 = LocalSpatialEncoding(8, num_neighbours, self.device)
         self.lse2 = LocalSpatialEncoding(8, num_neighbours, self.device)
 
-        self.pool1 = AttentivePooling(8, 8)
+        self.pool1 = AttentivePooling(16, 8)
         # self.pool2 = AttentivePooling(136, 136)
-        self.pool2 = AttentivePooling(8, 4)
+        self.pool2 = AttentivePooling(16, 16)
         self.lrelu = nn.LeakyReLU()
 
         self.lin1 = Lin(1024 + num_global_features, 512)
@@ -152,14 +152,14 @@ class Net(torch.nn.Module):
         # print("x shape after self.mlp1()")
         # print(x.shape)
 
-       # x = self.lse1(coords, x, knn_out_batch)
+        x = self.lse1(coords, x, knn_out_batch)
        #  print("x shape before pool1")
        #  print(x.shape)
         x = self.pool1(x)
         # print("x.shape after pool1")
         # print(x.shape)
         #
-        # x = self.lse2(coords, x, knn_out_batch)
+        x = self.lse2(coords, x, knn_out_batch)
         x = self.pool2(x)
         # print("x.shape after pool2")
         # print(x.shape)
