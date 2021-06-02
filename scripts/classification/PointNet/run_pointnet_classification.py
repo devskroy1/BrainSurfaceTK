@@ -58,7 +58,7 @@ if __name__ == '__main__':
     batch_size = 2
     gamma = 0.9875
     scheduler_step_size = 2
-    target_class = 'gender'
+    target_class = 'birth_age'
     task = 'classification'
     numb_epochs = 200
     # number_of_points = 10000
@@ -66,7 +66,10 @@ if __name__ == '__main__':
     ################################################
 
     ########## INDICES FOR DATA SPLIT #############
-    with open(PATH_TO_POINTNET + 'src/names.pk', 'rb') as f:
+    # with open(PATH_TO_POINTNET + 'src/names.pk', 'rb') as f:
+    #     indices = pickle.load(f)
+
+    with open(PATH_TO_POINTNET + 'src/names_preterm.pk', 'rb') as f:
         indices = pickle.load(f)
     ###############################################
 
