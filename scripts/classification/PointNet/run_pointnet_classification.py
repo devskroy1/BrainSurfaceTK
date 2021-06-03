@@ -28,8 +28,8 @@ if __name__ == '__main__':
     num_workers = 2
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
     #Try using weight global feature
-    #global_features = []
-    global_features = ['weight']
+    global_features = []
+    #global_features = ['weight']
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    data_compression = "10k"
+    data_compression = "5k"
     data_type = 'white'
     hemisphere = 'both'
 
