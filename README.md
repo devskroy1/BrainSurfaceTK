@@ -1,7 +1,3 @@
-Sukant Roy:
-Used code from the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch), the PointASNL Github repository (https://github.com/yanx27/PointASNL) and the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM). See LICENSE file in project root directory in master branch for their licenses.
-
-Alexey Zhakarov, Andy Wang, Cemlyn Waters, Francis Rhys Ward, Vitalis Vosylius:
 # BrainSurfaceToolKit
 
 <div align="center"> 
@@ -142,3 +138,9 @@ If you use this code useful for your research, please cite our [paper](https://a
     primaryClass={cs.CV}
 }
 ```
+
+###### Acknowledgements
+The code of RandLA-Net is based on the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch).
+The code of PointASNL is based on the PointASNL Github repository (https://github.com/yanx27/PointASNL).
+The code of PointNet CAM is based on the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM).
+See LICENSE file in project root directory in master branch for their licenses.
