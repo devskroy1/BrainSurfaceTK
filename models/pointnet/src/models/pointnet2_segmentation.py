@@ -103,360 +103,32 @@ class FPModule(torch.nn.Module):
         # print(x.shape)
         return x, pos_skip, batch_skip
 
-
-# My network
+#Baseline network
 class Net(torch.nn.Module):
-    def __init__(self, num_classes, num_local_features, num_neighbours=16, decimation=4, num_global_features=None):
-        #TODO: SEE HOW YOU CAN USE GLOBAL FEATURES
+    def __init__(self, num_classes, num_local_features, num_global_features=None):
         '''
         :param num_classes: Number of segmentation classes
         :param num_local_features: Feature per node
         :param num_global_features: NOT USED
         '''
-
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.decimation = decimation
         super(Net, self).__init__()
-        #self.sa1_module = SAModule(0.2, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
-        # self.sa1_module = SAModule(0.2, 0.2, MLP([8 + num_local_features, 64, 64, 152]))
-        # self.sa2_module = SAModule(0.25, 0.4, MLP([152 + 3, 128, 128, 256]))
-
-        #Using mlp2, locSE2, pool2 modules
-        #self.sa1_module = SAModule(0.2, 0.2, MLP([8 + num_local_features, 64, 64, 128]))
-        self.sa1_module = SAModule(0.2, 0.2, MLP([32 + 3, 64, 64, 128]))
+        self.sa1_module = SAModule(0.2, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
 
-        # Using only mlp1, locSE1, pool1 modules
-        # #self.sa1_module = SAModule(0.2, 0.2, MLP([8 + 3, 64, 64, 128]))
-        # self.sa1_module = SAModule(0.2, 0.2, MLP([32 + 3, 64, 64, 128]))
-        # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
-        # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
-
-        # Using mlp2, locSE2, pool2 modules
         self.fp3_module = FPModule(1, MLP([1024 + 256, 256, 256]))
         self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
-        self.fp1_module = FPModule(3, MLP([128 + 32, 128, 128, 128]))
-
-        # Using only mlp1, locSE1, pool1 modules
-        # self.fp3_module = FPModule(1, MLP([1024 + 256, 256, 256]))
-        # self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
-        # self.fp1_module = FPModule(3, MLP([128 + 32, 128, 128, 128]))
-
-        self.fc_start = nn.Linear(num_local_features, 8).to(self.device)
-        self.bn_start = nn.Sequential(
-            nn.BatchNorm2d(8, eps=1e-6, momentum=0.99),
-            nn.LeakyReLU(0.2)
-        ).to(self.device)
-
-        # d_in = 8
-        # d_out = 16
-
-        self.mlp1 = SharedMLP(8, 8, activation_fn=nn.LeakyReLU(0.2))
-        #self.mlp2 = SharedMLP(136, 32)
-        self.mlp2 = SharedMLP(16, 32)
-        self.shortcut = SharedMLP(8, 32, bn=True)
-
-        self.lse1 = LocalSpatialEncoding(8, num_neighbours, self.device)
-        self.lse2 = LocalSpatialEncoding(8, num_neighbours, self.device)
-
-        self.pool1 = AttentivePooling(16, 8)
-        #self.pool2 = AttentivePooling(136, 136)
-        self.pool2 = AttentivePooling(16, 16)
-        self.lrelu = nn.LeakyReLU()
-
-        # self.encoder = nn.ModuleList([
-        #     LocalFeatureAggregation(8, 16, num_neighbours, self.device),
-        #     LocalFeatureAggregation(32, 64, num_neighbours, self.device),
-        #     LocalFeatureAggregation(128, 128, num_neighbours, self.device),
-        #     LocalFeatureAggregation(256, 256, num_neighbours, self.device)
-        # ])
-        #
-        # decoder_kwargs = dict(
-        #     transpose=True,
-        #     bn=True,
-        #     activation_fn=nn.ReLU()
-        # )
-        #
-        # self.decoder = nn.ModuleList([
-        #     SharedMLP(1024, 512, **decoder_kwargs),
-        #     SharedMLP(512, 256, **decoder_kwargs),
-        #     SharedMLP(256, 128, **decoder_kwargs),
-        #     SharedMLP(128, 128, **decoder_kwargs)
-        # ])
+        self.fp1_module = FPModule(3, MLP([128 + num_local_features, 128, 128, 128]))
 
         self.lin1 = torch.nn.Linear(128, 128)
         self.lin2 = torch.nn.Linear(128, 64)
         self.lin3 = torch.nn.Linear(64, num_classes)
-        self.num_neighbours = num_neighbours
-
-    # def forward(self, data):
-    #
-    #     print("Inside PointNet segmentation forward()")
-    #     N = data.x.size(0)
-    #     d = self.decimation
-    #
-    #     sa0_out = (data.x, data.pos, data.batch)
-    #     sa1_out = self.sa1_module(*sa0_out)
-    #     print("Just before calling sa2 module forward")
-    #     sa2_out = self.sa2_module(*sa1_out)
-    #     #sa3_out = self.sa3_module(*sa2_out)
-    #     x, coords, batch = self.sa3_module(*sa2_out)
-    #
-    #     # fp3_out = self.fp3_module(*sa3_out, *sa2_out)
-    #     # fp2_out = self.fp2_module(*fp3_out, *sa1_out)
-    #     # x, coords, batch = self.fp1_module(*fp2_out, *sa0_out)
-    #
-    #     print("x shape from sa3 module")
-    #     print(x.shape)
-    #     print("coords shape from sa3 module")
-    #     print("coords shape")
-    #     print(coords.shape)
-    #
-    #     decimation_ratio = 1
-    #     # coords = data.pos.clone().cpu()
-    #     # x = data.x.clone().cpu()
-    #     # print("coords")
-    #     # print(coords)
-    #     # permutation = torch.randperm(N)
-    #     # coords = coords[permutation]
-    #     # x = x[permutation]
-    #     #
-    #     # print("x.shape")
-    #     # print(x.shape)
-    #     # print("x")
-    #     # print(x)
-    #
-    #     x = x.view(x.size(0), x.size(1)//16, 16, 1)
-    #     print("x.shape after reshaping into 4d")
-    #     print(x.shape)
-    #
-    #     for lfa in self.encoder:
-    #         # at iteration i, x.shape = (B, N//(d**i), d_in)
-    #
-    #         x = lfa(coords[:, :N//decimation_ratio], x)
-    #         x_stack.append(x.clone())
-    #         decimation_ratio *= d
-    #         x = x[:, :, :N//decimation_ratio]
-    #
-    #     for mlp in self.decoder:
-    #         neighbors, _ = knn(
-    #             coords[:, :N//decimation_ratio].cpu().contiguous(), # original set
-    #             coords[:, :d*N//decimation_ratio].cpu().contiguous(), # upsampled set
-    #             1
-    #         ) # shape (B, N, 1)
-    #         neighbors = neighbors.to(self.device)
-    #
-    #         extended_neighbors = neighbors.unsqueeze(1).expand(-1, x.size(1), -1, 1)
-    #
-    #         x_neighbors = torch.gather(x, -2, extended_neighbors)
-    #
-    #         x = torch.cat((x_neighbors, x_stack.pop()), dim=1)
-    #
-    #         x = mlp(x)
-    #
-    #         decimation_ratio //= d
-    #
-    #     x = x[:, :, torch.argsort(permutation)]
-    #
-    #     x = F.relu(self.lin1(x))
-    #     x = F.dropout(x, p=0.5, training=self.training)
-    #     x = self.lin2(x)
-    #     x = F.dropout(x, p=0.5, training=self.training)
-    #     x = self.lin3(x)
-    #     return F.log_softmax(x, dim=-1)
 
     def forward(self, data):
-
-        #First shared mlp, locSE and Attentive pooling units, then SA module
-        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        data = data.to(self.device)
-
-        # N = input.size(1)
-        N = data.size(1)
-        B = data.size(0)
-        d_in = data.size(2)
-        d = self.decimation
-
-        # For CUDA
-        coords = data[..., :3]
-        local_features = data[..., 3:]
-
-        x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
-        x = self.bn_start(x)  # shape (B, d, N, 1)
-        decimation_ratio = 1
-        # permutation = torch.randperm(N)
-        # coords = coords[:, permutation, :]
-        # x = x[:, :, permutation, :]
-        coords = coords[:, :N // decimation_ratio, :]
-
-        knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
-        knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
-        for b in range(B):
-            knn_coords = coords[b, :, :]
-            knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
-            # print("knn_output_idx shape")
-            # print(knn_output_idx.shape)
-            # print("knn_output_dist shape")
-            # print(knn_output_dist.shape)
-
-            knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
-            knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
-            # knn_coords = coords[b, :, :].reshape(num_points, 3)
-
-        knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
-
-        features = x
-
-        # print("features shape before self.mlp1()")
-        # print(features.shape)
-
-        x = self.mlp1(features)
-
-        # print("x shape after self.mlp1()")
-        # print(x.shape)
-
-        x = self.lse1(coords, x, knn_out_batch)
-        x = self.pool1(x)
-
-        x = self.lse2(coords, x, knn_out_batch)
-        x = self.pool2(x)
-
-        x = self.lrelu(self.mlp2(x) + self.shortcut(features))
-
-        d_out = x.size(1)
-        coords = coords.reshape(B*N, 3)
-        x = x.reshape(B*N, d_out)
-
-        batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
-        for b in range(1, B):
-            batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
-            # batch_tensor = batch_tensor.new_full((, npoint), b)
-            # print("batch_tensor shape")
-            # print(batch_tensor.shape)
-            # Expected to be 512
-            batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
-
-        # print("x shape")
-        # print(x.shape)
-        # print("coords shape")
-        # print(coords.shape)
-        # print("batch_cat_tensor shape")
-        # print(batch_cat_tensor.shape)
-
-        #sa0_out = (x.to(self.device), coords.to(self.device), batch_cat_tensor.to(self.device))
-        sa0_out = (x, coords, batch_cat_tensor)
-
-        # print("Just before sa1_module")
-        # print("x.shape")
-        # print(x.shape)
-        # print("coords.shape")
-        # print(coords.shape)
-        # sa1_out_x, sa1_out_pos, sa1_out_batch = self.sa1_module(*sa0_out)
-        # print("sa1_out_x shape")
-        # print(sa1_out_x.shape)
-        # print("sa1_out_pos shape")
-        # print(sa1_out_pos.shape)
-        # print("sa1_out_batch shape")
-        # print(sa1_out_batch.shape)
+        sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
-
-        # print("sa1_out_x shape")
-        # print(sa1_out_x.shape)
-        # print("sa1_out_pos shape")
-        # print(sa1_out_pos.shape)
-        # print("sa1_out_batch shape")
-        # print(sa1_out_batch.shape)
-
-        #Randla-net code
-        # N = sa1_out_x.size(0) // B
-        # num_features = sa1_out_x.size(1)
-        # sa1_out_x = sa1_out_x.reshape(B, num_features, N).unsqueeze(-1)
-        # sa1_out_pos = sa1_out_pos.reshape(B, N, 3)
-        # knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
-        # knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
-        # for b in range(B):
-        #     knn_coords = sa1_out_pos[b, :, :]
-        #     knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
-        #     # print("knn_output_idx shape")
-        #     # print(knn_output_idx.shape)
-        #     # print("knn_output_dist shape")
-        #     # print(knn_output_dist.shape)
-        #
-        #     knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
-        #     knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
-        #     # knn_coords = coords[b, :, :].reshape(num_points, 3)
-        #
-        # knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
-        #
-        # x = self.lse2(sa1_out_pos, sa1_out_x, knn_out_batch)
-        # # print("x shape after self.lse2()")
-        # # print(x.shape)
-        # x = self.pool2(x)
-        # # print("x shape after pool2")
-        # # print(x.shape)
-        #
-        # # print("x shape before mlp2")
-        # # print(x.shape)
-        # # print("features shape")
-        # # print(features.shape)
-        # # mlp2 = self.mlp2(x)
-        # # shortcut = self.shortcut(features)
-        # #
-        # # npoint = shortcut.size(2)
-        # # nchannels = shortcut.size(1)
-        # # print("npoint")
-        # # print(npoint)
-        # # #Should be 5001
-        # # print("mlp2 shape")
-        # # print(mlp2.shape)
-        # # print("shortcut shape")
-        # # print(shortcut.shape)
-        # # mlp2 = mlp2.expand(B, nchannels, npoint, 1)
-        # # x = nn.LeakyReLU(mlp2 + shortcut)
-        # #
-        # # print("x shape after addition of mlp2 and shortcut connection")
-        # # print(x.shape)
-        #
-        # d_out = x.size(1)
-        # coords = sa1_out_pos.reshape(B*N, 3)
-        # x = x.reshape(B*N, d_out)
-        #
-        # batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
-        # for b in range(1, B):
-        #     batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
-        #     # batch_tensor = batch_tensor.new_full((, npoint), b)
-        #     # print("batch_tensor shape")
-        #     # print(batch_tensor.shape)
-        #     # Expected to be 512
-        #     batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
-
-        #sa1_out = (x, coords, batch_cat_tensor)
-
-        #sa2_out_x, sa2_out_pos, sa2_out_batch = self.sa2_module(*sa1_out)
-        #End of Randla-net code
-
-        #Vanilla Pointnet++
         sa2_out = self.sa2_module(*sa1_out)
-        #sa2_out_x, sa2_out_pos, sa2_out_batch = sa2_out
-
-        #
-        # print("sa2_out_x shape")
-        # print(sa2_out_x.shape)
-        # print("sa2_out_pos shape")
-        # print(sa2_out_pos.shape)
-        # print("sa2_out_batch shape")
-        # print(sa2_out_batch.shape)
-
         sa3_out = self.sa3_module(*sa2_out)
-        #sa3_out_x, sa3_out_pos, sa3_out_batch = sa3_out
-
-        # print("sa3_out_x shape")
-        # print(sa3_out_x.shape)
-        # print("sa3_out_pos shape")
-        # print(sa3_out_pos.shape)
-        # print("sa3_out_batch shape")
-        # print(sa3_out_batch.shape)
 
         fp3_out = self.fp3_module(*sa3_out, *sa2_out)
         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
@@ -468,3 +140,368 @@ class Net(torch.nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin3(x)
         return F.log_softmax(x, dim=-1)
+
+# My network with LFA
+# class Net(torch.nn.Module):
+#     def __init__(self, num_classes, num_local_features, num_neighbours=16, decimation=4, num_global_features=None):
+#         #TODO: SEE HOW YOU CAN USE GLOBAL FEATURES
+#         '''
+#         :param num_classes: Number of segmentation classes
+#         :param num_local_features: Feature per node
+#         :param num_global_features: NOT USED
+#         '''
+#
+#         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         self.decimation = decimation
+#         super(Net, self).__init__()
+#         #self.sa1_module = SAModule(0.2, 0.2, MLP([3 + num_local_features, 64, 64, 128]))
+#         # self.sa1_module = SAModule(0.2, 0.2, MLP([8 + num_local_features, 64, 64, 152]))
+#         # self.sa2_module = SAModule(0.25, 0.4, MLP([152 + 3, 128, 128, 256]))
+#
+#         #Using mlp2, locSE2, pool2 modules
+#         #self.sa1_module = SAModule(0.2, 0.2, MLP([8 + num_local_features, 64, 64, 128]))
+#         self.sa1_module = SAModule(0.2, 0.2, MLP([32 + 3, 64, 64, 128]))
+#         self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+#         self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+#
+#         # Using only mlp1, locSE1, pool1 modules
+#         # #self.sa1_module = SAModule(0.2, 0.2, MLP([8 + 3, 64, 64, 128]))
+#         # self.sa1_module = SAModule(0.2, 0.2, MLP([32 + 3, 64, 64, 128]))
+#         # self.sa2_module = SAModule(0.25, 0.4, MLP([128 + 3, 128, 128, 256]))
+#         # self.sa3_module = GlobalSAModule(MLP([256 + 3, 256, 512, 1024]))
+#
+#         # Using mlp2, locSE2, pool2 modules
+#         self.fp3_module = FPModule(1, MLP([1024 + 256, 256, 256]))
+#         self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
+#         self.fp1_module = FPModule(3, MLP([128 + 32, 128, 128, 128]))
+#
+#         # Using only mlp1, locSE1, pool1 modules
+#         # self.fp3_module = FPModule(1, MLP([1024 + 256, 256, 256]))
+#         # self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
+#         # self.fp1_module = FPModule(3, MLP([128 + 32, 128, 128, 128]))
+#
+#         self.fc_start = nn.Linear(num_local_features, 8).to(self.device)
+#         self.bn_start = nn.Sequential(
+#             nn.BatchNorm2d(8, eps=1e-6, momentum=0.99),
+#             nn.LeakyReLU(0.2)
+#         ).to(self.device)
+#
+#         # d_in = 8
+#         # d_out = 16
+#
+#         self.mlp1 = SharedMLP(8, 8, activation_fn=nn.LeakyReLU(0.2))
+#         #self.mlp2 = SharedMLP(136, 32)
+#         self.mlp2 = SharedMLP(16, 32)
+#         self.shortcut = SharedMLP(8, 32, bn=True)
+#
+#         self.lse1 = LocalSpatialEncoding(8, num_neighbours, self.device)
+#         self.lse2 = LocalSpatialEncoding(8, num_neighbours, self.device)
+#
+#         self.pool1 = AttentivePooling(16, 8)
+#         #self.pool2 = AttentivePooling(136, 136)
+#         self.pool2 = AttentivePooling(16, 16)
+#         self.lrelu = nn.LeakyReLU()
+#
+#         # self.encoder = nn.ModuleList([
+#         #     LocalFeatureAggregation(8, 16, num_neighbours, self.device),
+#         #     LocalFeatureAggregation(32, 64, num_neighbours, self.device),
+#         #     LocalFeatureAggregation(128, 128, num_neighbours, self.device),
+#         #     LocalFeatureAggregation(256, 256, num_neighbours, self.device)
+#         # ])
+#         #
+#         # decoder_kwargs = dict(
+#         #     transpose=True,
+#         #     bn=True,
+#         #     activation_fn=nn.ReLU()
+#         # )
+#         #
+#         # self.decoder = nn.ModuleList([
+#         #     SharedMLP(1024, 512, **decoder_kwargs),
+#         #     SharedMLP(512, 256, **decoder_kwargs),
+#         #     SharedMLP(256, 128, **decoder_kwargs),
+#         #     SharedMLP(128, 128, **decoder_kwargs)
+#         # ])
+#
+#         self.lin1 = torch.nn.Linear(128, 128)
+#         self.lin2 = torch.nn.Linear(128, 64)
+#         self.lin3 = torch.nn.Linear(64, num_classes)
+#         self.num_neighbours = num_neighbours
+#
+#     # def forward(self, data):
+#     #
+#     #     print("Inside PointNet segmentation forward()")
+#     #     N = data.x.size(0)
+#     #     d = self.decimation
+#     #
+#     #     sa0_out = (data.x, data.pos, data.batch)
+#     #     sa1_out = self.sa1_module(*sa0_out)
+#     #     print("Just before calling sa2 module forward")
+#     #     sa2_out = self.sa2_module(*sa1_out)
+#     #     #sa3_out = self.sa3_module(*sa2_out)
+#     #     x, coords, batch = self.sa3_module(*sa2_out)
+#     #
+#     #     # fp3_out = self.fp3_module(*sa3_out, *sa2_out)
+#     #     # fp2_out = self.fp2_module(*fp3_out, *sa1_out)
+#     #     # x, coords, batch = self.fp1_module(*fp2_out, *sa0_out)
+#     #
+#     #     print("x shape from sa3 module")
+#     #     print(x.shape)
+#     #     print("coords shape from sa3 module")
+#     #     print("coords shape")
+#     #     print(coords.shape)
+#     #
+#     #     decimation_ratio = 1
+#     #     # coords = data.pos.clone().cpu()
+#     #     # x = data.x.clone().cpu()
+#     #     # print("coords")
+#     #     # print(coords)
+#     #     # permutation = torch.randperm(N)
+#     #     # coords = coords[permutation]
+#     #     # x = x[permutation]
+#     #     #
+#     #     # print("x.shape")
+#     #     # print(x.shape)
+#     #     # print("x")
+#     #     # print(x)
+#     #
+#     #     x = x.view(x.size(0), x.size(1)//16, 16, 1)
+#     #     print("x.shape after reshaping into 4d")
+#     #     print(x.shape)
+#     #
+#     #     for lfa in self.encoder:
+#     #         # at iteration i, x.shape = (B, N//(d**i), d_in)
+#     #
+#     #         x = lfa(coords[:, :N//decimation_ratio], x)
+#     #         x_stack.append(x.clone())
+#     #         decimation_ratio *= d
+#     #         x = x[:, :, :N//decimation_ratio]
+#     #
+#     #     for mlp in self.decoder:
+#     #         neighbors, _ = knn(
+#     #             coords[:, :N//decimation_ratio].cpu().contiguous(), # original set
+#     #             coords[:, :d*N//decimation_ratio].cpu().contiguous(), # upsampled set
+#     #             1
+#     #         ) # shape (B, N, 1)
+#     #         neighbors = neighbors.to(self.device)
+#     #
+#     #         extended_neighbors = neighbors.unsqueeze(1).expand(-1, x.size(1), -1, 1)
+#     #
+#     #         x_neighbors = torch.gather(x, -2, extended_neighbors)
+#     #
+#     #         x = torch.cat((x_neighbors, x_stack.pop()), dim=1)
+#     #
+#     #         x = mlp(x)
+#     #
+#     #         decimation_ratio //= d
+#     #
+#     #     x = x[:, :, torch.argsort(permutation)]
+#     #
+#     #     x = F.relu(self.lin1(x))
+#     #     x = F.dropout(x, p=0.5, training=self.training)
+#     #     x = self.lin2(x)
+#     #     x = F.dropout(x, p=0.5, training=self.training)
+#     #     x = self.lin3(x)
+#     #     return F.log_softmax(x, dim=-1)
+#
+#     def forward(self, data):
+#
+#         #First shared mlp, locSE and Attentive pooling units, then SA module
+#         #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         data = data.to(self.device)
+#
+#         # N = input.size(1)
+#         N = data.size(1)
+#         B = data.size(0)
+#         d_in = data.size(2)
+#         d = self.decimation
+#
+#         # For CUDA
+#         coords = data[..., :3]
+#         local_features = data[..., 3:]
+#
+#         x = self.fc_start(local_features).transpose(-2, -1).unsqueeze(-1)
+#         x = self.bn_start(x)  # shape (B, d, N, 1)
+#         decimation_ratio = 1
+#         # permutation = torch.randperm(N)
+#         # coords = coords[:, permutation, :]
+#         # x = x[:, :, permutation, :]
+#         coords = coords[:, :N // decimation_ratio, :]
+#
+#         knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+#         knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
+#         for b in range(B):
+#             knn_coords = coords[b, :, :]
+#             knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
+#             # print("knn_output_idx shape")
+#             # print(knn_output_idx.shape)
+#             # print("knn_output_dist shape")
+#             # print(knn_output_dist.shape)
+#
+#             knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
+#             knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
+#             # knn_coords = coords[b, :, :].reshape(num_points, 3)
+#
+#         knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
+#
+#         features = x
+#
+#         # print("features shape before self.mlp1()")
+#         # print(features.shape)
+#
+#         x = self.mlp1(features)
+#
+#         # print("x shape after self.mlp1()")
+#         # print(x.shape)
+#
+#         x = self.lse1(coords, x, knn_out_batch)
+#         x = self.pool1(x)
+#
+#         x = self.lse2(coords, x, knn_out_batch)
+#         x = self.pool2(x)
+#
+#         x = self.lrelu(self.mlp2(x) + self.shortcut(features))
+#
+#         d_out = x.size(1)
+#         coords = coords.reshape(B*N, 3)
+#         x = x.reshape(B*N, d_out)
+#
+#         batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
+#         for b in range(1, B):
+#             batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
+#             # batch_tensor = batch_tensor.new_full((, npoint), b)
+#             # print("batch_tensor shape")
+#             # print(batch_tensor.shape)
+#             # Expected to be 512
+#             batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
+#
+#         # print("x shape")
+#         # print(x.shape)
+#         # print("coords shape")
+#         # print(coords.shape)
+#         # print("batch_cat_tensor shape")
+#         # print(batch_cat_tensor.shape)
+#
+#         #sa0_out = (x.to(self.device), coords.to(self.device), batch_cat_tensor.to(self.device))
+#         sa0_out = (x, coords, batch_cat_tensor)
+#
+#         # print("Just before sa1_module")
+#         # print("x.shape")
+#         # print(x.shape)
+#         # print("coords.shape")
+#         # print(coords.shape)
+#         # sa1_out_x, sa1_out_pos, sa1_out_batch = self.sa1_module(*sa0_out)
+#         # print("sa1_out_x shape")
+#         # print(sa1_out_x.shape)
+#         # print("sa1_out_pos shape")
+#         # print(sa1_out_pos.shape)
+#         # print("sa1_out_batch shape")
+#         # print(sa1_out_batch.shape)
+#         sa1_out = self.sa1_module(*sa0_out)
+#
+#         # print("sa1_out_x shape")
+#         # print(sa1_out_x.shape)
+#         # print("sa1_out_pos shape")
+#         # print(sa1_out_pos.shape)
+#         # print("sa1_out_batch shape")
+#         # print(sa1_out_batch.shape)
+#
+#         #Randla-net code
+#         # N = sa1_out_x.size(0) // B
+#         # num_features = sa1_out_x.size(1)
+#         # sa1_out_x = sa1_out_x.reshape(B, num_features, N).unsqueeze(-1)
+#         # sa1_out_pos = sa1_out_pos.reshape(B, N, 3)
+#         # knn_out_batch_idx = torch.zeros((B, N, self.num_neighbours), dtype=torch.int64, device=self.device)
+#         # knn_out_batch_dist = torch.zeros((B, N, self.num_neighbours), dtype=torch.float32, device=self.device)
+#         # for b in range(B):
+#         #     knn_coords = sa1_out_pos[b, :, :]
+#         #     knn_output_idx, knn_output_dist = knn(x=knn_coords, y=knn_coords, k=self.num_neighbours)
+#         #     # print("knn_output_idx shape")
+#         #     # print(knn_output_idx.shape)
+#         #     # print("knn_output_dist shape")
+#         #     # print(knn_output_dist.shape)
+#         #
+#         #     knn_out_batch_idx[b] = knn_output_idx.reshape(N, self.num_neighbours)
+#         #     knn_out_batch_dist[b] = knn_output_dist.reshape(N, self.num_neighbours)
+#         #     # knn_coords = coords[b, :, :].reshape(num_points, 3)
+#         #
+#         # knn_out_batch = (knn_out_batch_idx, knn_out_batch_dist)
+#         #
+#         # x = self.lse2(sa1_out_pos, sa1_out_x, knn_out_batch)
+#         # # print("x shape after self.lse2()")
+#         # # print(x.shape)
+#         # x = self.pool2(x)
+#         # # print("x shape after pool2")
+#         # # print(x.shape)
+#         #
+#         # # print("x shape before mlp2")
+#         # # print(x.shape)
+#         # # print("features shape")
+#         # # print(features.shape)
+#         # # mlp2 = self.mlp2(x)
+#         # # shortcut = self.shortcut(features)
+#         # #
+#         # # npoint = shortcut.size(2)
+#         # # nchannels = shortcut.size(1)
+#         # # print("npoint")
+#         # # print(npoint)
+#         # # #Should be 5001
+#         # # print("mlp2 shape")
+#         # # print(mlp2.shape)
+#         # # print("shortcut shape")
+#         # # print(shortcut.shape)
+#         # # mlp2 = mlp2.expand(B, nchannels, npoint, 1)
+#         # # x = nn.LeakyReLU(mlp2 + shortcut)
+#         # #
+#         # # print("x shape after addition of mlp2 and shortcut connection")
+#         # # print(x.shape)
+#         #
+#         # d_out = x.size(1)
+#         # coords = sa1_out_pos.reshape(B*N, 3)
+#         # x = x.reshape(B*N, d_out)
+#         #
+#         # batch_cat_tensor = torch.zeros(N, dtype=torch.int64, device=self.device)
+#         # for b in range(1, B):
+#         #     batch_tensor = torch.ones(N, dtype=torch.int64, device=self.device) * b
+#         #     # batch_tensor = batch_tensor.new_full((, npoint), b)
+#         #     # print("batch_tensor shape")
+#         #     # print(batch_tensor.shape)
+#         #     # Expected to be 512
+#         #     batch_cat_tensor = torch.cat([batch_cat_tensor, batch_tensor], dim=0)
+#
+#         #sa1_out = (x, coords, batch_cat_tensor)
+#
+#         #sa2_out_x, sa2_out_pos, sa2_out_batch = self.sa2_module(*sa1_out)
+#         #End of Randla-net code
+#
+#         #Vanilla Pointnet++
+#         sa2_out = self.sa2_module(*sa1_out)
+#         #sa2_out_x, sa2_out_pos, sa2_out_batch = sa2_out
+#
+#         #
+#         # print("sa2_out_x shape")
+#         # print(sa2_out_x.shape)
+#         # print("sa2_out_pos shape")
+#         # print(sa2_out_pos.shape)
+#         # print("sa2_out_batch shape")
+#         # print(sa2_out_batch.shape)
+#
+#         sa3_out = self.sa3_module(*sa2_out)
+#         #sa3_out_x, sa3_out_pos, sa3_out_batch = sa3_out
+#
+#         # print("sa3_out_x shape")
+#         # print(sa3_out_x.shape)
+#         # print("sa3_out_pos shape")
+#         # print(sa3_out_pos.shape)
+#         # print("sa3_out_batch shape")
+#         # print(sa3_out_batch.shape)
+#
+#         fp3_out = self.fp3_module(*sa3_out, *sa2_out)
+#         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
+#         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
+#
+#         x = F.relu(self.lin1(x))
+#         x = F.dropout(x, p=0.5, training=self.training)
+#         x = self.lin2(x)
+#         x = F.dropout(x, p=0.5, training=self.training)
+#         x = self.lin3(x)
+#         return F.log_softmax(x, dim=-1)
