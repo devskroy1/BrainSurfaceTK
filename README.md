@@ -128,4 +128,4 @@ folder. This is don't because the conversion process can be a bit slow and for m
 The code of RandLA-Net is based on the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch).
 The code of PointASNL is based on the PointASNL Github repository (https://github.com/yanx27/PointASNL).
 The code of PointNet CAM is based on the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM).
-See LICENSE file in project root directory in master branch for their licenses.
+See the LICENSE file in the root directory on the master branch for their licenses.
