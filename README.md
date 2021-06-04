@@ -1,5 +1,6 @@
 # BrainSurfaceToolKit
 
+This repository is forked from the BrainSurfaceTK Github repository at https://github.com/andwang1/BrainSurfaceTK
 <div align="center"> 
 
 <img src="https://github.com/andwang1/BrainSurfaceTK/blob/master/GUI/main/static/main/gifs/rotate-big.gif?raw=true" width="600" height="450"/>
