@@ -35,8 +35,9 @@ if __name__ == '__main__':
     REPROCESS = True
 
     data_nativeness = 'native'
-    #See if 5k works for Randla-net
-    data_compression = "5k"
+    #See if 50k works for Randla-net
+    #data_compression = "5k"
+    data_compression = "30k"
     data_type = 'white'
     hemisphere = 'both'
 

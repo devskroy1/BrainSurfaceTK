@@ -120,6 +120,9 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
     data_nativeness_paths = {'native': 'surface_native_04152020/',
                              'aligned': 'surface_fsavg32k/'}
 
+    # data_nativeness_paths = {'native': 'surface_native/',
+    #                          'aligned': 'surface_fsavg32k/'}
+
     hemispheres = {'both': 'merged/',
                   'left': 'hemispheres/',
                   'right': 'hemispheres/'}
@@ -144,6 +147,8 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
                        'sphere': 'sphere/',
                        'veryinflated': 'veryinflated/',
                        'white': 'white/'}
+    # hemisphere_paths = {'left_aligned_50': f'_hemi-L_{data_type}_reduce50.vtk',
+    #                     'right_aligned_50': f'_hemi-R_{data_type}_reduce50.vtk'}
 
     hemisphere_paths = {'left_native_original': f'_left_{data_type}.vtk',
                         'left_native_50':       f'_left_{data_type}_reducedby50percent.vtk',
@@ -186,6 +191,7 @@ def get_data_path(data_nativeness, data_compression, data_type, hemisphere='left
 
     if data_nativeness == 'native':
 
+        #data_folder = root + data_nativeness_paths[data_nativeness] + data_compression_paths[data_compression] + data_type_paths[data_type] + 'vtk'
         data_folder = root + data_nativeness_paths[data_nativeness] + hemispheres[hemisphere] + data_compression_paths[data_compression] + data_type_paths[data_type] + 'vtk'
         files_ending = hemisphere_paths[f'{_hemisphere}_{data_nativeness}_{data_compression}']
 

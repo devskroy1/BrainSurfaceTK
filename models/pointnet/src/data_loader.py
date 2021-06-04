@@ -226,6 +226,10 @@ class OurDataset(InMemoryDataset):
             if os.path.isfile(file_path):
                 # print('Reading...')
                 mesh = pv.read(file_path)
+                # print("mesh")
+                # print(mesh)
+                # print("mesh.array_names")
+                # print(mesh.array_names)
                 y = torch.tensor(mesh.get_array('segmentation'))
                 lens.append(y.size(0))
                 ys.append(y)
