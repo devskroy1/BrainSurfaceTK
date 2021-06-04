@@ -123,23 +123,7 @@ folder. This is don't because the conversion process can be a bit slow and for m
 </div>
 
 
-
-###### Citation
-If you use this code useful for your research, please cite our [paper](https://arxiv.org/abs/2008.06098):
-
-```
-@article{vosylius2020geometric,
-    title={Geometric Deep Learning for Post-Menstrual Age Prediction based on the Neonatal White Matter Cortical Surface},
-    author={Vitalis Vosylius and Andy Wang and Cemlyn Waters and Alexey Zakharov and Francis Ward and Loic Le Folgoc and 
-    John Cupitt and Antonios Makropoulos and Andreas Schuh and Daniel Rueckert and Amir Alansary},
-    year={2020},
-    eprint={2008.06098},
-    archivePrefix={arXiv},
-    primaryClass={cs.CV}
-}
-```
-
-###### Acknowledgements
+# Acknowledgements
 The code of RandLA-Net is based on the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch).
 The code of PointASNL is based on the PointASNL Github repository (https://github.com/yanx27/PointASNL).
 The code of PointNet CAM is based on the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM).
