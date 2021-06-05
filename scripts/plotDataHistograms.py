@@ -71,7 +71,7 @@ if __name__ == '__main__':
     categories = {'gender': 2, 'birth_age': 3, 'weight': 4, 'scan_age': 6, 'scan_num': 7}
     list_attrs = ['gender', 'scan_age', 'birth_age']
 
-    attribute = 'scan_age'
+    attribute = 'gender'
 
     with open(PATH_TO_POINTNET + 'src/names.pk', 'rb') as f:
         indices = pickle.load(f)
@@ -106,6 +106,8 @@ if __name__ == '__main__':
     # print(meta_df)
 
     plt.figure(figsize=(8, 6))
+    all_column = get_column(attribute=attribute)
+    plt.hist(all_column, bins=2, alpha=0.5, label="All")
     train_column = get_column(idxs=indices['Train'], attribute=attribute)
     plt.hist(train_column, bins=2, alpha=0.5, label="Train")
     # train_ax = train_column.plot.hist(bins=25)
@@ -114,12 +116,12 @@ if __name__ == '__main__':
     #val_ax = val_column.plot.hist(bins=25)
     test_column = get_column(idxs=indices['Test'], attribute=attribute)
     plt.hist(test_column, bins=2, alpha=0.5, label="Test")
-    all_column = get_column(attribute=attribute)
-    plt.hist(all_column, bins=2, alpha=0.5, label="All")
-    print("all_column min")
-    print(all_column.min())
-    print("all_column max")
-    print(all_column.max())
+    # all_column = get_column(attribute=attribute)
+    # plt.hist(all_column, bins=2, alpha=0.5, label="All")
+    # print("all_column min")
+    # print(all_column.min())
+    # print("all_column max")
+    # print(all_column.max())
     # print("all attribute column num. elems")
     # print(all_column.size)
     # print("train attribute column num. elems")
@@ -152,7 +154,7 @@ if __name__ == '__main__':
     # print("meta_df_train")
     # print(meta_df_train)
 
-    x_vals_scan_age = np.arange(22.5, 47.5, 2.5)
+    #x_vals_scan_age = np.arange(22.5, 47.5, 2.5)
     # y_vals_gender = np.arange(0, 500, 50).tolist()
     image_fp = hist_path_root + attribute + "_TrainTestValAll.png"
     # plt.savefig(image_fp)
@@ -165,6 +167,7 @@ if __name__ == '__main__':
 
     plt.grid(True)
     plt.xlabel("Gender")
+    #plt.xlabel("Scan age (weeks)")
     plt.ylabel("Frequency")
     #plt.xticks(x_vals_scan_age)
     plt.legend(loc='upper left')
