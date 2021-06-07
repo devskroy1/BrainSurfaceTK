@@ -143,15 +143,21 @@ def train(model, train_dl, train_ds, loss_function, diff_func, denorm_target, op
         bg_node_features = bg.ndata["features"].to(device)
         batch_labels = batch_labels.to(device)
         prediction = model(bg, bg_node_features)
-        print("prediction")
-        print(prediction)
-        print("batch_labels")
-        print(batch_labels)
+        # print("prediction")
+        # print(prediction)
+        # print("batch_labels")
+        # print(batch_labels)
         loss = loss_function(prediction, batch_labels)
         loss.backward()
         optimizer.step()
 
         with torch.no_grad():
+            # pred_birth_age = denorm_target(prediction, train_ds)
+            # true_birth_age = denorm_target(batch_labels, train_ds)
+            # print("pred_birth_age")
+            # print(pred_birth_age)
+            # print("true_birth_age")
+            # print(true_birth_age)
             train_diff = diff_func(denorm_target(prediction, train_ds),
                                    denorm_target(batch_labels, train_ds))  # shape: (batch_size, 1)
             train_epoch_error += train_diff.sum().detach().item()
@@ -331,8 +337,8 @@ if __name__ == "__main__":
                       test_epoch_error, train_epoch_max_diff, val_epoch_max_diff, test_epoch_max_diff, epoch)
 
         # Record material to be converted to csv later
-        record_csv_material(val_log_fp + ".npy", val_csv_material)
-        record_csv_material(test_log_fp + ".npy", test_csv_material)
+        # record_csv_material(val_log_fp + ".npy", val_csv_material)
+        # record_csv_material(test_log_fp + ".npy", test_csv_material)
 
         # Save model
         update_best_model(model, val_epoch_loss, best_val_loss, args)
