@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # data_type = 'pial'
     # hemisphere = 'both'
 
-    comment = 'comment'
+    comment = 'huberLossCurves'
 
     #################################################
     ############ EXPERIMENT DESCRIPTION #############
@@ -146,20 +146,29 @@ if __name__ == '__main__':
         train(model, train_loader, epoch, device,
               optimizer, scheduler, writer)
 
-        val_mse, val_l1 = test_regression(model, val_loader,
+        # val_mse, val_l1 = test_regression(model, val_loader,
+        #                                   indices['Val'], device,
+        #                                   recording, results_folder,
+        #                                   epoch=epoch)
+
+        val_mse, val_huber = test_regression(model, val_loader,
                                           indices['Val'], device,
                                           recording, results_folder,
                                           epoch=epoch)
 
         if recording:
             writer.add_scalar('Loss/val_mse', val_mse, epoch)
-            writer.add_scalar('Loss/val_l1', val_l1, epoch)
+            #writer.add_scalar('Loss/val_l1', val_l1, epoch)
+            writer.add_scalar('Loss/val_huber', val_huber, epoch)
 
-            print('Epoch: {:03d}, Test loss l1: {:.4f}'.format(epoch, val_l1))
+            #print('Epoch: {:03d}, Test loss l1: {:.4f}'.format(epoch, val_l1))
+            print('Epoch: {:03d}, Test loss Huber: {:.4f}'.format(epoch, val_huber))
             end = time.time()
             print('Time: ' + str(end - start))
-            if val_l1 < best_val_loss:
-                best_val_loss = val_l1
+            #if val_l1 < best_val_loss:
+            if val_huber < best_val_loss:
+                #best_val_loss = val_l1
+                best_val_loss = val_huber
                 torch.save(model.state_dict(), model_dir + '/model_best.pt')
                 print('Saving Model'.center(60, '-'))
             writer.add_scalar('Time/epoch', end - start, epoch)

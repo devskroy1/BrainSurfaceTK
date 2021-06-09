@@ -26,7 +26,8 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
         data = data.to(device)
         optimizer.zero_grad()
         pred = model(data)
-        loss = F.mse_loss(pred, data.y[:, 0].float())
+        #loss = F.mse_loss(pred, data.y[:, 0].float())
+        loss = F.smooth_l1_loss(pred, data.y[:, 0].float())
         loss.backward()
         optimizer.step()
 
@@ -35,7 +36,7 @@ def train(model, train_loader, epoch, device, optimizer, scheduler, writer):
     scheduler.step()
 
     if writer is not None:
-        writer.add_scalar('Loss/train_mse', loss_train / len(train_loader), epoch)
+        writer.add_scalar('Loss/train_huber', loss_train / len(train_loader), epoch)
 
 
 def test_regression(model, loader, indices, device, recording, results_folder, val=True, epoch=0):
@@ -52,7 +53,8 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                 result_writer.writerow(['Test scores'])
 
             mse = 0
-            l1 = 0
+            #l1 = 0
+            huber = 0
             for idx, data in enumerate(loader):
 
                 data = data.to(device)
@@ -68,15 +70,21 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                                                 str(abs(pred[i].item() - data.y[:, 0][i].item()))])
 
                     loss_test_mse = F.mse_loss(pred, data.y[:, 0])
-                    loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                    #loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                    loss_test_huber = F.smooth_l1_loss(pred, data.y[:, 0])
                     mse += loss_test_mse.item()
-                    l1 += loss_test_l1.item()
+                    # l1 += loss_test_l1.item()
+                    huber += loss_test_huber.item()
             if val:
-                result_writer.writerow(['Epoch average error:', str(l1 / len(loader))])
-                print(f'Epoch {epoch} average error: {l1 / len(loader)}')
+                # result_writer.writerow(['Epoch average error:', str(l1 / len(loader))])
+                # print(f'Epoch {epoch} average error: {l1 / len(loader)}')
+                result_writer.writerow(['Epoch average error:', str(huber / len(loader))])
+                print(f'Epoch {epoch} average error: {huber / len(loader)}')
             else:
-                result_writer.writerow(['Test average error:', str(l1 / len(loader))])
-                print(f'Test average error: {l1 / len(loader)}')
+                # result_writer.writerow(['Test average error:', str(l1 / len(loader))])
+                # print(f'Test average error: {l1 / len(loader)}')
+                result_writer.writerow(['Test average error:', str(huber / len(loader))])
+                print(f'Test average error: {huber / len(loader)}')
     else:
 
         if val:
@@ -85,7 +93,8 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
             print('Test'.center(60, '-'))
 
         mse = 0
-        l1 = 0
+        # l1 = 0
+        huber = 0
         for idx, data in enumerate(loader):
             data = data.to(device)
             with torch.no_grad():
@@ -96,17 +105,26 @@ def test_regression(model, loader, indices, device, recording, results_folder, v
                           str(data.y[:, 0][i].item()).center(20, ' '),
                           indices[idx * len(pred) + i])
 
+                # loss_test_mse = F.mse_loss(pred, data.y[:, 0])
+                # loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                # mse += loss_test_mse.item()
+                # l1 += loss_test_l1.item()
+
                 loss_test_mse = F.mse_loss(pred, data.y[:, 0])
-                loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                # loss_test_l1 = F.l1_loss(pred, data.y[:, 0])
+                loss_test_huber = F.smooth_l1_loss(pred, data.y[:, 0])
                 mse += loss_test_mse.item()
-                l1 += loss_test_l1.item()
+                # l1 += loss_test_l1.item()
+                huber += loss_test_huber.item()
 
         if val:
-            print(f'Epoch {epoch} average error (L1): {l1 / len(loader)}')
+            #print(f'Epoch {epoch} average error (L1): {l1 / len(loader)}')
+            print(f'Epoch {epoch} average error (Huber): {huber / len(loader)}')
         else:
-            print(f'Test average error (L1): {l1 / len(loader)}')
+            #print(f'Test average error (L1): {l1 / len(loader)}')
+            print(f'Test average error (Huber): {huber / len(loader)}')
 
-    return mse / len(loader), l1 / len(loader)
+    return mse / len(loader), huber / len(loader)
 
 
 if __name__ == '__main__':
