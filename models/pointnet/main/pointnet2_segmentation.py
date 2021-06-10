@@ -16,6 +16,7 @@ from torch_geometric.utils import intersection_and_union as i_and_u
 from torch.optim.lr_scheduler import StepLR
 
 from ..src.metrics import add_i_and_u, get_mean_iou_per_class
+from ..src.metrics import dice_coef_multilabel as dice_loss
 from ..src.utils import get_id, save_to_log, get_comment, get_data_path, data, get_grid_search_local_features
 from ..src.models.pointnet2_segmentation import Net
 
@@ -53,34 +54,58 @@ def train(model, train_loader, epoch, device, optimizer, num_labels, writer, rec
         correct_nodes += out.max(dim=1)[1].eq(data.y).sum().item()
         total_nodes += data.num_nodes
 
-        # Mean Jaccard indeces PER LABEL (18 numbers)
-        i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+        # print("data.y")
+        # print(data.y)
+        # print("pred")
+        # print(pred)
 
-        # Add to totals
-        i_total, u_total = add_i_and_u(i, u, i_total, u_total, idx)
+        one_hot_data_y = F.one_hot(data.y)
+        one_hot_pred = F.one_hot(pred)
+        # print("one_hot_data_y")
+        # print(one_hot_data_y)
+        # print("one_hot_data_y shape")
+        # print(one_hot_data_y.shape)
+        # print("one_hot_pred shape")
+        # print(one_hot_pred.shape)
+        num_points = data.y.size(0)
+        # dice_score = dice_loss(data.y, pred, num_labels, num_points)
+        dice_score = dice_loss(one_hot_data_y, one_hot_pred, num_labels, num_points)
+        dice_score = dice_score.item()
+        # print("dice_score")
+        # print(dice_score)
+        # Mean Jaccard indeces PER LABEL (18 numbers)
+        # i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+        #
+        # # Add to totals
+        # i_total, u_total = add_i_and_u(i, u, i_total, u_total, idx)
 
         if (idx + 1) % print_per == 0:
 
-            mean_iou_per_class = get_mean_iou_per_class(i_total, u_total)
-            mean_iou = torch.tensor(np.nanmean(mean_iou_per_class.cpu().detach().numpy()))
+            # mean_iou_per_class = get_mean_iou_per_class(i_total, u_total)
+            # mean_iou = torch.tensor(np.nanmean(mean_iou_per_class.cpu().detach().numpy()))
 
-            print('[{}/{}] Loss: {:.4f}, Train Accuracy: {:.4f}, Mean IoU: {}'.format(
+            # print('[{}/{}] Loss: {:.4f}, Train Accuracy: {:.4f}, Mean IoU: {}'.format(
+            #     idx + 1, len(train_loader), total_loss / print_per,
+            #     correct_nodes / total_nodes, mean_iou))
+
+            print('[{}/{}] Loss: {:.4f}, Train Accuracy: {:.4f}, Dice Score: {}'.format(
                 idx + 1, len(train_loader), total_loss / print_per,
-                correct_nodes / total_nodes, mean_iou))
+                correct_nodes / total_nodes, dice_score))
 
             # Write to tensorboard: LOSS and IoU per class
             if recording:
                 writer.add_scalar('Loss/train', total_loss / print_per, epoch)
-                writer.add_scalar('Mean IoU/train', mean_iou, epoch)
+                # writer.add_scalar('Mean IoU/train', mean_iou, epoch)
+                writer.add_scalar('Dice score/train', dice_score, epoch)
                 writer.add_scalar('Accuracy/train', correct_nodes/total_nodes, epoch)
 
-                for label, iou in enumerate(mean_iou_per_class):
-                    writer.add_scalar('IoU{}/train'.format(label), iou, epoch)
+                # for label, iou in enumerate(mean_iou_per_class):
+                #     writer.add_scalar('IoU{}/train'.format(label), iou, epoch)
 
                 # print('\t\tLabel {}: {}'.format(label, iou))
             # print('\n')
             total_loss = correct_nodes = total_nodes = 0
-            i_total, u_total = torch.zeros_like(i_total), torch.zeros_like(u_total)
+            #i_total, u_total = torch.zeros_like(i_total), torch.zeros_like(u_total)
 
 
 def test(model, loader, experiment_description, device, num_labels, writer, epoch=None, test=False, test_by_acc_OR_iou='acc', id=None, experiment_name='', recording=False):
@@ -123,10 +148,17 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
             _y = data.y.cpu().detach().numpy()
             _out = out.max(dim=1)[1].cpu().detach().numpy()
 
+            one_hot_data_y = F.one_hot(data.y)
+            one_hot_pred = F.one_hot(pred)
+
+            num_points = data.y.size(0)
+            # dice_score = dice_loss(data.y, pred, num_labels, num_points)
+            dice_score = dice_loss(one_hot_data_y, one_hot_pred, num_labels, num_points)
+            dice_score = dice_score.item()
 
             # Mean Jaccard indeces PER LABEL (18 numbers)
-            i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
-            i_total, u_total = add_i_and_u(i, u, i_total, u_total, batch_idx)
+            # i, u = i_and_u(out.max(dim=1)[1], data.y, num_labels, batch=data.batch)
+            # i_total, u_total = add_i_and_u(i, u, i_total, u_total, batch_idx)
 
 
             if batch_idx == 0:
@@ -167,11 +199,14 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
 
         if recording:
 
+            # if test:
+            #     writer.add_scalar(f'Mean IoU/test_by_{test_by_acc_OR_iou}', mean_iou)
+            # else:
+            #     writer.add_scalar(f'Mean IoU/validation', mean_iou, epoch)
             if test:
-                writer.add_scalar(f'Mean IoU/test_by_{test_by_acc_OR_iou}', mean_iou)
+                writer.add_scalar(f'Dice Score/test_by_{test_by_acc_OR_iou}', dice_score)
             else:
-                writer.add_scalar(f'Mean IoU/validation', mean_iou, epoch)
-
+                writer.add_scalar(f'Dice Score/validation', dice_score, epoch)
 
             writer.add_scalar('Validation Time/epoch', time.time() - start, epoch)
 
@@ -179,8 +214,8 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
             # cm = plot_confusion_matrix(all_datay, all_preds, labels=all_labels)
             # writer.add_figure(f'Confusion Matrix - ID{id}-{experiment_name}', cm)
 
-    return loss, accuracy, mean_iou_per_class, mean_iou
-
+    #return loss, accuracy, mean_iou_per_class, mean_iou
+    return loss, accuracy, dice_score
 
 def perform_final_testing(model, writer, test_loader, experiment_name, comment, id, num_labels, device, best_model_acc, best_model_iou, recording=False):
 
@@ -189,38 +224,46 @@ def perform_final_testing(model, writer, test_loader, experiment_name, comment, 
         torch.load(PATH_TO_ROOT + f'experiment_data/new/{experiment_name}-{id}/' + 'best_acc_model' + '.pt'))
 
     # 2. Test the performance after training
-    loss_acc, acc_acc, iou_acc, mean_iou_acc = test(model, test_loader, comment, device, num_labels, writer, test=True, test_by_acc_OR_iou='acc', id=id, experiment_name=experiment_name, recording=recording)
+    # loss_acc, acc_acc, iou_acc, mean_iou_acc = test(model, test_loader, comment, device, num_labels, writer, test=True, test_by_acc_OR_iou='acc', id=id, experiment_name=experiment_name, recording=recording)
+    loss_acc, acc_acc, dice_score = test(model, test_loader, comment, device, num_labels, writer, test=True,
+                                                    test_by_acc_OR_iou='acc', id=id, experiment_name=experiment_name,
+                                                    recording=recording)
 
     # 3. Record test metrics in Tensorboard
     if recording:
         writer.add_scalar('Loss/test_byACC', loss_acc)
         writer.add_scalar('Accuracy/test_byACC', acc_acc)
         print(f'****************** Loaded best model by Acc. It was saved at epoch {best_model_acc} ******************')
-        for label, value in enumerate(iou_acc):
-            writer.add_scalar('IoU{}/test_byACC'.format(label), value)
-            print('\t\tTest Label (best model by Acc) {}: {}'.format(label, value))
+        # for label, value in enumerate(iou_acc):
+        #     writer.add_scalar('IoU{}/test_byACC'.format(label), value)
+        #     print('\t\tTest Label (best model by Acc) {}: {}'.format(label, value))
 
 
 
     # 1. Load the best model for testing --- both by accuracy and IoU
+    # model.load_state_dict(
+    #     torch.load(PATH_TO_ROOT + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt'))
     model.load_state_dict(
-        torch.load(PATH_TO_ROOT + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt'))
+        torch.load(PATH_TO_ROOT + f'experiment_data/new/{experiment_name}-{id}/' + 'best_dice_score_model' + '.pt'))
 
     # 2. Test the performance after training
-    loss_iou, acc_iou, iou_iou, mean_iou_iou = test(model, test_loader, comment, device, num_labels, writer, test=True, test_by_acc_OR_iou='iou', id=id, experiment_name=experiment_name, recording=recording)
+    loss_dice_score, acc_dice_score, dice_score = test(model, test_loader, comment, device, num_labels, writer, test=True, test_by_acc_OR_iou='iou', id=id, experiment_name=experiment_name, recording=recording)
 
     # 3. Record test metrics in Tensorboard
     if recording:
-        writer.add_scalar('Loss/test_byIOU', loss_iou)
-        writer.add_scalar('Accuracy/test_byIOU', acc_iou)
+        # writer.add_scalar('Loss/test_byIOU', loss_iou)
+        # writer.add_scalar('Accuracy/test_byIOU', acc_iou)
+        writer.add_scalar('Loss/test_byDiceScore', loss_dice_score)
+        writer.add_scalar('Accuracy/test_byDiceScore', acc_dice_score)
         print(f'****************** Loaded best model by IoU. It was saved at epoch {best_model_iou} ******************')
-        for label, value in enumerate(iou_iou):
-            writer.add_scalar('IoU{}/test_byIOU'.format(label), value)
-            print('\t\tTest Label (best model by IoU) {}: {}'.format(label, value))
+        # for label, value in enumerate(iou_iou):
+        #     writer.add_scalar('IoU{}/test_byIOU'.format(label), value)
+        #     print('\t\tTest Label (best model by IoU) {}: {}'.format(label, value))
 
-    return loss_acc, acc_acc, iou_acc, mean_iou_acc, \
-           loss_iou, acc_iou, iou_iou, mean_iou_iou
+    # return loss_acc, acc_acc, iou_acc, mean_iou_acc, \
+    #        loss_iou, acc_iou, iou_iou, mean_iou_iou
 
+    return loss_acc, acc_acc, loss_dice_score, acc_dice_score, dice_score
 
 
 

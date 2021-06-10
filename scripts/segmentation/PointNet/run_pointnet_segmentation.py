@@ -24,7 +24,7 @@ if __name__ == '__main__':
     num_workers = 2
 
     local_features = ['corrected_thickness', 'curvature', 'sulcal_depth']
-    global_features = None
+    global_features = []
 
     #################################################
     ########### EXPERIMENT DESCRIPTION ##############
@@ -32,17 +32,18 @@ if __name__ == '__main__':
     recording = True
     REPROCESS = True
 
+    # data_nativeness = 'aligned'
+    # data_compression = "50"
+    # data_type = 'white'
+    # hemisphere = 'left'
+    #try right hemisphere too
+
     data_nativeness = 'native'
-    data_compression = "5k"
+    data_compression = "10k"
     data_type = 'white'
     hemisphere = 'both'
 
-    # data_nativeness = 'native'
-    # data_compression = "20k"
-    # data_type = 'white'
-    # hemisphere = 'left'
-
-    additional_comment = 'Baseline PointNet++ segmentn to compare with Randla-net segmentn'
+    additional_comment = 'Dice Score'
 
     experiment_name = f'{data_nativeness}_{data_type}_{data_compression}_{hemisphere}_{additional_comment}'
 
@@ -138,8 +139,10 @@ if __name__ == '__main__':
 
     best_val_acc = 0
     best_val_iou = 0
+    best_val_dice_score = 0
     best_model_acc = 0
     best_model_iou = 0
+    best_model_dice_score = 0
 
     # 10. ====== TRAINING LOOP ======
     for epoch in range(1, 150):
@@ -154,9 +157,12 @@ if __name__ == '__main__':
             writer.add_scalar('Training Time/epoch', time.time() - start, epoch)
 
         # 3. Validate the performance after each epoch
-        loss, acc, iou, mean_iou = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer, epoch=epoch, id=id,
+        # loss, acc, iou, mean_iou = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer, epoch=epoch, id=id,
+        #                                 experiment_name=experiment_name, recording=recording)
+        loss, acc, dice_score = test(model, val_loader, comment + 'val' + str(epoch), device, num_labels, writer,
+                                        epoch=epoch, id=id,
                                         experiment_name=experiment_name, recording=recording)
-        print('Epoch: {:02d}, Val Loss/nll: {}, Val Acc: {:.4f}'.format(epoch, loss, acc))
+        print('Epoch: {:02d}, Val Loss/nll: {}, Val Acc: {:.4f}, Val Dice Score: {:.4f}'.format(epoch, loss, acc, dice_score))
 
         scheduler.step()
 
@@ -171,17 +177,22 @@ if __name__ == '__main__':
                            PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_acc_model' + '.pt')
 
             # By Mean IoU
-            if mean_iou > best_val_iou:
-                best_val_iou = mean_iou
-                best_model_iou = epoch
+            # if mean_iou > best_val_iou:
+            #     best_val_iou = mean_iou
+            #     best_model_iou = epoch
+            #     torch.save(model.state_dict(),
+            #                PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt')
+            if dice_score > best_val_dice_score:
+                best_val_dice_score = dice_score
+                best_model_dice_score = epoch
                 torch.save(model.state_dict(),
-                           PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_iou_model' + '.pt')
+                           PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'best_dice_score_model' + '.pt')
 
             writer.add_scalar('Loss/val_nll', loss, epoch)
             writer.add_scalar('Accuracy/val', acc, epoch)
-            for label, value in enumerate(iou):
-                writer.add_scalar('IoU{}/validation'.format(label), value, epoch)
-                print('\t\tValidation Label {}: {}'.format(label, value))
+            # for label, value in enumerate(iou):
+            #     writer.add_scalar('IoU{}/validation'.format(label), value, epoch)
+            #     print('\t\tValidation Label {}: {}'.format(label, value))
 
         print('=' * 60)
 
@@ -189,14 +200,25 @@ if __name__ == '__main__':
         # save the last model
         torch.save(model.state_dict(), PATH_TO_POINTNET + f'experiment_data/new/{experiment_name}-{id}/' + 'last_model' + '.pt')
 
-        loss_acc, acc_acc, iou_acc, mean_iou_acc, loss_iou, acc_iou, iou_iou, mean_iou_iou = perform_final_testing(model,
-                                                                                                                   writer,
-                                                                                                                   test_loader,
-                                                                                                                   experiment_name,
-                                                                                                                   comment,
-                                                                                                                   id,
-                                                                                                                   num_labels,
-                                                                                                                   device,
-                                                                                                                   best_model_acc,
-                                                                                                                   best_model_iou,
-                                                                                                                   recording=recording)
+        # loss_acc, acc_acc, iou_acc, mean_iou_acc, loss_iou, acc_iou, iou_iou, mean_iou_iou = perform_final_testing(model,
+        #                                                                                                            writer,
+        #                                                                                                            test_loader,
+        #                                                                                                            experiment_name,
+        #                                                                                                            comment,
+        #                                                                                                            id,
+        #                                                                                                            num_labels,
+        #                                                                                                            device,
+        #                                                                                                            best_model_acc,
+        #                                                                                                            best_model_iou,
+        #                                                                                                            recording=recording)
+        loss_acc, acc_acc, loss_dice_score, acc_dice_score, dice_score = perform_final_testing(model,
+                                                                                               writer,
+                                                                                               test_loader,
+                                                                                               experiment_name,
+                                                                                               comment,
+                                                                                               id,
+                                                                                               num_labels,
+                                                                                               device,
+                                                                                               best_model_acc,
+                                                                                               best_model_iou,
+                                                                                               recording=recording)
