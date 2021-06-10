@@ -191,8 +191,8 @@ def test(model, loader, experiment_description, device, num_labels, writer, epoc
             total_nodes += data.num_nodes
 
         # Mean IoU over all batches and per class (i.e. array of shape 18 - [0.5, 0.7, 0.85, ... ]
-        mean_iou_per_class = get_mean_iou_per_class(i_total, u_total)
-        mean_iou = torch.tensor(np.nanmean(mean_iou_per_class.cpu().detach().numpy()))
+        # mean_iou_per_class = get_mean_iou_per_class(i_total, u_total)
+        # mean_iou = torch.tensor(np.nanmean(mean_iou_per_class.cpu().detach().numpy()))
 
         accuracy = correct_nodes / total_nodes
         loss = torch.mean(torch.tensor(total_loss))
