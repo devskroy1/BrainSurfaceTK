@@ -1,6 +1,7 @@
 # BrainSurfaceToolKit
 
-This repository is forked from the BrainSurfaceTK Github repository at https://github.com/andwang1/BrainSurfaceTK
+This repository is forked from the BrainSurfaceTK Github repository at https://github.com/andwang1/BrainSurfaceTK, developed by Andy Wang, Alex Zakharov, 
+Cemlyn Waters and Amir Alansary. The basic PointNet++, GCN, MeshCNN and VolumeCNN models' code is from their repository.
 <div align="center"> 
 
 <img src="https://github.com/andwang1/BrainSurfaceTK/blob/master/GUI/main/static/main/gifs/rotate-big.gif?raw=true" width="600" height="450"/>
@@ -125,7 +126,7 @@ folder. This is don't because the conversion process can be a bit slow and for m
 
 
 # Acknowledgements
-The code of RandLA-Net is based on the RandLA-Net-pytorch Github repository (https://github.com/aRI0U/RandLA-Net-pytorch).
-The code of PointASNL is based on the PointASNL Github repository (https://github.com/yanx27/PointASNL).
-The code of PointNet CAM is based on the Pointcloud-grad-CAM Github repository (https://github.com/Fragjacker/Pointcloud-grad-CAM).
+The code of RandLA-Net is based on the RandLA-Net-pytorch Github repository at https://github.com/aRI0U/RandLA-Net-pytorch, developed by Alain Riou and Thibaud-Ardoin.
+The code of PointASNL is based on the PointASNL Github repository at https://github.com/yanx27/PointASNL, developed by Xu Yan.
+The code of PointNet CAM is based on the Pointcloud-grad-CAM Github repository at https://github.com/Fragjacker/Pointcloud-grad-CAM, developed by Dennis Struhs.
 See the LICENSE file in the root directory on the master branch for their licenses.
