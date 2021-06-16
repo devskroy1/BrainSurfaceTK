@@ -46,6 +46,14 @@ python -u models/gNNs/basicgcntrain.py /path_to/meshes False all --batch_size 32
 Please note that the BrainNetworkDataset will convert the vtk PolyData and save them as DGL graphs in a user-specified
 folder. This is don't because the conversion process can be a bit slow and for multiple experiments, this becomes beneficial.
 
+# Volume CNN
+
+Volume CNN is a 3D CNN applied to volumetric MRI images, using voxel based grids, for task of age regression.
+
+###### Run instructions
+
+Please refer to the README in models/volume3d of this repository for the run instructions
+
 # Happy Researching!
 
 <div align="center"> 
