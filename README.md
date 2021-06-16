@@ -32,7 +32,6 @@ PointNet++ is a hierarchical neural network, which was proposed to be used on po
 
 The run instructions differ slightly for Pointnet regression and segmentation. Please proceed to the README in models/pointnet of this repository for full information.
 
-
 # GCNN
 
 GCNN [3] is a Graph Convolution Neural Network and uses the Deep Graph Library (DGL) [4] implementation of a Graph Convolutional layer.
@@ -45,6 +44,48 @@ python -u models/gNNs/basicgcntrain.py /path_to/meshes False all --batch_size 32
 ```
 Please note that the BrainNetworkDataset will convert the vtk PolyData and save them as DGL graphs in a user-specified
 folder. This is don't because the conversion process can be a bit slow and for multiple experiments, this becomes beneficial.
+
+# MeshCNN
+
+MeshCNN [2] is a general-purpose deep neural network for 3D triangular meshes, which can be used for tasks such as 3D shape classification or segmentation. 
+This framework includes convolution, pooling and unpooling layers which are applied directly on the mesh edges.
+
+The original GitHub repo and additional run instructions can be found here: https://github.com/ranahanocka/MeshCNN/
+
+In this repository, we have made multiple modifcations. These include functionality for regression, adding global features into the penultimate fully-connected layers, adding logging of test-ouput, allowing for a train/test/validation split, and functionality for new learning-rate schedulers among other features.
+
+###### Run instructions
+
+Place the .obj mesh data files into a folder in *models/MeshCNN/datasets* with the correct folder structure - below is an example of the structure. Here, *brains* denotes the name of the directory in *models/MeshCNN/datasets* which holds one directory for each class, here e.g. *Male* and *Female*.
+In each class, folders *train*, *val* and *test* hold the files.
+
+<img src="https://github.com/andwang1/BrainSurfaceTK/blob/master/img/meshcnn_data.png?raw=true" width="450" height="263" />
+
+Please additionally place a file called *meta_data.tsv* in the *models/MeshCNN/util* folder. This tab-seperated file will be used to read in additional labels and features into the model.
+The file should contain columns participant_id and session_id, which will be concatenated to form a unique identifier of a patient's scan. This unique identifier must be used to name the data files in the datasets/ folder structure described above.
+E.g. a *meta_data.tsv* file might look like this:
+
+participant_id	session_id	scan_age
+
+CC00549XX22	100100	42.142347
+
+The corresponding mesh data file must then be named
+*CC00549XX22_100100.obj*
+
+Any continuous-valued columns in the *meta_data.tsv* file can then be used as features or labels in the regression using switches in the training file, as mentioned below.
+```
+--label scan_age
+--features birth_age
+```
+
+From the main repository level, the model can then be trained using, e.g. for regression
+```
+./scripts/regression/MeshCNN/train_reg_brains.sh
+```
+Similarly, a pretrained model can be applied to the test set, e.g.
+```
+./scripts/regression/MeshCNN/test_reg_brains.sh
+```
 
 # Volume CNN
 
