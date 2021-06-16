@@ -26,7 +26,7 @@ pip install -r cpu_requirements2.txt -f https://pytorch-geometric.com/whl/torch-
 ``` 
 
 # PointNet++
-PointNet++ is a hierarchical neural network, which was proposed to be used on point-cloud geometric data [1] for the tasks of regression, classification, and segmentation. In this project, we apply this architecture onto point-cloud representations of brain surfaces to tackle the tasks of age regression and brain segmentation.
+PointNet++ is a hierarchical neural network, which was proposed to be used on point-cloud geometric data [1] for the tasks of regression, classification, and segmentation. In this project, we apply this architecture onto point-cloud representations of brain surfaces to tackle the tasks of age regression, brain segmentation, sex classification and preterm classification. We add Local Feature Aggregation (LFA) units from RandLA-Net for segmentation and classification tasks and Adaptive Sampling (AS) and Point Local-Point Non-Local (PL-PNL) cells from PointASNL for classification and regression tasks. We also try to improve PointNet++ classification results by applying dGCNN, using extra local and global features, varying the architecture (by varying the number of Set Abstraction layers for instance), tuning hyperparameters such as the Learning Rate and including a separate pathway consisting of 3D Convolutional layers from the Volume CNN. 
 
 ###### Run instructions
 
@@ -34,7 +34,7 @@ The run instructions differ slightly for Pointnet regression and segmentation. P
 
 # GCNN
 
-GCNN [3] is a Graph Convolution Neural Network and uses the Deep Graph Library (DGL) [4] implementation of a Graph Convolutional layer.
+GCNN [3] is a Graph Convolution Neural Network and uses the Deep Graph Library (DGL) [4] implementation of a Graph Convolutional layer. There are segmentation and regression architectures. We explore variations of the GCNN by introducing Dynamic Edge Convolution from dGCNN into the segmentation network. For the regression network, we also carry out hyperparameter tuning and vary the architecture (varying the number of Graph Convolution layers for instance). We also introduce different pooling layers such as Sort and Max pooling into the regression network.
 
 ###### Run instructions
 
@@ -89,7 +89,7 @@ Similarly, a pretrained model can be applied to the test set, e.g.
 
 # Volume CNN
 
-Volume CNN is a 3D CNN applied to volumetric MRI images, using voxel based grids, for task of age regression.
+Volume CNN is a 3D CNN applied to volumetric MRI images, using voxel based grids, for the task of age regression. We enhance the Volume CNN regression network architecture by including a separate pathway consisting of Graph Convolution layers from the GCNN, which we apply to graph based representations of surfaces.
 
 ###### Run instructions
 
